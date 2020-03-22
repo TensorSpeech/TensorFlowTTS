@@ -41,6 +41,3 @@ jobs:
       - name: Flake8
         run: |
           flake8 tensorflow_tts
-      - name: Pytest
-        run: |
-          pytest test
