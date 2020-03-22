@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron: 0 0 * * 1
+
+jobs:
+  linter_and_test:
+    runs-on: ubuntu-18.04
+    strategy:
+      max-parallel: 10
+      matrix:
+        python-version: [3.6]
+        tensorflow-version: [2.1.0]
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: 'x64'
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.pytorch-version }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.tensorflow-version }}-pip-
+      - name: Install dependencies
+        run: |
+          # install python modules
+          python -m pip install --upgrade pip
+          pip install -q -U numpy
+          pip install -q tensorflow-gpu==${{ matrix.tensorflow-version }}
+          pip install -q -e .
+          pip install -q -e .[test]
+      - name: Flake8
+        run: |
+          flake8 tensorflow_tts
+      - name: Pytest
+        run: |
+          pytest test
