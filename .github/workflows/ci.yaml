@@ -41,3 +41,6 @@ jobs:
       - name: Flake8
         run: |
           flake8 tensorflow_tts --ignore F401,H102,W504,H238,D104,H306,H405,D205
+      - name: Pytest
+        run: |
+          pytest test
