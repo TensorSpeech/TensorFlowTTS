@@ -1,0 +1,71 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2020 Minh Nguyen Quan Anh
+#  MIT License (https://opensource.org/licenses/MIT)
+
+import logging
+import os
+
+import numpy as np
+import pytest
+import tensorflow as tf
+
+from tensorflow_tts.layers import TFReflectionPad1d
+from tensorflow_tts.layers import TFConvTranspose1d
+from tensorflow_tts.layers import TFResidualStack
+
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+
+
+@pytest.mark.parametrize(
+    "padding_size", [
+        (3),
+        (5)
+    ])
+def test_padding(padding_size):
+    fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
+    out = TFReflectionPad1d(padding_size=padding_size)(fake_input_1d)
+    assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000 + 2 * padding_size, 256])
+
+
+@pytest.mark.parametrize(
+    "filters,kernel_size,strides,padding", [
+        (512, 40, 8, "same"),
+        (768, 15, 8, "same")
+    ])
+def test_convtranpose1d(filters, kernel_size, strides, padding):
+    fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
+    conv1d_transpose = TFConvTranspose1d(
+        filters=filters,
+        kernel_size=kernel_size,
+        strides=strides,
+        padding=padding
+    )
+    out = conv1d_transpose(fake_input_1d)
+    assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000 * strides, filters])
+
+
+@pytest.mark.parametrize(
+    "kernel_size,filters,dilation_rate,use_bias,nonlinear_activation,nonlinear_activation_params", [
+        (3, 256, 1, True, "LeakyReLU", {"alpha": 0.3}),
+        (3, 256, 3, True, "ReLU", {})
+    ]
+)
+def test_residualblock(kernel_size,
+                       filters,
+                       dilation_rate,
+                       use_bias,
+                       nonlinear_activation,
+                       nonlinear_activation_params):
+    fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
+    residual_block = TFResidualStack(kernel_size=kernel_size,
+                                     filters=filters,
+                                     dilation_rate=dilation_rate,
+                                     use_bias=use_bias,
+                                     nonlinear_activation=nonlinear_activation,
+                                     nonlinear_activation_params=nonlinear_activation_params)
+    out = residual_block(fake_input_1d)
+    assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000, filters])

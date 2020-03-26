@@ -71,6 +71,7 @@ class TFConvTranspose1d(Layer):
 
 class TFResidualStack(Layer):
     """Tensorflow ResidualStack module."""
+
     def __init__(self,
                  kernel_size,
                  filters,
@@ -90,6 +91,7 @@ class TFResidualStack(Layer):
         super(TFResidualStack, self).__init__()
         self.blocks = [
             getattr(tflayers, nonlinear_activation)(**nonlinear_activation_params),
+            TFReflectionPad1d(dilation_rate),
             tflayers.Conv1D(
                 filters=filters,
                 kernel_size=kernel_size,
