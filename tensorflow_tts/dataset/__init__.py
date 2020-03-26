@@ -1,0 +1,3 @@
+from tensorflow_tts.dataset.scp_dataset import AudioMelSCPDataset
+from tensorflow_tts.dataset.scp_dataset import AudioSCPDataset
+from tensorflow_tts.dataset.scp_dataset import MelSCPDataset

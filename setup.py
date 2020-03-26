@@ -47,7 +47,7 @@ requirements = {
 # TODO(@dathudeptrai) update console_scripts.
 entry_points = {
     "console_scripts": [
-        # TODO
+        "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:main",
     ]
 }
 
