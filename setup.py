@@ -36,10 +36,6 @@ requirements = {
     "setup": [
         "numpy",
         "pytest-runner",
-    ],
-    "test": [
-        "pytest>=3.3.0",
-        "hacking>=1.1.0",
         "flake8>=3.7.8",
         "flake8-docstrings>=1.3.1",
     ]
@@ -84,5 +80,4 @@ setup(name="tensorflow_tts",
           "Operating System :: POSIX :: Linux",
           "License :: OSI Approved :: MIT License",
           "Topic :: Software Development :: Libraries :: Python Modules"
-      ],
-)
+      ])

@@ -19,7 +19,7 @@ from tensorflow_tts.utils import read_hdf5
 
 
 class AudioMelDataset(tf.keras.utils.Sequence):
-    """Tensorflow compatible audio and mel dataset"""
+    """Tensorflow compatible audio and mel dataset."""
 
     def __init__(self,
                  root_dir,
@@ -33,6 +33,7 @@ class AudioMelDataset(tf.keras.utils.Sequence):
                  return_utt_id=False,
                  ):
         """Initialize dataset.
+
         Args:
             root_dir (str): Root directory including dumped files.
             audio_query (str): Query to find audio files in root_dir.
@@ -42,6 +43,7 @@ class AudioMelDataset(tf.keras.utils.Sequence):
             audio_length_threshold (int): Threshold to remove short audio files.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
+
         """
         # find all of audio and mel files.
         audio_files = sorted(find_files(root_dir, audio_query))
@@ -118,12 +120,14 @@ class AudioDataset(tf.keras.utils.Sequence):
                  return_utt_id=False,
                  ):
         """Initialize dataset.
+
         Args:
             root_dir (str): Root directory including dumped files.
             audio_query (str): Query to find audio files in root_dir.
             audio_load_fn (func): Function to load audio file.
             audio_length_threshold (int): Threshold to remove short audio files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
+
         """
         # find all of audio and mel files.
         audio_files = sorted(find_files(root_dir, audio_query))
@@ -184,12 +188,14 @@ class MelDataset(tf.keras.utils.Sequence):
                  return_utt_id=False,
                  ):
         """Initialize dataset.
+
         Args:
             root_dir (str): Root directory including dumped files.
             audio_query (str): Query to find audio files in root_dir.
             audio_load_fn (func): Function to load audio file.
             audio_length_threshold (int): Threshold to remove short audio files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
+            
         """
         # find all of audio and mel files.
         mel_files = sorted(find_files(root_dir, mel_query))

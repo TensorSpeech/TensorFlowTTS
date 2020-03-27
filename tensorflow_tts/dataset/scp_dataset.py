@@ -25,7 +25,8 @@ class AudioMelSCPDataset(tf.data.Dataset):
                 return_utt_id=False,
                 return_sampling_rate=False,
                 allow_cache=False):
-        """
+        """Initialize dataset.
+
         Args:
             wav_scp (str): Kaldi-style wav.scp file.
             feats_scp (str): Kaldi-style fests.scp file.
@@ -35,6 +36,7 @@ class AudioMelSCPDataset(tf.data.Dataset):
             return_utt_id (bool): Whether to return utterance id.
             return_sampling_rate (bool): Wheter to return sampling rate.
             allow_cache (bool): Whether to allow cache of the loaded files.
+
         """
         # load scp as lazy dict
         audio_loader = kaldiio.load_scp(wav_scp, segments=segments)
@@ -114,7 +116,8 @@ class AudioSCPDataset(tf.data.Dataset):
                 return_utt_id=False,
                 return_sampling_rate=False,
                 allow_cache=True):
-        """
+        """Initialize dataset.
+
         Args:
             wav_scp (str): Kaldi-style wav.scp file.
             segments (str): Kaldi-style segments file.
@@ -123,6 +126,7 @@ class AudioSCPDataset(tf.data.Dataset):
             return_utt_id (bool): Whether to return utterance id.
             return_sampling_rate (bool): Wheter to return sampling rate.
             allow_cache (bool): Whether to allow cache of the loaded files.
+
         """
         # load scp as lazy dict
         audio_loader = kaldiio.load_scp(wav_scp, segments=segments)
@@ -182,11 +186,13 @@ class MelSCPDataset(tf.data.Dataset):
                 feats_scp,
                 mel_length_threshold=None,
                 return_utt_id=False):
-        """
+        """Initialize dataset.
+
         Args:
             feats_scp (str): Kaldi-style fests.scp file.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return utterance id.
+            
         """
         # load scp as lazy dict
         mel_loader = kaldiio.load_scp(feats_scp)
