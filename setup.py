@@ -31,6 +31,7 @@ requirements = {
         "PyYAML>=3.12",
         "tqdm>=4.26.1",
         "h5py>=2.10.0",
+        "kaldiio>=2.14.1",
     ],
     "setup": [
         "numpy",
@@ -48,6 +49,8 @@ requirements = {
 entry_points = {
     "console_scripts": [
         "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:main",
+        "tensorflow-tts-compute-statistics=tensorflow_tts.bin.compute_statistics:main",
+        "tensorflow-tts-normalize=tensorflow_tts.bin.normalize:main",
     ]
 }
 

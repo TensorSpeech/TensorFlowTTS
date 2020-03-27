@@ -15,6 +15,7 @@ import tensorflow as tf
 
 class AudioMelSCPDataset(tf.data.Dataset):
     """Tensorflow compatible audio and mel dataset based on kaldi-stype scp files."""
+
     def __new__(cls,
                 wav_scp,
                 feats_scp,
@@ -99,6 +100,9 @@ class AudioMelSCPDataset(tf.data.Dataset):
 
         return audio_mel_datasets
 
+    def __name__(self):
+        return "Dataset"
+
 
 class AudioSCPDataset(tf.data.Dataset):
     """Tensorflow compatible audio dataset based on kaldi-stype scp files."""
@@ -167,6 +171,9 @@ class AudioSCPDataset(tf.data.Dataset):
 
         return audio_datasets
 
+    def __name__(self):
+        return "Dataset"
+
 
 class MelSCPDataset(tf.data.Dataset):
     """Tensorflow compatible mel dataset based on kaldi-stype scp files."""
@@ -178,12 +185,8 @@ class MelSCPDataset(tf.data.Dataset):
         """
         Args:
             feats_scp (str): Kaldi-style fests.scp file.
-            segments (str): Kaldi-style segments file.
-            audio_length_threshold (int): Threshold to remove short audio files.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return utterance id.
-            return_sampling_rate (bool): Wheter to return sampling rate.
-            allow_cache (bool): Whether to allow cache of the loaded files.
         """
         # load scp as lazy dict
         mel_loader = kaldiio.load_scp(feats_scp)
@@ -217,3 +220,6 @@ class MelSCPDataset(tf.data.Dataset):
         )
 
         return mel_datasets
+
+    def __name__(self):
+        return "Dataset"

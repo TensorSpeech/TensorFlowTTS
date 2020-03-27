@@ -29,12 +29,12 @@ eval_set="eval"         # name of evaluation data direcotry
 set -euo pipefail
 
 if [ "${stage}" -le -1 ] && [ "${stop_stage}" -ge -1 ]; then
-    echo "Stage -1: Data download"
+    echo -e "\e[92mStage -1: Data download\e[39m"
     local/data_download.sh "${download_dir}"
 fi
 
 if [ "${stage}" -le 0 ] && [ "${stop_stage}" -ge 0 ]; then
-    echo "Stage 0: Data preparation"
+    echo -e "\e[92mStage 0: Data preparation\e[39m"
     local/data_prep.sh \
         --train_set "${train_set}" \
         --dev_set "${dev_set}" \
@@ -44,14 +44,14 @@ fi
 
 stats_ext=$(grep -q "hdf5" <(yq ".format" "${conf}") && echo "h5" || echo "npy")
 if [ "${stage}" -le 1 ] && [ "${stop_stage}" -ge 1 ]; then
-    echo "Stage 1: Feature extraction"
+    echo -e "\e[92mStage 1: Feature extraction\e[39m"
     SECONDS=0
     # extract raw features
     pids=()
     for name in "${train_set}" "${dev_set}" "${eval_set}"; do
     (
         [ ! -e "${dumpdir}/${name}/raw" ] && mkdir -p "${dumpdir}/${name}/raw"
-        echo "Feature extraction start. See the progress via ${dumpdir}/${name}/raw/preprocessing.*.log."
+        echo -e "Feature extraction start. See the progress via ${dumpdir}/${name}/raw/preprocessing.*.log."
         make_subset_data.sh "data/${name}" "${n_jobs}" "${dumpdir}/${name}/raw"
         ${train_cmd} JOB=1:${n_jobs} "${dumpdir}/${name}/raw/preprocessing.JOB.log" \
             tensorflow-tts-preprocess \
@@ -59,13 +59,45 @@ if [ "${stage}" -le 1 ] && [ "${stop_stage}" -ge 1 ]; then
                 --scp "${dumpdir}/${name}/raw/wav.JOB.scp" \
                 --dumpdir "${dumpdir}/${name}/raw/dump.JOB" \
                 --verbose "${verbose}"
-        echo "Successfully finished feature extraction of ${name} set."
+        echo -e "Successfully finished feature extraction of ${name} set."
     ) &
     pids+=($!)
     done
     i=0; for pid in "${pids[@]}"; do wait "${pid}" || ((++i)); done
     [ "${i}" -gt 0 ] && echo "$0: ${i} background jobs are failed." && exit 1;
-    echo "Successfully finished feature extraction."
+    echo -e "Successfully finished feature extraction."
+
+    # calculate statistics for normalization
+    echo -e "\e[92mStatistics computation start. See the progress via ${dumpdir}/${train_set}/compute_statistics.log.\e[39m"
+    ${train_cmd} "${dumpdir}/${train_set}/compute_statistics.log" \
+        tensorflow-tts-compute-statistics \
+            --config "${conf}" \
+            --rootdir "${dumpdir}/${train_set}/raw" \
+            --dumpdir "${dumpdir}/${train_set}" \
+            --verbose "${verbose}"
+    echo -e "Successfully finished calculation of statistics."
+
+    # normalize and dump them
+    pids=()
+    for name in "${train_set}" "${dev_set}" "${eval_set}"; do
+    (
+        [ ! -e "${dumpdir}/${name}/norm" ] && mkdir -p "${dumpdir}/${name}/norm"
+        echo -e "\e[92mNomalization start. See the progress via ${dumpdir}/${name}/norm/normalize.*.log.\e[39m"
+        ${train_cmd} JOB=1:${n_jobs} "${dumpdir}/${name}/norm/normalize.JOB.log" \
+            tensorflow-tts-normalize \
+                --config "${conf}" \
+                --stats "${dumpdir}/${train_set}/stats.${stats_ext}" \
+                --rootdir "${dumpdir}/${name}/raw/dump.JOB" \
+                --dumpdir "${dumpdir}/${name}/norm/dump.JOB" \
+                --verbose "${verbose}"
+        echo -e "Successfully finished normalization of ${name} set."
+    ) &
+    pids+=($!)
+    done
+    i=0; for pid in "${pids[@]}"; do wait "${pid}" || ((++i)); done
+    [ "${i}" -gt 0 ] && echo "$0: ${i} background jobs are failed." && exit 1;
+    echo -e "Successfully finished normalization."
+
     duration=$SECONDS
-    echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
+    echo -e "\e[91mFeature extraction stage took \e[39m$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed.\e[39m"
 fi
