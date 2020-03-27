@@ -199,8 +199,6 @@ class MelDataset(tf.keras.utils.Sequence):
         """
         # find all of audio and mel files.
         mel_files = sorted(find_files(root_dir, mel_query))
-        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-        print(mel_files[0:2])
 
         # filter by threshold
         if mel_length_threshold is not None:
