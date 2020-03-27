@@ -109,7 +109,7 @@ class AudioMelDataset(tf.keras.utils.Sequence):
 
 
 class AudioDataset(tf.keras.utils.Sequence):
-    """Tensorflow compatible audio dataset"""
+    """Tensorflow compatible audio dataset."""
 
     def __init__(self,
                  root_dir,
@@ -177,7 +177,7 @@ class AudioDataset(tf.keras.utils.Sequence):
 
 
 class MelDataset(tf.keras.utils.Sequence):
-    """Tensorflow compatible mel dataset"""
+    """Tensorflow compatible mel dataset."""
 
     def __init__(self,
                  root_dir,
@@ -195,7 +195,7 @@ class MelDataset(tf.keras.utils.Sequence):
             audio_load_fn (func): Function to load audio file.
             audio_length_threshold (int): Threshold to remove short audio files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
-            
+
         """
         # find all of audio and mel files.
         mel_files = sorted(find_files(root_dir, mel_query))

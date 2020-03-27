@@ -192,7 +192,7 @@ class MelSCPDataset(tf.data.Dataset):
             feats_scp (str): Kaldi-style fests.scp file.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return utterance id.
-            
+
         """
         # load scp as lazy dict
         mel_loader = kaldiio.load_scp(feats_scp)
