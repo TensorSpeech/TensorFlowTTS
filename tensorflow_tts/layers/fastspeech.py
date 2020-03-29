@@ -3,12 +3,14 @@
 # Copyright 2020 TRINH LE (@l4zy9x)
 #  MIT License (https://opensource.org/licenses/MIT)
 """Tensorflow Layer modules for FastSpeech."""
+
 import tensorflow as tf
+
 from tensorflow.python.keras import layers as tflayers
 
 
 class TacotronEncoder(tflayers.Layer):
-    "Tacotron encoder module"
+    """Tacotron encoder module."""
 
     def __init__(self,
                  hidden_dim,
@@ -66,14 +68,3 @@ class TacotronEncoder(tflayers.Layer):
         y = self.linear(_x)
 
         return y
-
-
-class Foo():
-    def __init__(self):
-        pass
-
-
-if __name__ == "__main__":
-    encoder = TacotronEncoder(128, 3, 3, None, 1, 64, True, 0.1)
-    x = tf.random.uniform([4, 50, 128], dtype=tf.float32)
-    encoder(x)
