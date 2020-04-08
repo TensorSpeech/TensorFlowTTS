@@ -29,11 +29,21 @@ from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
 
 
 class MelganTrainer(GanBasedTrainer):
+    """Melgan Trainer class based on GanBasedTrainer."""
+
     def __init__(self,
                  config,
                  steps=0,
                  epochs=0,
                  ):
+        """Initialize trainer.
+
+        Args:
+            steps (int): Initial global steps.
+            epochs (int): Initial global epochs.
+            config (dict): Config dict loaded from yaml format configuration file.
+
+        """
         super(MelganTrainer, self).__init__(steps, epochs, config)
         # define loss
         self.mse_loss = tf.keras.losses.MeanSquaredError()
@@ -53,6 +63,7 @@ class MelganTrainer(GanBasedTrainer):
         self.reset_states_eval()
 
     def init_train_eval_metrics(self, list_metrics_name):
+        """init train and eval metrics to save it to tensorboard."""
         self.train_metrics = {}
         self.eval_metrics = {}
         for name in list_metrics_name:
@@ -64,10 +75,12 @@ class MelganTrainer(GanBasedTrainer):
             )
 
     def reset_states_train(self):
+        """reset train metrics after save it to tensorboard."""
         for metric in self.train_metrics.keys():
             self.train_metrics[metric].reset_states()
 
     def reset_states_eval(self):
+        """reset eval metrics after save it to tensorboard."""
         for metric in self.eval_metrics.keys():
             self.eval_metrics[metric].reset_states()
 
@@ -84,6 +97,7 @@ class MelganTrainer(GanBasedTrainer):
 
     @tf.function(experimental_relax_shapes=True)
     def _one_step_generator(self, y, mels):
+        """one step generator training."""
         with tf.GradientTape() as g_tape:
             y_hat = self.generator(mels)  # [B, T, 1]
             p_hat = self.discriminator(y_hat)
@@ -119,6 +133,7 @@ class MelganTrainer(GanBasedTrainer):
 
     @tf.function(experimental_relax_shapes=True)
     def _one_step_discriminator(self, y, y_hat):
+        """one step discriminator training."""
         with tf.GradientTape() as d_tape:
             y, y_hat = tf.expand_dims(y, 2), tf.expand_dims(y_hat, 2)  # [B, T]
             p = self.discriminator(y)
@@ -217,6 +232,7 @@ class MelganTrainer(GanBasedTrainer):
         self.eval_metrics["dis_loss"].update_state(dis_loss)
 
     def _check_log_interval(self):
+        """Log to tensorboard."""
         if self.steps % self.config["log_interval_steps"] == 0:
             for metric_name in self.list_metrics_name:
                 logging.info(
@@ -227,6 +243,7 @@ class MelganTrainer(GanBasedTrainer):
             self.reset_states_train()
 
     def generate_and_save_intermediate_result(self, batch):
+        """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
         # generate
@@ -266,14 +283,12 @@ class MelganTrainer(GanBasedTrainer):
                 break
 
     def _check_train_finish(self):
+        """Check training finished."""
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
 
 
-def collater(audio,
-             mel,
-             batch_max_steps=25600,
-             hop_size=256):
+def collater(audio, mel, batch_max_steps=25600, hop_size=256):
     """Initialize collater (mapping function) for Tensorflow Audio-Mel Dataset.
 
     Args:

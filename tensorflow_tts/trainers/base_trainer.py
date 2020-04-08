@@ -30,13 +30,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         Args:
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
-            data_loader (dict): Dict of data loaders. It must contrain "train" and "dev" loaders.
-            model (dict): Dict of models. It must contrain "generator" and "discriminator" models.
-            criterion (dict): Dict of criterions. It must contrain "stft" and "mse" criterions.
-            optimizer (dict): Dict of optimizers. It must contrain "generator" and "discriminator" optimizers.
-            scheduler (dict): Dict of schedulers. It must contrain "generator" and "discriminator" schedulers.
             config (dict): Config dict loaded from yaml format configuration file.
-            device (torch.deive): Pytorch device instance.
 
         """
         self.steps = steps
@@ -48,44 +42,57 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         self.total_eval_loss = defaultdict(float)
 
     def set_train_data_loader(self, train_dataset):
+        """Set train data loader (MUST)."""
         self.train_data_loader = train_dataset
 
     def get_train_data_loader(self):
+        """Get train data loader."""
         return self.train_data_loader
 
     def set_eval_data_loader(self, eval_dataset):
+        """Set eval data loader (MUST)."""
         self.eval_data_loader = eval_dataset
 
     def get_eval_data_loader(self):
+        """Get eval data loader."""
         return self.eval_data_loader
 
     def set_gen_model(self, generator_model):
+        """Set generator class model (MUST)."""
         self.generator = generator_model
 
     def get_gen_model(self):
+        """Get generator model."""
         return self.generator
 
     def set_dis_model(self, discriminator_model):
+        """Set discriminator class model (MUST)."""
         self.discriminator = discriminator_model
 
     def get_dis_model(self):
+        """Get discriminator model."""
         return self.discriminator
 
     def set_gen_optimizer(self, generator_optimizer):
+        """Set generator optimizer (MUST)."""
         self.gen_optimizer = generator_optimizer
 
     def get_gen_optimizer(self):
+        """get generator optimizer."""
         return self.gen_optimizer
 
     def set_dis_optimizer(self, discriminator_optimizer):
+        """Set discriminator optimizer (MUST)."""
         self.dis_optimizer = discriminator_optimizer
 
     def get_dis_optimizer(self):
+        """Get discriminator optimizer."""
         return self.dis_optimizer
 
     def create_checkpoint_manager(self,
                                   saved_path=None,
                                   max_to_keep=10):
+        """Create checkpoint management."""
         if saved_path is None:
             saved_path = self.config["outdir"] + '/checkpoints/'
             os.makedirs(saved_path, exist_ok=True)
@@ -115,11 +122,13 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         logging.info("Finish training.")
 
     def save_checkpoint(self):
+        """Save checkpoint."""
         self.ckpt.steps.assign_add(self.steps)
         self.ckpt.epochs.assign_add(self.epochs)
         self.ckp_manager.save()
 
     def load_checkpoint(self, pretrained_path):
+        """Load checkpoint."""
         self.ckpt.restore(pretrained_path)
         self.steps = self.ckpt.steps.numpy()
         self.epochs = self.ckpt.epochs.numpy()
@@ -179,6 +188,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         pass
 
     def _write_to_tensorboard(self, list_metrics, stage="train"):
+        """Write variables to tensorboard"""
         with self.writer.as_default():
             for key, value in list_metrics.items():
                 tf.summary.scalar(stage + "_" + key, value.result(), step=self.steps)
