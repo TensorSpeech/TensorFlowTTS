@@ -51,6 +51,7 @@ entry_points = {
         "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:main",
         "tensorflow-tts-compute-statistics=tensorflow_tts.bin.compute_statistics:main",
         "tensorflow-tts-normalize=tensorflow_tts.bin.normalize:main",
+        "tensorflow-tts-train-melgan=tensorflow_tts.bin.train_melgan:main"
     ]
 }
 
