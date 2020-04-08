@@ -10,7 +10,7 @@ import logging
 import numpy as np
 
 import tensorflow as tf
-import tensorflow.python.keras.layers as tflayers
+from tensorflow.python.keras import layers as tflayers
 
 from tensorflow_tts.layers import TFReflectionPad1d
 from tensorflow_tts.layers import TFConvTranspose1d

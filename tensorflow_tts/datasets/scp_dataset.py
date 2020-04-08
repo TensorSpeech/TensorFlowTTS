@@ -24,7 +24,9 @@ class AudioMelSCPDataset(tf.data.Dataset):
                 mel_length_threshold=None,
                 return_utt_id=False,
                 return_sampling_rate=False,
-                allow_cache=False):
+                allow_cache=False,
+                batch_size=1,
+                map_fn=None):
         """Initialize dataset.
 
         Args:
@@ -100,6 +102,14 @@ class AudioMelSCPDataset(tf.data.Dataset):
                   return_utt_id)
         )
 
+        if map_fn is not None:
+            audio_mel_datasets = audio_mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
+
+        audio_mel_datasets = audio_mel_datasets.batch(batch_size)
+        if allow_cache:
+            audio_mel_datasets = audio_mel_datasets.cache()
+        audio_mel_datasets = audio_mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
+
         return audio_mel_datasets
 
     def __name__(self):
@@ -115,7 +125,9 @@ class AudioSCPDataset(tf.data.Dataset):
                 audio_length_threshold=None,
                 return_utt_id=False,
                 return_sampling_rate=False,
-                allow_cache=True):
+                allow_cache=False,
+                batch_size=1,
+                map_fn=None):
         """Initialize dataset.
 
         Args:
@@ -173,6 +185,14 @@ class AudioSCPDataset(tf.data.Dataset):
                   return_utt_id,)
         )
 
+        if map_fn is not None:
+            audio_datasets = audio_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
+
+        audio_datasets = audio_datasets.batch(batch_size)
+        if allow_cache:
+            audio_datasets = audio_datasets.cache()
+        audio_datasets = audio_datasets.prefetch(tf.data.experimental.AUTOTUNE)
+
         return audio_datasets
 
     def __name__(self):
@@ -185,7 +205,10 @@ class MelSCPDataset(tf.data.Dataset):
     def __new__(cls,
                 feats_scp,
                 mel_length_threshold=None,
-                return_utt_id=False):
+                return_utt_id=False,
+                allow_cache=False,
+                batch_size=1,
+                map_fn=None):
         """Initialize dataset.
 
         Args:
@@ -224,6 +247,14 @@ class MelSCPDataset(tf.data.Dataset):
             output_types=output_types,
             args=(return_utt_id)
         )
+
+        if map_fn is not None:
+            mel_datasets = mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
+
+        mel_datasets = mel_datasets.batch(batch_size)
+        if allow_cache:
+            mel_datasets = mel_datasets.cache()
+        mel_datasets = mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return mel_datasets
 
