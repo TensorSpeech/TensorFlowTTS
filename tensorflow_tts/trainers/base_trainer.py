@@ -78,7 +78,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         self.gen_optimizer = generator_optimizer
 
     def get_gen_optimizer(self):
-        """get generator optimizer."""
+        """Get generator optimizer."""
         return self.gen_optimizer
 
     def set_dis_optimizer(self, discriminator_optimizer):
@@ -161,34 +161,41 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _eval_epoch(self):
+        """One epoch evaluation."""
         pass
 
     @abc.abstractmethod
     def _train_step(self, batch):
+        """One step training."""
         pass
 
     @abc.abstractmethod
     def _eval_step(self, batch):
+        """One eval step."""
         pass
 
     @abc.abstractmethod
     def _check_log_interval(self):
+        """Save log interval."""
         pass
 
     def _check_eval_interval(self):
+        """Evaluation interval step."""
         if self.steps % self.config["eval_interval_steps"] == 0:
             self._eval_epoch()
 
     def _check_save_interval(self):
+        """Save interval checkpoint."""
         if self.steps % self.config["save_interval_steps"] == 0:
             self.save_checkpoint()
             logging.info(f"Successfully saved checkpoint @ {self.steps} steps.")
 
     def generate_and_save_intermediate_result(self, batch):
+        """Generate and save intermediate result."""
         pass
 
     def _write_to_tensorboard(self, list_metrics, stage="train"):
-        """Write variables to tensorboard"""
+        """Write variables to tensorboard."""
         with self.writer.as_default():
             for key, value in list_metrics.items():
                 tf.summary.scalar(stage + "_" + key, value.result(), step=self.steps)
