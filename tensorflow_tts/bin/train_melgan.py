@@ -35,6 +35,7 @@ class MelganTrainer(GanBasedTrainer):
                  config,
                  steps=0,
                  epochs=0,
+                 is_mixed_precision=True
                  ):
         """Initialize trainer.
 
@@ -42,6 +43,7 @@ class MelganTrainer(GanBasedTrainer):
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
             config (dict): Config dict loaded from yaml format configuration file.
+            is_mixed_precision (bool): Use mixed precision or not.
 
         """
         super(MelganTrainer, self).__init__(steps, epochs, config)
@@ -122,7 +124,14 @@ class MelganTrainer(GanBasedTrainer):
             adv_loss += self.config["lambda_feat_match"] * fm_loss
             gen_loss = adv_loss
 
-        gradients = g_tape.gradient(gen_loss, self.generator.trainable_variables)
+            if self.is_mixed_precision:
+                scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
+        
+        if self.is_mixed_precision:
+            scaled_gradients = g_tape.gradient(scaled_gen_loss, self.generator.trainable_variables)
+            gradients = self.gen_optimizer.get_unscaled_gradients(scaled_gradients)
+        else:
+            gradients = g_tape.gradient(gen_loss, self.generator.trainable_variables)
         self.gen_optimizer.apply_gradients(zip(gradients, self.generator.trainable_variables))
 
         # accumulate loss into metrics
@@ -151,7 +160,14 @@ class MelganTrainer(GanBasedTrainer):
             fake_loss /= (i + 1)
             dis_loss = real_loss + fake_loss
 
-        gradients = d_tape.gradient(dis_loss, self.discriminator.trainable_variables)
+            if self.is_mixed_precision:
+                scaled_dis_loss = self.dis_optimizer.get_scaled_loss(dis_loss)
+
+        if self.is_mixed_precision:
+            scaled_gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
+            gradients = self.dis_optimizer.get_unscaled_gradients(scaled_gradients)
+        else:
+            gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
         self.dis_optimizer.apply_gradients(zip(gradients, self.discriminator.trainable_variables))
 
         # accumulate loss into metrics
@@ -225,6 +241,7 @@ class MelganTrainer(GanBasedTrainer):
         dis_loss = real_loss + fake_loss
 
         # add to total eval loss
+        self.eval_metrics["adversarial_loss"].update_state(adv_loss)
         self.eval_metrics["fm_loss"].update_state(fm_loss)
         self.eval_metrics["gen_loss"].update_state(gen_loss)
         self.eval_metrics["real_loss"].update_state(real_loss)
@@ -312,7 +329,8 @@ def collater(audio, mel, batch_max_steps=25600, hop_size=256):
         audio = audio[start_step: start_step + batch_max_steps]
         mel = mel[start_frame: start_frame + batch_max_frames, :]
     else:
-        pass
+        audio = tf.pad(audio, [[0, batch_max_steps - len(audio)]])
+        mel = tf.pad(mel, [[0, batch_max_frames - len(mel)], [0, 0]])
 
     return audio, mel
 
@@ -356,7 +374,13 @@ def main():
                         help="logging level. higher is more logging. (default=1)")
     parser.add_argument("--rank", "--local_rank", default=0, type=int,
                         help="rank for distributed training. no need to explictly specify.")
+    parser.add_argument("--mixed_precision", default=True, type=bool,
+                        help="using mixed precision or not.")
     args = parser.parse_args()
+
+    # set mixed precision config
+    if args.mixed_precision is True:
+        tf.config.optimizer.set_experimental_options({"auto_mixed_precision": True})
 
     # set logger
     if args.verbose > 1:
@@ -445,7 +469,7 @@ def main():
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
             mel_length_threshold=mel_length_threshold,
-            shuffle_buffer_size=-1,
+            shuffle_buffer_size=64,
             map_fn=collater,
             allow_cache=config["allow_cache"],
             batch_size=config["batch_size"]
@@ -466,7 +490,7 @@ def main():
     discriminator = TFMelGANMultiScaleDiscriminator(**config["discriminator_params"])
 
     # define trainer
-    trainer = MelganTrainer(config=config)
+    trainer = MelganTrainer(config=config, is_mixed_precision=args.mixed_precision)
 
     # set data loader
     trainer.set_train_data_loader(train_dataset)

@@ -3,27 +3,24 @@
 # Copyright 2020 Minh Nguyen Quan Anh
 #  MIT License (https://opensource.org/licenses/MIT)
 
-"""Train MelGAN."""
+"""Based Trainer."""
 
 import abc
 import logging
 import os
-
-from collections import defaultdict
+from tqdm import tqdm
 
 import tensorflow as tf
 
-from tqdm import tqdm
 
-
-# Fix doc
 class GanBasedTrainer(metaclass=abc.ABCMeta):
     """Customized trainer module for MelGAN training."""
 
     def __init__(self,
                  steps,
                  epochs,
-                 config
+                 config,
+                 is_mixed_precision=True
                  ):
         """Initialize trainer.
 
@@ -38,8 +35,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         self.config = config
         self.writer = tf.summary.create_file_writer(config["outdir"])
         self.finish_train = False
-        self.total_train_loss = defaultdict(float)
-        self.total_eval_loss = defaultdict(float)
+        self.is_mixed_precision = is_mixed_precision
 
     def set_train_data_loader(self, train_dataset):
         """Set train data loader (MUST)."""
@@ -76,6 +72,9 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
     def set_gen_optimizer(self, generator_optimizer):
         """Set generator optimizer (MUST)."""
         self.gen_optimizer = generator_optimizer
+        if self.is_mixed_precision:
+            self.gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self.gen_optimizer, 'dynamic')
 
     def get_gen_optimizer(self):
         """Get generator optimizer."""
@@ -84,6 +83,9 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
     def set_dis_optimizer(self, discriminator_optimizer):
         """Set discriminator optimizer (MUST)."""
         self.dis_optimizer = discriminator_optimizer
+        if self.is_mixed_precision:
+            self.dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self.dis_optimizer, 'dynamic')
 
     def get_dis_optimizer(self):
         """Get discriminator optimizer."""
@@ -123,8 +125,8 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
 
     def save_checkpoint(self):
         """Save checkpoint."""
-        self.ckpt.steps.assign_add(self.steps)
-        self.ckpt.epochs.assign_add(self.epochs)
+        self.ckpt.steps.assign(self.steps)
+        self.ckpt.epochs.assign(self.epochs)
         self.ckp_manager.save(checkpoint_number=self.steps)
 
     def load_checkpoint(self, pretrained_path):

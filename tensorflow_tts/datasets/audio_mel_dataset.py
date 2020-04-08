@@ -32,6 +32,7 @@ class AudioMelDataset(tf.data.Dataset):
                 batch_size=1,
                 shuffle_buffer_size=64,
                 map_fn=None,
+                reshuffle_each_iteration=True
                 ):
         """Initialize dataset.
 
@@ -105,7 +106,8 @@ class AudioMelDataset(tf.data.Dataset):
         )
 
         if shuffle_buffer_size != -1:
-            audio_mel_datasets = audio_mel_datasets.shuffle(shuffle_buffer_size)
+            audio_mel_datasets = audio_mel_datasets.shuffle(
+                shuffle_buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
 
         if batch_size > 1 and map_fn is None:
             raise ValueError("map function must define when batch_size > 1.")
@@ -137,6 +139,7 @@ class AudioDataset(tf.data.Dataset):
                 batch_size=1,
                 shuffle_buffer_size=64,
                 map_fn=None,
+                reshuffle_each_iteration=True,
                 ):
         """Initialize dataset.
 
@@ -196,7 +199,8 @@ class AudioDataset(tf.data.Dataset):
         )
 
         if shuffle_buffer_size != -1:
-            audio_datasets = audio_datasets.shuffle(shuffle_buffer_size)
+            audio_datasets = audio_datasets.shuffle(
+                shuffle_buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
 
         if batch_size > 1 and map_fn is None:
             raise ValueError("map function must define when batch_size > 1.")
