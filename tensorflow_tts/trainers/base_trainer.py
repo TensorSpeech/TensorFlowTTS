@@ -125,7 +125,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         """Save checkpoint."""
         self.ckpt.steps.assign_add(self.steps)
         self.ckpt.epochs.assign_add(self.epochs)
-        self.ckp_manager.save()
+        self.ckp_manager.save(checkpoint_number=self.steps)
 
     def load_checkpoint(self, pretrained_path):
         """Load checkpoint."""
@@ -198,5 +198,5 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         """Write variables to tensorboard."""
         with self.writer.as_default():
             for key, value in list_metrics.items():
-                tf.summary.scalar(stage + "_" + key, value.result(), step=self.steps)
+                tf.summary.scalar(stage + "/" + key, value.result(), step=self.steps)
                 self.writer.flush()

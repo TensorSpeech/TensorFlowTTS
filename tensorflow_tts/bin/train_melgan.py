@@ -156,7 +156,7 @@ class MelganTrainer(GanBasedTrainer):
 
         # accumulate loss into metrics
         self.train_metrics["real_loss"].update_state(real_loss)
-        self.train_metrics["real_loss"].update_state(fake_loss)
+        self.train_metrics["fake_loss"].update_state(fake_loss)
         self.train_metrics["dis_loss"].update_state(dis_loss)
 
     def _eval_epoch(self):
