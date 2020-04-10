@@ -20,7 +20,8 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
                  steps,
                  epochs,
                  config,
-                 is_mixed_precision=True
+                 is_generator_mixed_precision=False,
+                 is_discriminator_mixed_precision=False,
                  ):
         """Initialize trainer.
 
@@ -35,7 +36,8 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         self.config = config
         self.writer = tf.summary.create_file_writer(config["outdir"])
         self.finish_train = False
-        self.is_mixed_precision = is_mixed_precision
+        self.is_generator_mixed_precision = is_generator_mixed_precision
+        self.is_discriminator_mixed_precision = is_discriminator_mixed_precision
 
     def set_train_data_loader(self, train_dataset):
         """Set train data loader (MUST)."""
@@ -72,7 +74,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
     def set_gen_optimizer(self, generator_optimizer):
         """Set generator optimizer (MUST)."""
         self.gen_optimizer = generator_optimizer
-        if self.is_mixed_precision:
+        if self.is_generator_mixed_precision:
             self.gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
                 self.gen_optimizer, 'dynamic')
 
@@ -83,7 +85,7 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
     def set_dis_optimizer(self, discriminator_optimizer):
         """Set discriminator optimizer (MUST)."""
         self.dis_optimizer = discriminator_optimizer
-        if self.is_mixed_precision:
+        if self.is_discriminator_mixed_precision:
             self.dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
                 self.dis_optimizer, 'dynamic')
 

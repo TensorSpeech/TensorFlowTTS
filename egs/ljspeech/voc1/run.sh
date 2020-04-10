@@ -23,7 +23,8 @@ dumpdir=dump           # directory to dump features
 tag=""     # tag for directory to save model
 resume=""  # checkpoint path to resume training
            # (e.g. <path>/<to>/checkpoint-10000steps.pkl)
-mixed_precision=true  # use mixed precision or not.
+generator_mixed_precision=true  # use mixed precision for generator or not.
+discriminator_mixed_precision=true  # use mixed precision for discriminator or not.
 
 # decoding related setting
 checkpoint="" # checkpoint path to be used for decoding
@@ -133,6 +134,7 @@ if [ "${stage}" -le 2 ] && [ "${stop_stage}" -ge 2 ]; then
             --outdir "${expdir}" \
             --resume "${resume}" \
             --verbose "${verbose}" \
-            --mixed_precision "${mixed_precision}"
+            --generator_mixed_precision "${generator_mixed_precision}" \
+            --discriminator_mixed_precision "${discriminator_mixed_precision}"
     echo "Successfully finished training."
 fi

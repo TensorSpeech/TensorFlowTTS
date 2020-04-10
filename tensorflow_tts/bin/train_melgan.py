@@ -35,7 +35,8 @@ class MelganTrainer(GanBasedTrainer):
                  config,
                  steps=0,
                  epochs=0,
-                 is_mixed_precision=True
+                 is_generator_mixed_precision=False,
+                 is_discriminator_mixed_precision=False,
                  ):
         """Initialize trainer.
 
@@ -46,7 +47,11 @@ class MelganTrainer(GanBasedTrainer):
             is_mixed_precision (bool): Use mixed precision or not.
 
         """
-        super(MelganTrainer, self).__init__(steps, epochs, config)
+        super(MelganTrainer, self).__init__(steps,
+                                            epochs,
+                                            config,
+                                            is_generator_mixed_precision,
+                                            is_discriminator_mixed_precision)
         # define loss
         self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.mae_loss = tf.keras.losses.MeanAbsoluteError()
@@ -124,10 +129,10 @@ class MelganTrainer(GanBasedTrainer):
             adv_loss += self.config["lambda_feat_match"] * fm_loss
             gen_loss = adv_loss
 
-            if self.is_mixed_precision:
+            if self.is_generator_mixed_precision:
                 scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
-        
-        if self.is_mixed_precision:
+
+        if self.is_generator_mixed_precision:
             scaled_gradients = g_tape.gradient(scaled_gen_loss, self.generator.trainable_variables)
             gradients = self.gen_optimizer.get_unscaled_gradients(scaled_gradients)
         else:
@@ -160,10 +165,10 @@ class MelganTrainer(GanBasedTrainer):
             fake_loss /= (i + 1)
             dis_loss = real_loss + fake_loss
 
-            if self.is_mixed_precision:
+            if self.is_discriminator_mixed_precision:
                 scaled_dis_loss = self.dis_optimizer.get_scaled_loss(dis_loss)
 
-        if self.is_mixed_precision:
+        if self.is_discriminator_mixed_precision:
             scaled_gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
             gradients = self.dis_optimizer.get_unscaled_gradients(scaled_gradients)
         else:
@@ -374,12 +379,14 @@ def main():
                         help="logging level. higher is more logging. (default=1)")
     parser.add_argument("--rank", "--local_rank", default=0, type=int,
                         help="rank for distributed training. no need to explictly specify.")
-    parser.add_argument("--mixed_precision", default=True, type=bool,
-                        help="using mixed precision or not.")
+    parser.add_argument("--generator_mixed_precision", default=False, type=bool,
+                        help="using mixed precision for generator or not.")
+    parser.add_argument("--discriminator_mixed_precision", default=False, type=bool,
+                        help="using mixed precision for discriminator or not.")
     args = parser.parse_args()
 
     # set mixed precision config
-    if args.mixed_precision is True:
+    if args.generator_mixed_precision is True or args.discriminator_mixed_precision is True:
         tf.config.optimizer.set_experimental_options({"auto_mixed_precision": True})
 
     # set logger
@@ -490,7 +497,9 @@ def main():
     discriminator = TFMelGANMultiScaleDiscriminator(**config["discriminator_params"])
 
     # define trainer
-    trainer = MelganTrainer(config=config, is_mixed_precision=args.mixed_precision)
+    trainer = MelganTrainer(config=config,
+                            is_generator_mixed_precision=args.generator_mixed_precision,
+                            is_discriminator_mixed_precision=args.discriminator_mixed_precision)
 
     # set data loader
     trainer.set_train_data_loader(train_dataset)
