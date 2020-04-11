@@ -91,13 +91,12 @@ class TFResidualStack(Layer):
         super(TFResidualStack, self).__init__()
         self.blocks = [
             getattr(tflayers, nonlinear_activation)(**nonlinear_activation_params),
-            TFReflectionPad1d(dilation_rate),
             tflayers.Conv1D(
                 filters=filters,
                 kernel_size=kernel_size,
                 dilation_rate=dilation_rate,
                 use_bias=use_bias,
-                padding='valid'
+                padding='same'
             ),
             getattr(tflayers, nonlinear_activation)(**nonlinear_activation_params),
             tflayers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias)

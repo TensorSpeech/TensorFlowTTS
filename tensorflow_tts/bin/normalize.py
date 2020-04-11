@@ -8,17 +8,16 @@ import argparse
 import logging
 import os
 
-import tensorflow as tf
 import numpy as np
 import yaml
 
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.dataset import AudioMelSCPDataset
-from tensorflow_tts.dataset import AudioMelDataset
-from tensorflow_tts.dataset import MelSCPDataset
-from tensorflow_tts.dataset import MelDataset
+from tensorflow_tts.datasets import AudioMelSCPDataset
+from tensorflow_tts.datasets import AudioMelDataset
+from tensorflow_tts.datasets import MelSCPDataset
+from tensorflow_tts.datasets import MelDataset
 from tensorflow_tts.utils import read_hdf5
 from tensorflow_tts.utils import write_hdf5
 
@@ -91,20 +90,18 @@ def main():
         if not args.skip_wav_copy:
             dataset = AudioMelDataset(
                 args.rootdir,
-                batch_size=1,
                 audio_query=audio_query,
                 mel_query=mel_query,
                 audio_load_fn=audio_load_fn,
                 mel_load_fn=mel_load_fn,
-                return_utt_id=True
+                return_utt_id=True,
             )
         else:
             dataset = MelDataset(
                 args.rootdir,
-                batch_size=1,
                 mel_query=mel_query,
                 mel_load_fn=mel_load_fn,
-                return_utt_id=True
+                return_utt_id=True,
             )
     else:
         if not args.skip_wav_copy:
@@ -112,15 +109,13 @@ def main():
                 wav_scp=args.wav_scp,
                 feats_scp=args.feats_scp,
                 segments=args.segments,
-                return_utt_id=True
+                return_utt_id=True,
             )
         else:
             dataset = MelSCPDataset(
                 feats_scp=args.feats_scp,
-                return_utt_id=True
+                return_utt_id=True,
             )
-        dataset = dataset.batch(1).prefetch(tf.data.experimental.AUTOTUNE)
-    logging.info(f"The number of files = {len(dataset)}.")
 
     # restore scaler
     scaler = StandardScaler()
@@ -140,15 +135,10 @@ def main():
         else:
             utt_id, mel = items
 
-        # convert to numpy if dataset is instance of tf.data
-        if "Dataset" in dataset.__name__():
-            utt_id = utt_id[0].numpy().decode("utf-8")
-            audio = audio[0].numpy()
-            mel = mel[0].numpy()
-        else:
-            utt_id = utt_id[0]
-            audio = audio[0]
-            mel = mel[0]
+        # convert to numpy
+        utt_id = utt_id[0].numpy().decode("utf-8")
+        audio = audio[0].numpy()
+        mel = mel[0].numpy()
 
         # normalize
         mel = scaler.transform(mel)

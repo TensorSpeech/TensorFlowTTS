@@ -9,15 +9,13 @@ import argparse
 import logging
 import os
 
-import tensorflow as tf
-
 import librosa
 import numpy as np
 import yaml
 
 from tqdm import tqdm
 
-from tensorflow_tts.dataset import AudioSCPDataset
+from tensorflow_tts.datasets import AudioSCPDataset
 from tensorflow_tts.utils import write_hdf5
 
 
@@ -103,6 +101,7 @@ def main():
         audio_length_threshold=None,
         return_utt_id=True,
         return_sampling_rate=True,
+        batch_size=1
     )
 
     # check directly existence
@@ -110,7 +109,7 @@ def main():
         os.makedirs(args.dumpdir, exist_ok=True)
 
     # process each data
-    for utt_id, audio, fs in tqdm(dataset.batch(1).prefetch(tf.data.experimental.AUTOTUNE)):
+    for utt_id, audio, fs in tqdm(dataset):
         utt_id = utt_id.numpy()[0].decode('utf-8')
         audio = audio.numpy()[0]
         fs = fs.numpy()[0]

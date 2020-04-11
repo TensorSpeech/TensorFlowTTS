@@ -8,15 +8,14 @@ import argparse
 import logging
 import os
 
-import tensorflow as tf
 import numpy as np
 import yaml
 
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.dataset import MelSCPDataset
-from tensorflow_tts.dataset import MelDataset
+from tensorflow_tts.datasets import MelSCPDataset
+from tensorflow_tts.datasets import MelDataset
 from tensorflow_tts.utils import read_hdf5
 from tensorflow_tts.utils import write_hdf5
 
@@ -90,18 +89,11 @@ def main():
         )
     else:
         dataset = MelSCPDataset(args.feats_scp)
-        dataset = dataset.batch(1).prefetch(tf.data.experimental.AUTOTUNE)
-    logging.info(f"The number of files = {len(dataset)}.")
 
     # calculate statistics
     scaler = StandardScaler()
     for mel in tqdm(dataset):
-        # convert to numpy if dataset is instance of tf.data
-        if "Dataset" in dataset.__name__():
-            mel = mel[0].numpy()
-        else:
-            mel = mel[0]
-
+        mel = mel[0].numpy()
         scaler.partial_fit(mel)
 
     if config["format"] == "hdf5":

@@ -19,6 +19,19 @@ conf=conf/melgan.v1.yaml
 download_dir=downloads # direcotry to save downloaded files
 dumpdir=dump           # directory to dump features
 
+# training related setting
+tag=""     # tag for directory to save model
+resume=""  # checkpoint path to resume training
+           # (e.g. <path>/<to>/checkpoint-10000steps.pkl)
+generator_mixed_precision=true  # use mixed precision for generator or not.
+discriminator_mixed_precision=true  # use mixed precision for discriminator or not.
+
+# decoding related setting
+checkpoint="" # checkpoint path to be used for decoding
+              # if not provided, the latest one will be used
+              # (e.g. <path>/<to>/checkpoint-400000steps.pkl)
+
+
 # shellcheck disable=SC1091
 . parse_options.sh || exit 1;
 
@@ -100,4 +113,28 @@ if [ "${stage}" -le 1 ] && [ "${stop_stage}" -ge 1 ]; then
 
     duration=$SECONDS
     echo -e "\e[91mFeature extraction stage took \e[39m$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed.\e[39m"
+fi
+
+if [ -z "${tag}" ]; then
+    expdir="exp/${train_set}_ljspeech_$(basename "${conf}" .yaml)"
+else
+    expdir="exp/${train_set}_ljspeech_${tag}"
+fi
+if [ "${stage}" -le 2 ] && [ "${stop_stage}" -ge 2 ]; then
+    echo "Stage 2: Network training"
+    [ ! -e "${expdir}" ] && mkdir -p "${expdir}"
+    cp "${dumpdir}/${train_set}/stats.${stats_ext}" "${expdir}"
+    train="tensorflow-tts-train-melgan"
+    echo "Training start. See the progress via ${expdir}/train.log."
+    ${cuda_cmd} --gpu "${n_gpus}" "${expdir}/train.log" \
+        ${train} \
+            --config "${conf}" \
+            --train-dumpdir "${dumpdir}/${train_set}/norm" \
+            --dev-dumpdir "${dumpdir}/${dev_set}/norm" \
+            --outdir "${expdir}" \
+            --resume "${resume}" \
+            --verbose "${verbose}" \
+            --generator_mixed_precision "${generator_mixed_precision}" \
+            --discriminator_mixed_precision "${discriminator_mixed_precision}"
+    echo "Successfully finished training."
 fi
