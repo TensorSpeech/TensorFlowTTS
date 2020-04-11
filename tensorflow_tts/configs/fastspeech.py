@@ -6,7 +6,7 @@
 
 
 class FastSpeechConfig(object):
-    """Initialize FastSpeech Config"""
+    """Initialize FastSpeech Config."""
 
     def __init__(
             self,
