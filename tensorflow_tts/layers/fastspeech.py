@@ -72,7 +72,7 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
 
     def build(self, input_shape):
-        """Build shared charactor/phoneme embedding layers"""
+        """Build shared charactor/phoneme embedding layers."""
         with tf.name_scope("charactor_embeddings"):
             self.charactor_embeddings = self.add_weight(
                 "weight",
@@ -110,7 +110,6 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         # extended speaker embeddings
         extended_speaker_embeddings = speaker_embeddings[:, tf.newaxis, :]
 
-        # TODO (@dathudeptrai), support more option.
         # sum all embedding
         embeddings = inputs_embeds + position_embeddings + extended_speaker_embeddings
         embeddings = self.LayerNorm(embeddings)
@@ -263,7 +262,7 @@ class TFFastSpeechOutput(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
 
     def call(self, inputs, training=False):
-        """Call logic"""
+        """Call logic."""
         hidden_states, input_tensor = inputs
 
         hidden_states = self.dense(hidden_states)

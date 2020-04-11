@@ -6,6 +6,8 @@
 
 
 class FastSpeechConfig(object):
+    """Initialize FastSpeech Config"""
+
     def __init__(
             self,
             vocab_size=11,
@@ -29,7 +31,6 @@ class FastSpeechConfig(object):
             output_attentions=False,
             output_hidden_states=False,):
         """Init parameters for Fastspeech model."""
-
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
