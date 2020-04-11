@@ -32,26 +32,27 @@ def test_padding(padding_size):
 
 
 @pytest.mark.parametrize(
-    "filters,kernel_size,strides,padding", [
-        (512, 40, 8, "same"),
-        (768, 15, 8, "same")
+    "filters,kernel_size,strides,padding,is_weight_norm", [
+        (512, 40, 8, "same", False),
+        (768, 15, 8, "same", True)
     ])
-def test_convtranpose1d(filters, kernel_size, strides, padding):
+def test_convtranpose1d(filters, kernel_size, strides, padding, is_weight_norm):
     fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
     conv1d_transpose = TFConvTranspose1d(
         filters=filters,
         kernel_size=kernel_size,
         strides=strides,
-        padding=padding
+        padding=padding,
+        is_weight_norm=is_weight_norm
     )
     out = conv1d_transpose(fake_input_1d)
     assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000 * strides, filters])
 
 
 @pytest.mark.parametrize(
-    "kernel_size,filters,dilation_rate,use_bias,nonlinear_activation,nonlinear_activation_params", [
-        (3, 256, 1, True, "LeakyReLU", {"alpha": 0.3}),
-        (3, 256, 3, True, "ReLU", {})
+    "kernel_size,filters,dilation_rate,use_bias,nonlinear_activation,nonlinear_activation_params,is_weight_norm", [
+        (3, 256, 1, True, "LeakyReLU", {"alpha": 0.3}, True),
+        (3, 256, 3, True, "ReLU", {}, False)
     ]
 )
 def test_residualblock(kernel_size,
@@ -59,13 +60,15 @@ def test_residualblock(kernel_size,
                        dilation_rate,
                        use_bias,
                        nonlinear_activation,
-                       nonlinear_activation_params):
+                       nonlinear_activation_params,
+                       is_weight_norm):
     fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
     residual_block = TFResidualStack(kernel_size=kernel_size,
                                      filters=filters,
                                      dilation_rate=dilation_rate,
                                      use_bias=use_bias,
                                      nonlinear_activation=nonlinear_activation,
-                                     nonlinear_activation_params=nonlinear_activation_params)
+                                     nonlinear_activation_params=nonlinear_activation_params,
+                                     is_weight_norm=is_weight_norm)
     out = residual_block(fake_input_1d)
     assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000, filters])

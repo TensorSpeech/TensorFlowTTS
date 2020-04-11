@@ -27,6 +27,8 @@ from tensorflow_tts.datasets import AudioMelSCPDataset
 from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
 
+import tensorflow_tts.configs.melgan as MELGAN_CONFIG
+
 
 class MelganTrainer(GanBasedTrainer):
     """Melgan Trainer class based on GanBasedTrainer."""
@@ -436,8 +438,8 @@ def main():
     if args.train_wav_scp is None or args.dev_wav_scp is None:
         if config["format"] == "hdf5":
             audio_query, mel_query = "*.h5", "*.h5"
-            audio_load_fn = lambda x: read_hdf5(x, "wave")
-            mel_load_fn = lambda x: read_hdf5(x, "feats")
+            def audio_load_fn(x): return read_hdf5(x, "wave")
+            def mel_load_fn(x): return read_hdf5(x, "feats")
         elif config["format"] == "npy":
             audio_query, mel_query = "*-wave.npy", "*-feats.npy"
             audio_load_fn = np.load
@@ -493,8 +495,9 @@ def main():
         )
 
     # define generator and discriminator
-    generator = TFMelGANGenerator(**config["generator_params"])
-    discriminator = TFMelGANMultiScaleDiscriminator(**config["discriminator_params"])
+    generator = TFMelGANGenerator(MELGAN_CONFIG.MelGANGeneratorConfig(), name='melgan_generator')
+    discriminator = TFMelGANMultiScaleDiscriminator(
+        MELGAN_CONFIG.MelGANDiscriminatorConfig(), name='melgan_discriminator')
 
     # define trainer
     trainer = MelganTrainer(config=config,
