@@ -1,27 +1,34 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
+#  MIT License (https://opensource.org/licenses/MIT)
+"""FastSpeech Config object."""
+
+
 class FastSpeechConfig(object):
     def __init__(
-        self,
-        vocab_size=11,
-        n_speakers=5,
-        hidden_size=128,
-        num_hidden_layers=2,
-        num_attention_heads=2,
-        intermediate_size=256,
-        num_duration_conv_layers=4,
-        duration_predictor_filters=128,
-        duration_predictor_kernel_sizes=3,
-        num_mels=80,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
-        duration_predictor_dropout_probs=0.1,
-        max_position_embeddings=11,
-        type_vocab_size=2,
-        initializer_range=0.02,
-        layer_norm_eps=1e-12,
-        output_attentions=False,
-        output_hidden_states=False,
-    ):
+            self,
+            vocab_size=11,
+            n_speakers=5,
+            hidden_size=128,
+            num_hidden_layers=2,
+            num_attention_heads=2,
+            intermediate_size=256,
+            num_duration_conv_layers=4,
+            duration_predictor_filters=128,
+            duration_predictor_kernel_sizes=3,
+            num_mels=80,
+            hidden_act="gelu",
+            hidden_dropout_prob=0.1,
+            attention_probs_dropout_prob=0.1,
+            duration_predictor_dropout_probs=0.1,
+            max_position_embeddings=11,
+            type_vocab_size=2,
+            initializer_range=0.02,
+            layer_norm_eps=1e-12,
+            output_attentions=False,
+            output_hidden_states=False,):
+        """Init parameters for Fastspeech model."""
 
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2020 MINH ANH (@dathudeptrai)
+#  MIT License (https://opensource.org/licenses/MIT)
+
+"""Tensorflow Model modules for FastSpeech."""
+
 import tensorflow as tf
 
 from tensorflow_tts.layers import TFFastSpeechEmbeddings
@@ -7,9 +14,10 @@ from tensorflow_tts.layers import TFFastSpeechLengthRegulator
 
 
 class TFFastSpeech(tf.keras.Model):
-    """TF Fastspeech module"""
+    """TF Fastspeech module."""
 
     def __init__(self, config, **kwargs):
+        """Init layers for fastspeech."""
         super().__init__(**kwargs)
         self.num_hidden_layers = config.num_hidden_layers
 

@@ -50,6 +50,7 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
     """Construct charactor/phoneme/positional/speaker embeddings."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.vocab_size = config.vocab_size
         self.hidden_size = config.hidden_size
@@ -121,6 +122,7 @@ class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
     """Self attention module for fastspeech."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError(
@@ -188,6 +190,7 @@ class TFFastSpeechSelfOutput(tf.keras.layers.Layer):
     """Fastspeech output of self attention module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
             config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
@@ -209,6 +212,7 @@ class TFFastSpeechAttention(tf.keras.layers.Layer):
     """Fastspeech attention module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.self_attention = TFFastSpeechSelfAttention(config, name="self")
         self.dense_output = TFFastSpeechSelfOutput(config, name="output")
@@ -229,6 +233,7 @@ class TFFastSpeechIntermediate(tf.keras.layers.Layer):
     """Intermediate representation module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
             config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
@@ -249,6 +254,7 @@ class TFFastSpeechOutput(tf.keras.layers.Layer):
     """Output module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.dense = tf.keras.layers.Dense(
             config.hidden_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
@@ -270,6 +276,7 @@ class TFFastSpeechLayer(tf.keras.layers.Layer):
     """Fastspeech module (FFT module on the paper)."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.attention = TFFastSpeechAttention(config, name="attention")
         self.intermediate = TFFastSpeechIntermediate(config, name="intermediate")
@@ -291,12 +298,14 @@ class TFFastSpeechEncoder(tf.keras.layers.Layer):
     """Fast Speech encoder module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.output_attentions = config.output_attentions
         self.output_hidden_states = config.output_hidden_states
         self.layer = [TFFastSpeechLayer(config, name="layer_._{}".format(i)) for i in range(config.num_hidden_layers)]
 
     def call(self, inputs, training=False):
+        """Call logic."""
         hidden_states, attention_mask = inputs
 
         all_hidden_states = ()
@@ -327,6 +336,7 @@ class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):
     """FastSpeech duration predictor module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
         self.output_layer = tf.keras.layers.Dense(1)
         self.relu6 = tf.keras.layers.Activation(tf.nn.relu6)
@@ -361,6 +371,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
     """FastSpeech lengthregulator module."""
 
     def __init__(self, config, **kwargs):
+        """Init variables."""
         super().__init__(**kwargs)
 
     def call(self, inputs, training=False):
@@ -383,7 +394,6 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
         batch_size = input_shape[0]
         hidden_size = input_shape[-1]
 
-        # TODO (@dathudeptrai), find better way to implement.
         # initialize output hidden states and encoder masking.
         outputs = tf.zeros(shape=[1, max_durations, hidden_size], dtype=tf.float32)
         encoder_masks = tf.zeros(shape=[1, max_durations], dtype=tf.float32)
