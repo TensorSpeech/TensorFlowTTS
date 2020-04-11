@@ -23,7 +23,8 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 # TODO(@dathudeptrai) update requirement if needed.
 requirements = {
     "install": [
-        "tensorflow-gpu>=2.1.0",
+        "tf-nightly",
+        "tensorflow-addons>=0.9.1",
         "setuptools>=38.5.1",
         "librosa>=0.7.0",
         "soundfile>=0.10.2",
@@ -86,4 +87,4 @@ setup(name="tensorflow_tts",
           "License :: OSI Approved :: MIT License",
           "Topic :: Software Development :: Libraries :: Python Modules"
       ],
-)
+      )

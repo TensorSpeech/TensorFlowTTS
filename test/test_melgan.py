@@ -12,6 +12,9 @@ import tensorflow as tf
 from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
 
+from tensorflow_tts.configs import MelGANGeneratorConfig
+from tensorflow_tts.configs import MelGANDiscriminatorConfig
+
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 logging.basicConfig(
@@ -74,13 +77,16 @@ def test_melgan_trainable(dict_g, dict_d, dict_loss):
     args_g = make_melgan_generator_args(**dict_g)
     args_d = make_melgan_discriminator_args(**dict_d)
 
+    args_g = MelGANGeneratorConfig(**args_g)
+    args_d = MelGANDiscriminatorConfig(**args_d)
+
     mels_spec = tf.random.uniform(shape=[batch_size, 4096 // 256, 80],
                                   dtype=tf.float32)
     y = tf.random.uniform(shape=[batch_size, batch_length, 1], minval=0, maxval=1,
                           dtype=tf.float32)
 
-    generator = TFMelGANGenerator(**args_g)
-    discriminator = TFMelGANMultiScaleDiscriminator(**args_d)
+    generator = TFMelGANGenerator(args_g)
+    discriminator = TFMelGANMultiScaleDiscriminator(args_d)
 
     optimizer_g = tf.keras.optimizers.Adam(lr=0.0001)
     optimizer_d = tf.keras.optimizers.Adam(lr=0.00005)

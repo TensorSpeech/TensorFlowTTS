@@ -6,26 +6,23 @@
 """Tensorflow Layer modules for Melgan."""
 
 import tensorflow as tf
-
-from tensorflow.python.keras.layers import Layer
-from tensorflow.python.keras import layers as tflayers
+from tensorflow_tts.utils import WeightNormalization
 
 
-class TFReflectionPad1d(Layer):
+class TFReflectionPad1d(tf.keras.layers.Layer):
     """Tensorflow ReflectionPad1d module."""
 
-    def __init__(self, padding_size, padding_type="REFLECT"):
+    def __init__(self, padding_size, padding_type="REFLECT", **kwargs):
         """Initialize TFReflectionPad1d module.
 
         Args:
             padding_size (int)
             padding_type (str) ("CONSTANT", "REFLECT", or "SYMMETRIC". Default is "REFLECT")
         """
-        super(TFReflectionPad1d, self).__init__()
+        super().__init__(**kwargs)
         self.padding_size = padding_size
         self.padding_type = padding_type
 
-    @tf.function
     def call(self, x):
         """Calculate forward propagation.
         Args:
@@ -36,10 +33,10 @@ class TFReflectionPad1d(Layer):
         return tf.pad(x, [[0, 0], [self.padding_size, self.padding_size], [0, 0]], self.padding_type)
 
 
-class TFConvTranspose1d(Layer):
+class TFConvTranspose1d(tf.keras.layers.Layer):
     """Tensorflow ConvTranspose1d module."""
 
-    def __init__(self, filters, kernel_size, strides, padding):
+    def __init__(self, filters, kernel_size, strides, padding, is_weight_norm, **kwargs):
         """Initialize TFConvTranspose1d( module.
         Args:
             filters (int): Number of filters.
@@ -47,15 +44,16 @@ class TFConvTranspose1d(Layer):
             strides (int): Stride width.
             padding (str): Padding type ("same" or "valid").
         """
-        super(TFConvTranspose1d, self).__init__()
-        self.conv1d_transpose = tflayers.Conv2DTranspose(
+        super().__init__(**kwargs)
+        self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
             filters=filters,
-            kernel_size=(kernel_size, 1),
-            strides=(strides, 1),
+            kernel_size=kernel_size,
+            strides=strides,
             padding=padding
         )
+        if is_weight_norm:
+            self.conv1d_transpose = WeightNormalization(self.conv1d_transpose)
 
-    @tf.function
     def call(self, x):
         """Calculate forward propagation.
         Args:
@@ -63,13 +61,11 @@ class TFConvTranspose1d(Layer):
         Returns:
             Tensor: Output tensor (B, T', C').
         """
-        x = tf.expand_dims(x, 2)
         x = self.conv1d_transpose(x)
-        x = tf.squeeze(x, 2)
         return x
 
 
-class TFResidualStack(Layer):
+class TFResidualStack(tf.keras.layers.Layer):
     """Tensorflow ResidualStack module."""
 
     def __init__(self,
@@ -78,7 +74,9 @@ class TFResidualStack(Layer):
                  dilation_rate,
                  use_bias,
                  nonlinear_activation,
-                 nonlinear_activation_params):
+                 nonlinear_activation_params,
+                 is_weight_norm,
+                 **kwargs):
         """Initialize TFResidualStack module.
         Args:
             kernel_size (int): Kernel size.
@@ -88,22 +86,26 @@ class TFResidualStack(Layer):
             nonlinear_activation (str): Activation function module name.
             nonlinear_activation_params (dict): Hyperparameters for activation function.
         """
-        super(TFResidualStack, self).__init__()
+        super().__init__(**kwargs)
         self.blocks = [
-            getattr(tflayers, nonlinear_activation)(**nonlinear_activation_params),
-            tflayers.Conv1D(
+            getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params),
+            tf.keras.layers.Conv1D(
                 filters=filters,
                 kernel_size=kernel_size,
                 dilation_rate=dilation_rate,
                 use_bias=use_bias,
                 padding='same'
             ),
-            getattr(tflayers, nonlinear_activation)(**nonlinear_activation_params),
-            tflayers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias)
+            getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params),
+            tf.keras.layers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias)
         ]
-        self.shortcut = tflayers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias)
+        self.shortcut = tf.keras.layers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias, name='shortcut')
 
-    @tf.function
+        # apply weightnorm
+        if is_weight_norm:
+            self._apply_weightnorm(self.blocks)
+            self.shortcut = WeightNormalization(self.shortcut)
+
     def call(self, x):
         """Calculate forward propagation.
         Args:
@@ -116,3 +118,13 @@ class TFResidualStack(Layer):
             _x = layer(_x)
         shortcut = self.shortcut(x)
         return shortcut + _x
+
+    def _apply_weightnorm(self, list_layers):
+        """Try apply weightnorm for all layer in list_layers"""
+        for i in range(len(list_layers)):
+            try:
+                layer_name = list_layers[i].__name__.lower()
+                if "conv" in layer_name or "dense" in layer_name:
+                    list_layers[i] = WeightNormalization(list_layers[i])
+            except Exception:
+                pass
