@@ -1,3 +1,8 @@
 from tensorflow_tts.layers.melgan import TFReflectionPad1d
 from tensorflow_tts.layers.melgan import TFConvTranspose1d
 from tensorflow_tts.layers.melgan import TFResidualStack
+
+from tensorflow_tts.layers.fastspeech import TFFastSpeechEmbeddings
+from tensorflow_tts.layers.fastspeech import TFFastSpeechEncoder
+from tensorflow_tts.layers.fastspeech import TFFastSpeechDurationPredictor
+from tensorflow_tts.layers.fastspeech import TFFastSpeechLengthRegulator

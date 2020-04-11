@@ -1,0 +1,1 @@
+from tensorflow_tts.configs.fastspeech import FastSpeechConfig
