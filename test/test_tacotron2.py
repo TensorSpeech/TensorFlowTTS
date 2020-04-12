@@ -44,7 +44,7 @@ def test_tacotron2_trainable(n_speakers):
 
     optimizer = tf.keras.optimizers.Adam(lr=0.001)
 
-    # check inference
+    # @tf.function
     def one_step_training():
         with tf.GradientTape() as tape:
             mel_preds, \
@@ -64,5 +64,9 @@ def test_tacotron2_trainable(n_speakers):
 
         tf.print(loss_before)
 
-    for _ in range(5):
+    import time
+    for i in range(10):
+        if i == 1:
+            start = time.time()
         one_step_training()
+    print(time.time() - start)

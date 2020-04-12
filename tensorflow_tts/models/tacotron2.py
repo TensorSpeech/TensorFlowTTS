@@ -41,10 +41,10 @@ class TFTacotron2(tf.keras.Model):
         input_mask = tf.cast(tf.sequence_mask(input_lengths, maxlen=max_length), tf.float32)  # [batch_size, max_length]
         encoder_hidden_states = self.encoder([input_ids, speaker_ids, input_mask], training=training)
 
-        batch_size, max_length_encoder = tf.shape(encoder_hidden_states)[0:2]
+        batch_size, max_length_encoder = tf.keras.backend.int_shape(encoder_hidden_states)[0:2]
 
         # decoder
-        max_decoder_steps = tf.reduce_max(mel_lengths)
+        max_decoder_steps = max(mel_lengths)
         time_first_mels_outputs = tf.transpose(mel_outputs, perm=[1, 0, 2])  # [max_len, batch_size, dim]
 
         frame_predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
@@ -54,7 +54,7 @@ class TFTacotron2(tf.keras.Model):
             alignment_size=max_length_encoder
         )
 
-        for i in tf.range(max_decoder_steps):
+        for i in range(max_decoder_steps):
             decoder_inputs = TFTacotronDecoderInput(
                 time_first_mels_outputs[i],
                 encoder_hidden_states,
