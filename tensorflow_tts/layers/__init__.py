@@ -6,3 +6,12 @@ from tensorflow_tts.layers.fastspeech import TFFastSpeechEmbeddings
 from tensorflow_tts.layers.fastspeech import TFFastSpeechEncoder
 from tensorflow_tts.layers.fastspeech import TFFastSpeechDurationPredictor
 from tensorflow_tts.layers.fastspeech import TFFastSpeechLengthRegulator
+
+from tensorflow_tts.layers.tacotron2 import TFTacotronEmbeddings
+from tensorflow_tts.layers.tacotron2 import TFTacotronConvBatchNorm
+from tensorflow_tts.layers.tacotron2 import TFTacotronEncoder
+from tensorflow_tts.layers.tacotron2 import TFTacotronLocationSensitiveAttention
+from tensorflow_tts.layers.tacotron2 import TFTacotronDecoderCell
+from tensorflow_tts.layers.tacotron2 import TFTacotronDecoderInput
+from tensorflow_tts.layers.tacotron2 import TFTacotronPrenet
+from tensorflow_tts.layers.tacotron2 import TFTacotronPostnet

@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2020 Minh Nguyen Quan Anh
+#  MIT License (https://opensource.org/licenses/MIT)
+
 import logging
 import os
 import pytest

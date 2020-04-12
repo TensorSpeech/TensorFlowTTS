@@ -28,13 +28,12 @@ class TFFastSpeech(tf.keras.Model):
         self.decoder = TFFastSpeechEncoder(config, name='decoder')
         self.mels_dense = tf.keras.layers.Dense(units=config.num_mels)
 
-    def call(
-            self,
-            input_ids,
-            attention_mask,
-            speaker_ids,
-            duration_gts,
-            training=False):
+    def call(self,
+             input_ids,
+             attention_mask,
+             speaker_ids,
+             duration_gts,
+             training=False):
         """Call logic."""
         # extended_attention_masks for self attention encoder.
         extended_attention_mask = attention_mask[:, tf.newaxis, tf.newaxis, :]
