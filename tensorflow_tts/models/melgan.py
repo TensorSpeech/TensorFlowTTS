@@ -103,7 +103,7 @@ class TFMelGANGenerator(tf.keras.Model):
         return self.melgan(c)
 
     def _apply_weightnorm(self, list_layers):
-        """Try apply weightnorm for all layer in list_layers"""
+        """Try apply weightnorm for all layer in list_layers."""
         for i in range(len(list_layers)):
             try:
                 layer_name = list_layers[i].__name__.lower()
@@ -211,7 +211,7 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
         return outs
 
     def _apply_weightnorm(self, list_layers):
-        """Try apply weightnorm for all layer in list_layers"""
+        """Try apply weightnorm for all layer in list_layers."""
         for i in range(len(list_layers)):
             try:
                 layer_name = list_layers[i].__name__.lower()

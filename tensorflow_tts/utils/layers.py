@@ -3,17 +3,19 @@
 # Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
 
+"""Utils layer Modules."""
+
 import tensorflow as tf
 from tensorflow_addons.layers import WeightNormalization as WeightNormalizationOriginal
 
 
 class WeightNormalization(WeightNormalizationOriginal):
-    """This class is modified from tensorlow_addons.layers.WeightNormalization
+    """This class is modified from tensorlow_addons.layers.WeightNormalization.
     But also support for convolution transpose.
     """
 
     def build(self, input_shape):
-        """Build `Layer`"""
+        """Build `Layer`."""
         input_shape = tf.TensorShape(input_shape)
         self.input_spec = tf.keras.layers.InputSpec(shape=[None] + input_shape[1:])
 
@@ -72,7 +74,7 @@ class WeightNormalization(WeightNormalizationOriginal):
         self.built = True
 
     def call(self, inputs):
-        """Call `Layer`"""
+        """Call `Layer`."""
 
         def _do_nothing():
             return tf.identity(self.g)
