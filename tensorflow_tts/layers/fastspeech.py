@@ -372,6 +372,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
+        self.config = config
 
     def call(self, inputs, training=False):
         """Call logic.
@@ -440,7 +441,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
             [i, batch_size, outputs, encoder_masks, encoder_hidden_states, durations_gt, max_durations],
             shape_invariants=[i.get_shape(),
                               batch_size.get_shape(),
-                              tf.TensorShape([None, None, None]),
+                              tf.TensorShape([None, None, self.config.hidden_size]),
                               tf.TensorShape([None, None]),
                               encoder_hidden_states.get_shape(),
                               durations_gt.get_shape(),
