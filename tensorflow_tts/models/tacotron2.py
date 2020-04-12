@@ -20,6 +20,7 @@ class TFTacotron2(tf.keras.Model):
     """Tensorflow tacotron-2 model."""
 
     def __init__(self, config, training, **kwargs):
+        """Initalize tacotron-2 layers."""
         super().__init__(self, **kwargs)
         self.encoder = TFTacotronEncoder(config, name='encoder')
         self.decoder_cell = TFTacotronDecoderCell(config, training=training, name='decoder_cell')
