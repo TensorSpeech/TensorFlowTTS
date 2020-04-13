@@ -19,7 +19,8 @@ class Tacotron2Config(object):
             n_conv_encoder=3,
             encoder_conv_filters=512,
             encoder_conv_kernel_sizes=5,
-            encoder_activation='relu',
+            encoder_conv_activation='relu',
+            encoder_conv_dropout_rate=0.5,
             encoder_lstm_units=256,
             n_prenet_layers=2,
             prenet_units=256,
@@ -46,7 +47,8 @@ class Tacotron2Config(object):
         self.n_conv_encoder = n_conv_encoder
         self.encoder_conv_filters = encoder_conv_filters
         self.encoder_conv_kernel_sizes = encoder_conv_kernel_sizes
-        self.encoder_activation = encoder_activation
+        self.encoder_conv_activation = encoder_conv_activation
+        self.encoder_conv_dropout_rate = encoder_conv_dropout_rate
         self.encoder_lstm_units = encoder_lstm_units
 
         # decoder param

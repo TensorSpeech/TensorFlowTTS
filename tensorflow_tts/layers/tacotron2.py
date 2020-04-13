@@ -42,6 +42,8 @@ def swish(x):
 
 
 ACT2FN = {
+    "identity": tf.keras.layers.Activation('linear'),
+    "tanh": tf.keras.layers.Activation('tanh'),
     "gelu": tf.keras.layers.Activation(gelu),
     "relu": tf.keras.activations.relu,
     "swish": tf.keras.layers.Activation(swish),
@@ -49,6 +51,23 @@ ACT2FN = {
 }
 
 
+class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
+    """Tacotron-2 Convolutional Batchnorm module."""
+    def __init__(self, filters, kernel_size, dropout_rate, activation=None, name_idx=None):
+        super(TFTacotronConvBatchNorm, self).__init__()
+        self.conv1d = tf.keras.layers.Conv1D(filters, kernel_size, padding='same', name='conv_._'.format(name_idx))
+        self.norm = tf.keras.layers.BatchNormalization(axis=2, momentum=0.99, epsilon=1e-3, name='batch_norm_._{}'.format(name_idx))
+        self.dropout = tf.keras.layers.Dropout(rate=dropout_rate, name='dropout_._'.format(name_idx))
+        self.act = ACT2FN[activation]
+
+    def call(self, x):
+        o = self.conv1d(x)
+        o = self.norm(o)
+        o = self.act(o)
+        o = self.dropout(o)
+        return o
+
+    
 class TFTacotronEmbeddings(tf.keras.layers.Layer):
     """Construct character/phoneme/positional/speaker embeddings."""
 
@@ -108,31 +127,27 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         return embeddings
 
 
-class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
-    """Tacotron-2 Convolutional Batchnorm module."""
+class TFTacotronEncoderConvs(tf.keras.layers.Layer):
+    """Tacotron-2 Encoder Convolutional Batchnorm module."""
 
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
         self.conv_batch_norm = []
         for i in range(config.n_conv_encoder):
-            conv = tf.keras.layers.Conv1D(
+            conv = TFTacotronConvBatchNorm(
                 filters=config.encoder_conv_filters,
                 kernel_size=config.encoder_conv_kernel_sizes,
-                padding='same',
-                name='conv_._{}'.format(i)
-            )
-            batch_norm = tf.keras.layers.BatchNormalization(name='batch_norm_._{}'.format(i))
-            self.conv_batch_norm.append((conv, batch_norm))
-        self.activation = ACT2FN[config.encoder_activation]
+                activation=config.encoder_conv_activation,
+                dropout_rate=config.encoder_conv_dropout_rate,
+                name_idx=i)
+            self.conv_batch_norm.append(conv)
 
     def call(self, inputs, training=False):
         """Call logic."""
         outputs, mask = inputs
-        for conv, bn in self.conv_batch_norm:
+        for conv in self.conv_batch_norm:
             outputs = conv(outputs)
-            outputs = bn(outputs)
-            outputs = self.activation(outputs)
         return outputs * mask
 
 
@@ -143,7 +158,7 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
         """Init variables."""
         super().__init__(**kwargs)
         self.embeddings = TFTacotronEmbeddings(config, name='embeddings')
-        self.convbn = TFTacotronConvBatchNorm(config, name='conv_batch_norm')
+        self.convbn = TFTacotronEncoderConvs(config, name='conv_batch_norm')
         self.bilstm = tf.keras.layers.Bidirectional(
             tf.keras.layers.LSTM(units=config.encoder_lstm_units, return_sequences=True),
             name='bilstm'
@@ -285,25 +300,21 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.conv_batch_norm = []
         for i in range(config.n_conv_postnet):
-            conv = tf.keras.layers.Conv1D(
+            conv = TFTacotronConvBatchNorm(
                 filters=config.postnet_conv_filters,
                 kernel_size=config.postnet_conv_kernel_sizes,
-                padding='same',
-                name='conv_._{}'.format(i)
+                dropout_rate=config.postnet_dropout_rate,
+                activation='identity' if i+1 == config.n_conv_postnet else 'tanh', 
+                name_idx=i
             )
-            batch_norm = tf.keras.layers.BatchNormalization(name='batch_norm_._{}'.format(i))
-            self.conv_batch_norm.append((conv, batch_norm))
-        self.dropout = tf.keras.layers.Dropout(rate=config.postnet_dropout_rate, name='dropout')
-        self.activation = [tf.nn.tanh] * (config.n_conv_postnet - 1) + [tf.identity]
+            self.conv_batch_norm.append(conv)
 
     def call(self, inputs, training=False):
         """Call logic."""
         outputs, mask = inputs
         extended_mask = tf.expand_dims(mask, axis=2)
-        for i, (conv, bn) in enumerate(self.conv_batch_norm):
+        for i, conv in enumerate(self.conv_batch_norm):
             outputs = conv(outputs)
-            outputs = bn(outputs)
-            outputs = self.activation[i](outputs)
         return outputs * extended_mask
 
 
