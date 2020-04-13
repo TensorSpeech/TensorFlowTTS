@@ -50,7 +50,7 @@ ACT2FN = {
 
 
 class TFTacotronEmbeddings(tf.keras.layers.Layer):
-    """Construct charactor/phoneme/positional/speaker embeddings."""
+    """Construct character/phoneme/positional/speaker embeddings."""
 
     def __init__(self, config, **kwargs):
         """Init variables."""
@@ -69,9 +69,9 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(config.embedding_dropout_prob)
 
     def build(self, input_shape):
-        """Build shared charactor/phoneme embedding layers."""
-        with tf.name_scope("charactor_embeddings"):
-            self.charactor_embeddings = self.add_weight(
+        """Build shared character/phoneme embedding layers."""
+        with tf.name_scope("character_embeddings"):
+            self.character_embeddings = self.add_weight(
                 "weight",
                 shape=[self.vocab_size, self.embedding_hidden_size],
                 initializer=get_initializer(self.initializer_range),
@@ -79,10 +79,10 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, inputs, training=False):
-        """Get charactor embeddings of inputs.
+        """Get character embeddings of inputs.
 
         Args:
-            1. charactor, Tensor (int32) shape [batch_size, length].
+            1. character, Tensor (int32) shape [batch_size, length].
             2. speaker_id, Tensor (int32) shape [batch_size]
         Returns:
             Tensor (float32) shape [batch_size, length, embedding_size].
@@ -95,7 +95,7 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         input_ids, speaker_ids = inputs
 
         # create embeddings
-        inputs_embeds = tf.gather(self.charactor_embeddings, input_ids)
+        inputs_embeds = tf.gather(self.character_embeddings, input_ids)
         speaker_embeddings = self.speaker_embeddings(speaker_ids)
 
         # extended speaker embeddings
@@ -154,7 +154,7 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
         input_ids, speaker_ids, input_mask = inputs
 
         # create embedding and mask them since we sum
-        # speaker embedding to all charactor embedding.
+        # speaker embedding to all character embedding.
         extended_input_mask = tf.expand_dims(input_mask, -1)
         input_embeddings = self.embeddings([input_ids, speaker_ids], training=training)
         mask_embeddings = input_embeddings * extended_input_mask
