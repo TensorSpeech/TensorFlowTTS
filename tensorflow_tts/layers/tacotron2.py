@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 MINH ANH (@dathudeptrai)
+# Copyright 2020 MINH ANH (@dathudeptrai) - Eren Gölge (@erogol)
 #  MIT License (https://opensource.org/licenses/MIT)
 
 """Tensorflow Layer modules for Tacotron-2."""
