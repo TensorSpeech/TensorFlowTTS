@@ -233,12 +233,12 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
 
         # compute attention vector (aka context vector)
         extended_alignments = tf.expand_dims(alignments, axis=2)
-        attention = tf.reduce_sum(extended_alignments * memory, axis=1)  # [batch_size, attention_dim]
+        context = tf.reduce_sum(extended_alignments * memory, axis=1)  # [batch_size, attention_dim]
 
         # cumulative alignments
         cum_alignments = alignments + prev_alignments
 
-        return attention, alignments, cum_alignments
+        return context, alignments, cum_alignments
 
     def _location_sensitive_score(self, w_query, w_fil, w_keys):
         """Calculate location sensitive score."""
@@ -249,7 +249,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         """Get initial alignments."""
         return tf.zeros(shape=[batch_size, max_time], dtype=tf.float32)
 
-    def get_initial_attention(self, batch_size):
+    def get_initial_context(self, batch_size):
         """Get initial attention."""
         return tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
 
@@ -309,7 +309,7 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
 
 TFTacotronDecoderCellState = collections.namedtuple(
     'TFTacotronDecoderCellState',
-    ['cell_state', 'attention', 'time', 'alignments', 'alignment_history'])
+    ['cell_state', 'context', 'time', 'alignments', 'alignment_history'])
 
 
 TFTacotronDecoderInput = collections.namedtuple(
@@ -368,16 +368,16 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
     def get_initial_state(self, batch_size, alignment_size):
         """Get initial states."""
         initial_lstm_cell_statess = self.stacked_lstm.get_initial_state(None, batch_size, dtype=tf.float32)
-        initial_attention = self.attention_layer.get_initial_attention(batch_size)
+        initial_context = self.attention_layer.get_initial_context(batch_size)
         initial_alignments = self.attention_layer.get_initial_alignments(
             batch_size, alignment_size)
         initial_alignment_history = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         return TFTacotronDecoderCellState(
             cell_state=initial_lstm_cell_statess,
             time=tf.zeros([], dtype=tf.int32),
-            attention=initial_attention,
+            context=initial_context,
             alignments=initial_alignments,
-            alignment_history=initial_alignment_history
+            alignment_history=initial_alignment_history 
         )
 
     def call(self, inputs, states):
@@ -387,15 +387,15 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         # 1. apply prenet for decoder_input.
         prenet_out = self.prenet(decoder_input, training=self.training)  # [batch_size, dim]
 
-        # 2. concat prenet_out and prev attention vector
+        # 2. concat prenet_out and prev context vector
         # then use it as input of stacked lstm layer.
-        stacked_lstm_input = tf.concat([prenet_out, states.attention], axis=-1)
+        stacked_lstm_input = tf.concat([prenet_out, states.context], axis=-1)
         stacked_lstm_output, next_cell_state = self.stacked_lstm(stacked_lstm_input, states.cell_state)
 
-        # 3. compute attention, alignment and cumulative alignment.
+        # 3. compute context, alignment and cumulative alignment.
         prev_alignments = states.alignments
         prev_alignment_history = states.alignment_history
-        attention, alignments, cum_alignments = self.attention_layer(
+        context, alignments, cum_alignments = self.attention_layer(
             [stacked_lstm_output,
              encoder_output,
              prev_alignments,
@@ -404,7 +404,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         )
 
         # 4. compute frame feature and stop token.
-        projection_inputs = tf.concat([stacked_lstm_output, attention], axis=-1)
+        projection_inputs = tf.concat([stacked_lstm_output, context], axis=-1)
         decoder_outputs = self.frame_projection(projection_inputs)
         stop_tokens = self.stop_projection(projection_inputs)
 
@@ -415,7 +415,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         new_states = TFTacotronDecoderCellState(
             cell_state=next_cell_state,
             time=states.time + 1,
-            attention=attention,
+            context=context,
             alignments=cum_alignments,
             alignment_history=alignment_history
         )
