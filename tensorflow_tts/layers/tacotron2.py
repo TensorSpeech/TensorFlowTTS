@@ -178,7 +178,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         self.query_layer = tf.keras.layers.Dense(units=config.attention_dim,
                                                  use_bias=False,
                                                  name='query_layer')
-        self.memory_layer = tf.keras.layers.Dense(units=config.memory_units,
+        self.memory_layer = tf.keras.layers.Dense(units=config.attention_dim,
                                                   use_bias=False,
                                                   name='memory_layer')
         self.location_convolution = tf.keras.layers.Conv1D(
