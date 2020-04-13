@@ -22,6 +22,7 @@ class TFTacotron2(tf.keras.Model):
     def __init__(self, config, training, **kwargs):
         """Initalize tacotron-2 layers."""
         super().__init__(self, **kwargs)
+        self.n_mels = config.n_mels
         self.encoder = TFTacotronEncoder(config, name='encoder')
         self.decoder_cell = TFTacotronDecoderCell(config, training=training, name='decoder_cell')
         self.postnet = TFTacotronPostnet(config, name='post_net')
@@ -46,6 +47,10 @@ class TFTacotron2(tf.keras.Model):
 
         # decoder
         max_decoder_steps = tf.reduce_max(mel_lengths)
+
+        # insert the initial zero frame for decoding
+        zero_frame = tf.zeros([batch_size, 1, self.n_mels])
+        mel_outputs = tf.concat([zero_frame, mel_outputs], axis=1)
         time_first_mels_outputs = tf.transpose(mel_outputs, perm=[1, 0, 2])  # [max_len, batch_size, dim]
 
         frame_predictions = tf.TensorArray(tf.float32, size=max_decoder_steps)
