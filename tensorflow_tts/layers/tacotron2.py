@@ -206,6 +206,9 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
                 initializer="zeros",
             )
         super().build(input_shape)
+    
+    def setup_memory(self, memory):
+        self.values = self.memory_layer(memory)
 
     def call(self, inputs, training=False):
         """Call logic."""

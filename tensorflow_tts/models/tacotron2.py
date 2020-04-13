@@ -54,6 +54,8 @@ class TFTacotron2(tf.keras.Model):
             batch_size=batch_size,
             alignment_size=max_length_encoder
         )
+        
+        self.decoder_cell.attention_layer.setup_memory(encoder_hidden_states)
         num_step = tf.constant(0, dtype=tf.int32)
         for _ in tf.range(max_decoder_steps):
             decoder_inputs = TFTacotronDecoderInput(
