@@ -48,8 +48,8 @@ class TFTacotron2(tf.keras.Model):
         max_decoder_steps = tf.reduce_max(mel_lengths)
         time_first_mels_outputs = tf.transpose(mel_outputs, perm=[1, 0, 2])  # [max_len, batch_size, dim]
 
-        frame_predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
-        stop_predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
+        frame_predictions = tf.TensorArray(tf.float32, size=max_decoder_steps)
+        stop_predictions = tf.TensorArray(tf.float32, size=max_decoder_steps)
         state = self.decoder_cell.get_initial_state(
             batch_size=batch_size,
             alignment_size=max_length_encoder
