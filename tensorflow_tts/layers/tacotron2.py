@@ -230,7 +230,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
 
         # compute attention vector (aka context vector)
         extended_alignments = tf.expand_dims(alignments, axis=2)
-        attention = tf.reduce_sum(extended_alignments * values, axis=1)  # [batch_size, attention_dim]
+        attention = tf.reduce_sum(extended_alignments * memory, axis=1)  # [batch_size, attention_dim]
 
         # cumulative alignments
         cum_alignments = alignments + prev_alignments
@@ -248,7 +248,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
 
     def get_initial_attention(self, batch_size):
         """Get initial attention."""
-        return tf.zeros(shape=[batch_size, self.config.attention_dim], dtype=tf.float32)
+        return tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
 
 
 class TFTacotronPrenet(tf.keras.layers.Layer):
