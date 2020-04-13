@@ -25,7 +25,7 @@ class Tacotron2Config(object):
             prenet_units=256,
             prenet_activation='relu',
             prenet_dropout_rate=0.5,
-            n_lstm_decoder=2,
+            n_lstm_decoder=1,
             decoder_lstm_units=1024,
             attention_dim=128,
             memory_units=256,  # not neccessary
