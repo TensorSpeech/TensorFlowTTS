@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 Minh Nguyen Quan Anh
+# Copyright 2020 Minh Nguyen Quan Anh - Eren Gölge
 #  MIT License (https://opensource.org/licenses/MIT)
 
 import logging

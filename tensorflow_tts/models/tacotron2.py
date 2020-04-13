@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 Minh Nguyen (@dathudeptrai)
+# Copyright 2020 Minh Nguyen (@dathudeptrai) - Eren Gölge (@erogol)
 #  MIT License (https://opensource.org/licenses/MIT)
 
 """Tacotron-2 Modules."""
@@ -28,6 +28,7 @@ class TFTacotron2(tf.keras.Model):
         self.post_projection = tf.keras.layers.Dense(units=config.n_mels,
                                                      name='residual_projection')
 
+    # @tf.function
     def call(self,
              input_ids,
              speaker_ids,
