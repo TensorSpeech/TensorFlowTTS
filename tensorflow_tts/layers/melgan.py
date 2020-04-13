@@ -45,11 +45,11 @@ class TFConvTranspose1d(tf.keras.layers.Layer):
             padding (str): Padding type ("same" or "valid").
         """
         super().__init__(**kwargs)
-        self.conv1d_transpose = tf.keras.layers.Conv1DTranspose(
+        self.conv1d_transpose = tf.keras.layers.Conv2DTranspose(
             filters=filters,
-            kernel_size=kernel_size,
-            strides=strides,
-            padding=padding
+            kernel_size=(kernel_size, 1),
+            strides=(strides, 1),
+            padding="same"
         )
         if is_weight_norm:
             self.conv1d_transpose = WeightNormalization(self.conv1d_transpose)
@@ -61,7 +61,9 @@ class TFConvTranspose1d(tf.keras.layers.Layer):
         Returns:
             Tensor: Output tensor (B, T', C').
         """
+        x = tf.expand_dims(x, 2)
         x = self.conv1d_transpose(x)
+        x = tf.squeeze(x, 2)
         return x
 
 
@@ -89,12 +91,12 @@ class TFResidualStack(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.blocks = [
             getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params),
+            TFReflectionPad1d((kernel_size - 1) // 2 * dilation_rate),
             tf.keras.layers.Conv1D(
                 filters=filters,
                 kernel_size=kernel_size,
                 dilation_rate=dilation_rate,
                 use_bias=use_bias,
-                padding='same'
             ),
             getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params),
             tf.keras.layers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias)
