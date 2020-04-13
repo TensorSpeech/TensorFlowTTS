@@ -44,7 +44,7 @@ class TFTacotron2(tf.keras.Model):
         batch_size, max_length_encoder = tf.keras.backend.int_shape(encoder_hidden_states)[0:2]
 
         # decoder
-        max_decoder_steps = max(mel_lengths)
+        max_decoder_steps = tf.reduce_max(mel_lengths)
         time_first_mels_outputs = tf.transpose(mel_outputs, perm=[1, 0, 2])  # [max_len, batch_size, dim]
 
         frame_predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
@@ -53,17 +53,18 @@ class TFTacotron2(tf.keras.Model):
             batch_size=batch_size,
             alignment_size=max_length_encoder
         )
-
-        for i in range(max_decoder_steps):
+        num_step = tf.constant(0, dtype=tf.int32)
+        for _ in tf.range(max_decoder_steps):
             decoder_inputs = TFTacotronDecoderInput(
-                time_first_mels_outputs[i],
+                time_first_mels_outputs[num_step],
                 encoder_hidden_states,
                 input_mask
             )
             outputs, state = self.decoder_cell(decoder_inputs, state)
             frame_pred, stop_pred = outputs
-            frame_predictions = frame_predictions.write(i, frame_pred)
-            stop_predictions = stop_predictions.write(i, stop_pred)
+            frame_predictions = frame_predictions.write(num_step, frame_pred)
+            stop_predictions = stop_predictions.write(num_step, stop_pred)
+            num_step += 1
 
         mel_outputs = tf.transpose(frame_predictions.stack(), [1, 0, 2])
         stop_outputs = tf.transpose(stop_predictions.stack(), [1, 0, 2])
