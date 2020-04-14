@@ -55,13 +55,13 @@ discriminator_params:
 ###########################################################
 #               ADVERSARIAL LOSS SETTING                  #
 ###########################################################
-lambda_feat_match: 25.0
+lambda_feat_match: 10.0
 
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 16              # Batch size.
-batch_max_steps: 25600     # Length of each audio in batch. Make sure dividable by hop_size.
+batch_size: 2              # Batch size.
+batch_max_steps: 10000     # Length of each audio in batch. Make sure dividable by hop_size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
 
@@ -82,9 +82,9 @@ discriminator_optimizer_params:
 #                    INTERVAL SETTING                     #
 ###########################################################
 train_max_steps: 4000000                # Number of training steps.
-save_interval_steps: 2000               # Interval steps to save checkpoint.
+save_interval_steps: 5000               # Interval steps to save checkpoint.
 eval_interval_steps: 500               # Interval steps to evaluate the network.
-log_interval_steps: 100                 # Interval steps to record the training log.
+log_interval_steps: 200                # Interval steps to record the training log.
 
 ###########################################################
 #                     OTHER SETTING                       #

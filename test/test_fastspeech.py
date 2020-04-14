@@ -6,7 +6,6 @@
 import logging
 import os
 import pytest
-import numpy as np
 import tensorflow as tf
 
 from tensorflow_tts.models import TFFastSpeech
@@ -37,6 +36,7 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
 
     mel_gts = tf.random.uniform(shape=[1, 10, 80], dtype=tf.float32)
 
+    @tf.function
     def one_step_training():
         with tf.GradientTape() as tape:
             mel_outputs, duration_outputs = fastspeech(
@@ -47,5 +47,11 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
         gradients = tape.gradient(loss, fastspeech.trainable_variables)
         optimizer.apply_gradients(zip(gradients, fastspeech.trainable_variables))
 
-    for _ in range(10):
+        tf.print(loss)
+
+    import time
+    for i in range(100):
+        if i == 1:
+            start = time.time()
         one_step_training()
+    print(time.time() - start)

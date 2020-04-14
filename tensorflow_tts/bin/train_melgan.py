@@ -29,6 +29,9 @@ from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
 
 import tensorflow_tts.configs.melgan as MELGAN_CONFIG
 
+from tensorflow_tts.losses import melgan_relu_error
+from tensorflow_tts.losses import mae_error
+
 
 class MelganTrainer(GanBasedTrainer):
     """Melgan Trainer class based on GanBasedTrainer."""
@@ -54,10 +57,6 @@ class MelganTrainer(GanBasedTrainer):
                                             config,
                                             is_generator_mixed_precision,
                                             is_discriminator_mixed_precision)
-        # define loss
-        self.mse_loss = tf.keras.losses.MeanSquaredError()
-        self.mae_loss = tf.keras.losses.MeanAbsoluteError()
-
         # define metrics to aggregates data and use tf.summary logs them
         self.list_metrics_name = [
             "adversarial_loss",
@@ -70,6 +69,8 @@ class MelganTrainer(GanBasedTrainer):
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
         self.reset_states_eval()
+
+        self.config = config
 
     def init_train_eval_metrics(self, list_metrics_name):
         """Init train and eval metrics to save it to tensorboard."""
@@ -110,26 +111,23 @@ class MelganTrainer(GanBasedTrainer):
         with tf.GradientTape() as g_tape:
             y_hat = self.generator(mels)  # [B, T, 1]
             p_hat = self.discriminator(y_hat)
+            p = self.discriminator(tf.expand_dims(y, 2))
 
-            y, y_hat = tf.squeeze(y), tf.squeeze(y_hat)  # [B, T]
             adv_loss = 0.0
             for i in range(len(p_hat)):
-                adv_loss += tf.keras.losses.MeanSquaredError()(
-                    p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
-                )
-            adv_loss /= (i + 1)
+                adv_loss += melgan_relu_error(0.0, 1.0 * p_hat[i][-1])
 
-            p = self.discriminator(tf.expand_dims(y, 2))
             # define feature-matching loss
             fm_loss = 0.0
+            feat_weights = 4.0 / (len(self.config["discriminator_params"]["downsample_scales"]) + 1)
+            p_weights = 1.0 / self.config["discriminator_params"]["scales"]
+            wt = p_weights * feat_weights
+
             for i in range(len(p_hat)):
                 for j in range(len(p_hat[i]) - 1):
-                    fm_loss += self.mae_loss(
-                        p_hat[i][j], p[i][j]
-                    )
-            fm_loss /= (i + 1) * (j + 1)
-            adv_loss += self.config["lambda_feat_match"] * fm_loss
-            gen_loss = adv_loss
+                    fm_loss += wt * mae_error(p_hat[i][j], p[i][j])
+
+            gen_loss = adv_loss + self.config["lambda_feat_match"] * fm_loss
 
             if self.is_generator_mixed_precision:
                 scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
@@ -151,20 +149,15 @@ class MelganTrainer(GanBasedTrainer):
     def _one_step_discriminator(self, y, y_hat):
         """One step discriminator training."""
         with tf.GradientTape() as d_tape:
-            y, y_hat = tf.expand_dims(y, 2), tf.expand_dims(y_hat, 2)  # [B, T]
+            y = tf.expand_dims(y, 2)
             p = self.discriminator(y)
             p_hat = self.discriminator(y_hat)
             real_loss = 0.0
             fake_loss = 0.0
             for i in range(len(p)):
-                real_loss += self.mse_loss(
-                    p[i][-1], tf.ones_like(p[i][-1], dtype=tf.float32)
-                )
-                fake_loss += self.mse_loss(
-                    p_hat[i][-1], tf.zeros_like(p_hat[i][-1], dtype=tf.float32)
-                )
-            real_loss /= (i + 1)
-            fake_loss /= (i + 1)
+                real_loss += melgan_relu_error(1.0, p[i][-1])
+                fake_loss += melgan_relu_error(1.0, -p_hat[i][-1])
+
             dis_loss = real_loss + fake_loss
 
             if self.is_discriminator_mixed_precision:
@@ -191,9 +184,9 @@ class MelganTrainer(GanBasedTrainer):
             # eval one step
             self._eval_step(batch)
 
-            # save intermedia
-            if eval_steps_per_epoch == 1:
-                self.generate_and_save_intermediate_result(batch)
+            if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
+                # save intermedia
+                self.generate_and_save_intermediate_result(batch, eval_steps_per_epoch)
 
         logging.info(f"(Steps: {self.steps}) Finished evaluation "
                      f"({eval_steps_per_epoch} steps per epoch).")
@@ -214,22 +207,22 @@ class MelganTrainer(GanBasedTrainer):
         y, mels = batch  # [B, T], [B, T, 80]
 
         # Generator
-        y_hat = self.generator(mels)
+        y_hat = self.predict(mels)
         p_hat = self.discriminator(y_hat)
         adv_loss = 0.0
         for i in range(len(p_hat)):
-            adv_loss += self.mse_loss(
-                p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
-            )
-        adv_loss /= (i + 1)
+            adv_loss += melgan_relu_error(0.0, 1.0 * p_hat[i][-1])
 
         p = self.discriminator(tf.expand_dims(y, 2))
         fm_loss = 0.0
+        feat_weights = 4.0 / (len(self.config["discriminator_params"]["downsample_scales"]) + 1)
+        p_weights = 1.0 / self.config["discriminator_params"]["scales"]
+        wt = p_weights * feat_weights
+
         for i in range(len(p_hat)):
             for j in range(len(p_hat[i]) - 1):
-                fm_loss += self.mae_loss(p_hat[i][j], p[i][j])
+                fm_loss += wt * mae_error(p_hat[i][j], p[i][j])
 
-        fm_loss /= (i + 1) * (j + 1)
         gen_loss = adv_loss + self.config["lambda_feat_match"] * fm_loss
 
         # discriminator
@@ -237,14 +230,9 @@ class MelganTrainer(GanBasedTrainer):
         real_loss = 0.0
         fake_loss = 0.0
         for i in range(len(p)):
-            real_loss += self.mse_loss(
-                p[i][-1], tf.ones_like(p[i][-1], tf.float32)
-            )
-            fake_loss += self.mse_loss(
-                p_hat[i][-1], tf.zeros_like(p_hat[i][-1], tf.float32)
-            )
-        real_loss /= (i + 1)
-        fake_loss /= (i + 1)
+            real_loss += melgan_relu_error(1.0, p[i][-1])
+            fake_loss += melgan_relu_error(1.0, -p_hat[i][-1])
+
         dis_loss = real_loss + fake_loss
 
         # add to total eval loss
@@ -266,20 +254,25 @@ class MelganTrainer(GanBasedTrainer):
             # reset
             self.reset_states_train()
 
-    def generate_and_save_intermediate_result(self, batch):
+    @tf.function(experimental_relax_shapes=True)
+    def predict(self, batch):
+        """Predict."""
+        return self.generator(batch)
+
+    def generate_and_save_intermediate_result(self, batch, idx):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
         # generate
         y_batch, x_batch = batch
-        y_batch_ = self.generator(x_batch)
+        y_batch_ = self.predict(x_batch)
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for idx, (y, y_) in enumerate(zip(y_batch, y_batch_), 1):
+        for _, (y, y_) in enumerate(zip(y_batch, y_batch_), 1):
             # convert to ndarray
             y, y_ = tf.reshape(y, [-1]).numpy(), tf.reshape(y_, [-1]).numpy()
 
@@ -303,16 +296,15 @@ class MelganTrainer(GanBasedTrainer):
             sf.write(figname.replace(".png", "_gen.wav"), y_,
                      self.config["sampling_rate"], "PCM_16")
 
-            if idx >= self.config["num_save_intermediate_results"]:
-                break
-
     def _check_train_finish(self):
         """Check training finished."""
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
 
 
-def collater(audio, mel, batch_max_steps=25600, hop_size=256):
+def collater(audio, mel,
+             batch_max_steps=tf.constant(25600, dtype=tf.int32),
+             hop_size=tf.constant(256, dtype=tf.int32)):
     """Initialize collater (mapping function) for Tensorflow Audio-Mel Dataset.
 
     Args:
@@ -320,6 +312,8 @@ def collater(audio, mel, batch_max_steps=25600, hop_size=256):
         hop_size (int): Hop size of auxiliary features.
 
     """
+    if batch_max_steps is None:
+        batch_max_steps = (tf.shape(audio)[0] // hop_size) * hop_size
     batch_max_frames = batch_max_steps // hop_size
     if len(audio) < len(mel) * hop_size:
         audio = tf.pad(audio, [[0, len(mel) * hop_size - len(audio)]])
@@ -479,9 +473,9 @@ def main():
             mel_load_fn=mel_load_fn,
             mel_length_threshold=mel_length_threshold,
             shuffle_buffer_size=64,
-            map_fn=collater,
+            map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
             allow_cache=config["allow_cache"],
-            batch_size=config["batch_size"]
+            batch_size=1
         )
     else:
         dev_dataset = AudioMelSCPDataset(
@@ -489,9 +483,9 @@ def main():
             feats_scp=args.dev_feats_scp,
             segments=args.dev_segments,
             mel_length_threshold=mel_length_threshold,
-            map_fn=collater,
+            map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
             allow_cache=config["allow_cache"],
-            batch_size=config["batch_size"]
+            batch_size=1
         )
 
     # define generator and discriminator

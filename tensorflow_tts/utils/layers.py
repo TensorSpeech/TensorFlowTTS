@@ -15,9 +15,11 @@ class WeightNormalization(WeightNormalizationOriginal):
     """
 
     def build(self, input_shape):
-        """Build `Layer`."""
-        input_shape = tf.TensorShape(input_shape)
-        self.input_spec = tf.keras.layers.InputSpec(shape=[None] + input_shape[1:])
+        """Build `Layer`"""
+        #input_shape = tf.TensorShape(input_shape)
+        #self.input_spec = tf.keras.layers.InputSpec(shape=[None] + input_shape[1:])
+
+        # remove 2 lines above to run weight-norm on tf.function with dynamic shape
 
         if not self.layer.built:
             self.layer.build(input_shape)
@@ -36,8 +38,8 @@ class WeightNormalization(WeightNormalizationOriginal):
             kernel = kernel_layer.kernel
 
         # The kernel's filter or unit dimension is -1, if conv_traspose it's -2
-        if "conv1d_transpose" in self.layer.name:
-            self.layer_depth = int(kernel.shape[1])
+        if "_transpose" in self.layer.name:
+            self.layer_depth = int(kernel.shape[-2])
             self.kernel_norm_axes = list(range(kernel.shape.rank - 1))
         else:
             self.layer_depth = int(kernel.shape[-1])
@@ -88,9 +90,9 @@ class WeightNormalization(WeightNormalizationOriginal):
 
         with tf.name_scope("compute_weights"):
             # Replace kernel by normalized weight variable.
-            if "conv1d_transpose" in self.layer.name:
-                kernel = tf.nn.l2_normalize(tf.transpose(self.v, [0, 2, 1]), axis=self.kernel_norm_axes) * g
-                kernel = tf.transpose(kernel, perm=[0, 2, 1])
+            if "_transpose" in self.layer.name:
+                kernel = tf.nn.l2_normalize(tf.transpose(self.v, [0, 1, 3, 2]), axis=self.kernel_norm_axes) * g
+                kernel = tf.transpose(kernel, perm=[0, 1, 3, 2])
             else:
                 kernel = tf.nn.l2_normalize(self.v, axis=self.kernel_norm_axes) * g
 
