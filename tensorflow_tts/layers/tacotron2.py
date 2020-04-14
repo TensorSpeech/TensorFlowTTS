@@ -238,7 +238,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         # calculate attention scores
         energy = self._location_sensitive_score(extended_preprocessed_query,
                                                 processed_location_features,
-                                                values)  # [batch_size, max_len]
+                                                self.values)  # [batch_size, max_len]
         # masking energy
         mask_energy = (1.0 - tf.cast(input_mask, tf.float32)) * -10000.0
         energy = energy + mask_energy  # [batch_size, max_len]
