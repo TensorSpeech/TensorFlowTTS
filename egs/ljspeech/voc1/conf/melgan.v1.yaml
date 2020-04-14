@@ -60,9 +60,9 @@ lambda_feat_match: 10.0
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 2              # Batch size.
-batch_max_steps: 10000     # Length of each audio in batch. Make sure dividable by hop_size.
-remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
+batch_size: 16              # Batch size.
+batch_max_steps: 16000     # Length of each audio in batch. Make sure dividable by hop_size.
+remove_short_samples: false # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
 
 ###########################################################
