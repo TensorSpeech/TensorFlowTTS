@@ -147,11 +147,6 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
             # one step training
             self._train_step(batch)
 
-            # update counts
-            self.steps += 1
-            self.tqdm.update(1)
-            self._check_train_finish()
-
             # check interval
             if self.config["rank"] == 0:
                 self._check_log_interval()
@@ -209,8 +204,3 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
             for key, value in list_metrics.items():
                 tf.summary.scalar(stage + "/" + key, value.result(), step=self.steps)
                 self.writer.flush()
-
-    @abc.abstractmethod
-    def _check_train_finish(self):
-        """Check training finished."""
-        pass
