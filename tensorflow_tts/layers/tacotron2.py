@@ -230,6 +230,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         query, memory, prev_alignments, input_mask = inputs
         processed_query = self.query_layer(query)
         extended_preprocessed_query = tf.expand_dims(processed_query, 1)  # [batch_size, 1, attention_dim]
+        # TODO: (@erogol) compute values if not precomputed
         # values = self.memory_layer(memory)  # [batch_size, max_len, attention_dim]
         extended_alignments = tf.expand_dims(prev_alignments, axis=2)  # [batch_size, max_len, 1]
         f_alignments = self.location_convolution(extended_alignments)
