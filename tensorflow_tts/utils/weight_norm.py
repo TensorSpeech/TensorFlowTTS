@@ -4,102 +4,161 @@
 #  MIT License (https://opensource.org/licenses/MIT)
 
 import tensorflow as tf
-from tensorflow_addons.layers import WeightNormalization as WeightNormalizationOriginal
+import warnings
 
+class WeightNormalization(tf.keras.layers.Wrapper):
+  """Layer wrapper to decouple magnitude and direction of the layer's weights.
+  This wrapper reparameterizes a layer by decoupling the weight's
+  magnitude and direction. This speeds up convergence by improving the
+  conditioning of the optimization problem. It has an optional data-dependent
+  initialization scheme, in which initial values of weights are set as functions
+  of the first minibatch of data. Both the weight normalization and data-
+  dependent initialization are described in [Salimans and Kingma (2016)][1].
+  #### Example
+  ```python
+    net = WeightNorm(tf.keras.layers.Conv2D(2, 2, activation='relu'),
+           input_shape=(32, 32, 3), data_init=True)(x)
+    net = WeightNorm(tf.keras.layers.Conv2DTranspose(16, 5, activation='relu'),
+                     data_init=True)
+    net = WeightNorm(tf.keras.layers.Dense(120, activation='relu'),
+                     data_init=True)(net)
+    net = WeightNorm(tf.keras.layers.Dense(num_classes),
+                     data_init=True)(net)
+  ```
+  #### References
+  [1]: Tim Salimans and Diederik P. Kingma. Weight Normalization: A Simple
+       Reparameterization to Accelerate Training of Deep Neural Networks. In
+       _30th Conference on Neural Information Processing Systems_, 2016.
+       https://arxiv.org/abs/1602.07868
+  """
 
-class WeightNormalization(WeightNormalizationOriginal):
-    """This class is modified from tensorlow_addons.layers.WeightNormalization
-    But also support for convolution transpose.
+  def __init__(self, layer, data_init=True, **kwargs):
+    """Initialize WeightNorm wrapper.
+    Args:
+      layer: A `tf.keras.layers.Layer` instance. Supported layer types are
+        `Dense`, `Conv2D`, and `Conv2DTranspose`. Layers with multiple inputs
+        are not supported.
+      data_init: `bool`, if `True` use data dependent variable initialization.
+      **kwargs: Additional keyword args passed to `tf.keras.layers.Wrapper`.
+    Raises:
+      ValueError: If `layer` is not a `tf.keras.layers.Layer` instance.
+    """
+    if not isinstance(layer, tf.keras.layers.Layer):
+      raise ValueError(
+          'Please initialize `WeightNorm` layer with a `tf.keras.layers.Layer` '
+          'instance. You passed: {input}'.format(input=layer))
+
+    layer_type = type(layer).__name__
+    if layer_type not in ['Dense', 'Conv2D', 'Conv2DTranspose', "Conv1D", "GroupConv1D"]:
+      warnings.warn('`WeightNorm` is tested only for `Dense`, `Conv2D`, and '
+                    '`Conv2DTranspose` layers. You passed a layer of type `{}`'
+                    .format(layer_type))
+
+    super(WeightNormalization, self).__init__(layer, **kwargs)
+
+    self.data_init = data_init
+    self._track_trackable(layer, name='layer')
+    self.filter_axis = -2 if layer_type == 'Conv2DTranspose' else -1
+
+  def _compute_weights(self):
+    """Generate weights with normalization."""
+    # Determine the axis along which to expand `g` so that `g` broadcasts to
+    # the shape of `v`.
+    new_axis = -self.filter_axis - 3
+
+    self.layer.kernel = tf.nn.l2_normalize(
+        self.v, axis=self.kernel_norm_axes) * tf.expand_dims(self.g, new_axis)
+
+  def _init_norm(self):
+    """Set the norm of the weight vector."""
+    kernel_norm = tf.sqrt(
+        tf.reduce_sum(tf.square(self.v), axis=self.kernel_norm_axes))
+    self.g.assign(kernel_norm)
+
+  def _data_dep_init(self, inputs):
+    """Data dependent initialization."""
+    # Normalize kernel first so that calling the layer calculates
+    # `tf.dot(v, x)/tf.norm(v)` as in (5) in ([Salimans and Kingma, 2016][1]).
+    self._compute_weights()
+
+    activation = self.layer.activation
+    self.layer.activation = None
+
+    use_bias = self.layer.bias is not None
+    if use_bias:
+      bias = self.layer.bias
+      self.layer.bias = tf.zeros_like(bias)
+
+    # Since the bias is initialized as zero, setting the activation to zero and
+    # calling the initialized layer (with normalized kernel) yields the correct
+    # computation ((5) in Salimans and Kingma (2016))
+    x_init = self.layer(inputs)
+    norm_axes_out = list(range(x_init.shape.rank - 1))
+    m_init, v_init = tf.nn.moments(x_init, norm_axes_out)
+    scale_init = 1. / tf.sqrt(v_init + 1e-10)
+
+    self.g.assign(self.g * scale_init)
+    if use_bias:
+      self.layer.bias = bias
+      self.layer.bias.assign(-m_init * scale_init)
+    self.layer.activation = activation
+
+  def build(self, input_shape=None):
+    """Build `Layer`.
+    Args:
+      input_shape: The shape of the input to `self.layer`.
+    Raises:
+      ValueError: If `Layer` does not contain a `kernel` of weights
     """
 
-    def build(self, input_shape):
-        """Build `Layer`"""
-        # input_shape = tf.TensorShape(input_shape)
-        # self.input_spec = tf.keras.layers.InputSpec(shape=[None] + input_shape[1:])
+    input_shape = tf.TensorShape(input_shape).as_list()
+    input_shape[0] = None
+    self.input_spec = tf.keras.layers.InputSpec(shape=input_shape)
 
-        # remove 2 lines above to run weight-norm on tf.function with dynamic shape
+    if not self.layer.built:
+      self.layer.build(input_shape)
 
-        if not self.layer.built:
-            self.layer.build(input_shape)
+      if not hasattr(self.layer, 'kernel'):
+        raise ValueError('`WeightNorm` must wrap a layer that'
+                         ' contains a `kernel` for weights')
 
-        kernel_layer = self.layer.cell if self.is_rnn else self.layer
+      self.kernel_norm_axes = list(range(self.layer.kernel.shape.ndims))
+      self.kernel_norm_axes.pop(self.filter_axis)
 
-        if not hasattr(kernel_layer, "kernel"):
-            raise ValueError(
-                "`WeightNormalization` must wrap a layer that"
-                " contains a `kernel` for weights"
-            )
+      self.v = self.layer.kernel
 
-        if self.is_rnn:
-            kernel = kernel_layer.recurrent_kernel
-        else:
-            kernel = kernel_layer.kernel
+      # to avoid a duplicate `kernel` variable after `build` is called
+      self.layer.kernel = None
+      self.g = self.add_weight(
+          name='g',
+          shape=(int(self.v.shape[self.filter_axis]),),
+          initializer='ones',
+          dtype=self.v.dtype,
+          trainable=True)
+      self.initialized = self.add_weight(
+          name='initialized',
+          dtype=tf.bool,
+          trainable=False)
+      self.initialized.assign(False)
 
-        # The kernel's filter or unit dimension is -1, if conv_traspose it's -2
-        if "_transpose" in self.layer.name:
-            self.layer_depth = int(kernel.shape[-2])
-            self.kernel_norm_axes = list(range(kernel.shape.rank - 1))
-        else:
-            self.layer_depth = int(kernel.shape[-1])
-            self.kernel_norm_axes = list(range(kernel.shape.rank - 1))
+    super().build()
 
-        self.g = self.add_weight(
-            name="g",
-            shape=(self.layer_depth,),
-            initializer="ones",
-            dtype=kernel.dtype,
-            trainable=True,
-        )
-        self.v = kernel
+  @tf.function
+  def call(self, inputs):
+    """Call `Layer`."""
+    if not self.initialized:
+      if self.data_init:
+        self._data_dep_init(inputs)
+      else:
+        # initialize `g` as the norm of the initialized kernel
+        self._init_norm()
 
-        self._initialized = self.add_weight(
-            name="initialized",
-            shape=None,
-            initializer="zeros",
-            dtype=tf.dtypes.bool,
-            trainable=False,
-        )
+      self.initialized.assign(True)
 
-        if self.data_init:
-            # Used for data initialization in self._data_dep_init.
-            with tf.name_scope("data_dep_init"):
-                self._naked_clone_layer = self.layer
-                self._naked_clone_layer.build(input_shape)
-                self._naked_clone_layer.set_weights(self.layer.get_weights())
-                if not self.is_rnn:
-                    self._naked_clone_layer.activation = None
+    self._compute_weights()
+    output = self.layer(inputs)
+    return output
 
-        self.built = True
-
-    def call(self, inputs):
-        """Call `Layer`"""
-
-        def _do_nothing():
-            return tf.identity(self.g)
-
-        def _update_weights():
-            # Ensure we read `self.g` after _update_weights.
-            with tf.control_dependencies(self._initialize_weights(inputs)):
-                return tf.identity(self.g)
-
-        g = tf.cond(self._initialized, _do_nothing, _update_weights)
-
-        with tf.name_scope("compute_weights"):
-            # Replace kernel by normalized weight variable.
-            if "_transpose" in self.layer.name:
-                kernel = tf.nn.l2_normalize(tf.transpose(self.v, [0, 1, 3, 2]), axis=self.kernel_norm_axes) * g
-                kernel = tf.transpose(kernel, perm=[0, 1, 3, 2])
-            else:
-                kernel = tf.nn.l2_normalize(self.v, axis=self.kernel_norm_axes) * g
-
-            if self.is_rnn:
-                self.layer.cell.recurrent_kernel = kernel
-                update_kernel = tf.identity(self.layer.cell.recurrent_kernel)
-            else:
-                self.layer.kernel = kernel
-                update_kernel = tf.identity(self.layer.kernel)
-
-            # Ensure we calculate result after updating kernel.
-            with tf.control_dependencies([update_kernel]):
-                outputs = self.layer(inputs)
-                return outputs
+  def compute_output_shape(self, input_shape):
+    return tf.TensorShape(
+        self.layer.compute_output_shape(input_shape).as_list())
