@@ -63,9 +63,7 @@ class WeightNormalization(WeightNormalizationOriginal):
         if self.data_init:
             # Used for data initialization in self._data_dep_init.
             with tf.name_scope("data_dep_init"):
-                layer_config = tf.keras.layers.serialize(self.layer)
-                layer_config["config"]["trainable"] = False
-                self._naked_clone_layer = tf.keras.layers.deserialize(layer_config)
+                self._naked_clone_layer = self.layer
                 self._naked_clone_layer.build(input_shape)
                 self._naked_clone_layer.set_weights(self.layer.get_weights())
                 if not self.is_rnn:

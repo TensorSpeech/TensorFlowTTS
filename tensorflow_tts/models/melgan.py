@@ -16,6 +16,7 @@ from tensorflow_tts.layers import TFConvTranspose1d
 from tensorflow_tts.layers import TFResidualStack
 
 from tensorflow_tts.utils import WeightNormalization
+from tensorflow_tts.utils import GroupConv1D
 
 
 class TFMelGANGenerator(tf.keras.Model):
@@ -106,8 +107,8 @@ class TFMelGANGenerator(tf.keras.Model):
         """Try apply weightnorm for all layer in list_layers"""
         for i in range(len(list_layers)):
             try:
-                layer_name = list_layers[i].__name__.lower()
-                if "conv" in layer_name or "dense" in layer_name:
+                layer_name = list_layers[i].name.lower()
+                if "conv1d" in layer_name or "dense" in layer_name:
                     list_layers[i] = WeightNormalization(list_layers[i])
             except Exception:
                 pass
@@ -151,22 +152,35 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
         assert kernel_sizes[1] % 2 == 1
 
         # add first layer
+        discriminator = [
+            TFReflectionPad1d((np.prod(kernel_sizes) - 1) // 2, padding_type=padding_type),
+            tf.keras.layers.Conv1D(
+                filters=filters,
+                kernel_size=int(np.prod(kernel_sizes)),
+                use_bias=use_bias
+            ),
+            getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params)
+        ]
+
+        # add downsample layers
         in_chs = filters
-        for downsample_scale in downsample_scales:
-            out_chs = min(in_chs * downsample_scale, max_downsample_filters)
-            discriminator += [
-                tf.keras.layers.Conv1D(
-                    filters=out_chs,
-                    kernel_size=downsample_scale * 10 + 1,
-                    strides=downsample_scale,
-                    padding='same',
-                    use_bias=use_bias,
-                )
-            ]
-            discriminator += [
-                getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params)
-            ]
-            in_chs = out_channels
+        with tf.keras.utils.CustomObjectScope({"GroupConv1D": GroupConv1D}):
+            for downsample_scale in downsample_scales:
+                out_chs = min(in_chs * downsample_scale, max_downsample_filters)
+                discriminator += [
+                    GroupConv1D(
+                        filters=out_chs,
+                        kernel_size=downsample_scale * 10 + 1,
+                        strides=downsample_scale,
+                        padding='same',
+                        use_bias=use_bias,
+                        groups=in_chs // 4
+                    )
+                ]
+                discriminator += [
+                    getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params)
+                ]
+                in_chs = out_chs
 
         # add final layers
         out_chs = min(in_chs * 2, max_downsample_filters)
@@ -214,8 +228,8 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
         """Try apply weightnorm for all layer in list_layers"""
         for i in range(len(list_layers)):
             try:
-                layer_name = list_layers[i].__name__.lower()
-                if "conv" in layer_name or "dense" in layer_name:
+                layer_name = list_layers[i].name.lower()
+                if "conv1d" in layer_name or "dense" in layer_name:
                     list_layers[i] = WeightNormalization(list_layers[i])
             except Exception:
                 pass

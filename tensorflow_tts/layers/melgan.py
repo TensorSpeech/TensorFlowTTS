@@ -125,8 +125,8 @@ class TFResidualStack(tf.keras.layers.Layer):
         """Try apply weightnorm for all layer in list_layers"""
         for i in range(len(list_layers)):
             try:
-                layer_name = list_layers[i].__name__.lower()
-                if "conv" in layer_name or "dense" in layer_name:
+                layer_name = list_layers[i].name.lower()
+                if "conv1d" in layer_name or "dense" in layer_name:
                     list_layers[i] = WeightNormalization(list_layers[i])
             except Exception:
                 pass
