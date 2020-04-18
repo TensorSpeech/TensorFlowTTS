@@ -14,8 +14,8 @@ class WeightNormalization(WeightNormalizationOriginal):
 
     def build(self, input_shape):
         """Build `Layer`"""
-        #input_shape = tf.TensorShape(input_shape)
-        #self.input_spec = tf.keras.layers.InputSpec(shape=[None] + input_shape[1:])
+        # input_shape = tf.TensorShape(input_shape)
+        # self.input_spec = tf.keras.layers.InputSpec(shape=[None] + input_shape[1:])
 
         # remove 2 lines above to run weight-norm on tf.function with dynamic shape
 

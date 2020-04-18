@@ -105,6 +105,9 @@ class AudioMelDataset(tf.data.Dataset):
             args=()
         )
 
+        if allow_cache:
+            audio_mel_datasets = audio_mel_datasets.cache()
+
         if shuffle_buffer_size != -1:
             audio_mel_datasets = audio_mel_datasets.shuffle(
                 shuffle_buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
@@ -116,8 +119,6 @@ class AudioMelDataset(tf.data.Dataset):
             audio_mel_datasets = audio_mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
 
         audio_mel_datasets = audio_mel_datasets.batch(batch_size)
-        if allow_cache:
-            audio_mel_datasets = audio_mel_datasets.cache()
         audio_mel_datasets = audio_mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return audio_mel_datasets
@@ -198,6 +199,9 @@ class AudioDataset(tf.data.Dataset):
             args=()
         )
 
+        if allow_cache:
+            audio_mel_datasets = audio_mel_datasets.cache()
+
         if shuffle_buffer_size != -1:
             audio_datasets = audio_datasets.shuffle(
                 shuffle_buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
@@ -209,8 +213,6 @@ class AudioDataset(tf.data.Dataset):
             audio_datasets = audio_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
 
         audio_datasets = audio_datasets.batch(batch_size)
-        if allow_cache:
-            audio_datasets = audio_datasets.cache()
         audio_datasets = audio_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return audio_datasets
@@ -289,6 +291,9 @@ class MelDataset(tf.data.Dataset):
             output_types=output_types,
             args=()
         )
+        
+        if allow_cache:
+            mel_datasets = mel_datasets.cache()
 
         if shuffle_buffer_size != -1:
             mel_datasets = mel_datasets.shuffle(shuffle_buffer_size)
@@ -300,8 +305,6 @@ class MelDataset(tf.data.Dataset):
             mel_datasets = mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
 
         mel_datasets = mel_datasets.batch(batch_size)
-        if allow_cache:
-            mel_datasets = mel_datasets.cache()
         mel_datasets = mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return mel_datasets
