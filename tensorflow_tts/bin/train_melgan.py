@@ -96,9 +96,7 @@ class MelganTrainer(GanBasedTrainer):
 
     def _train_step(self, batch):
         """Train model one step."""
-        y, mels = batch
-        y, y_hat = self._one_step_generator(y, mels)
-        self._one_step_discriminator(y, y_hat)
+        _one_step_generator_discriminator(batch)
 
         # update counts
         self.steps += 1
@@ -106,16 +104,40 @@ class MelganTrainer(GanBasedTrainer):
         self._check_train_finish()
 
     @tf.function(experimental_relax_shapes=True)
-    def _one_step_generator(self, y, mels):
-        """One step generator training."""
+    def _one_step_generator_discriminator(self, batch):
+        """Train model one step."""
+        y, mels = batch
         with tf.GradientTape() as g_tape:
-            y_hat = self.generator(mels)  # [B, T, 1]
+            with tf.GradientTape() as d_tape:
+                y_hat = self.generator(mels)  # [B, T, 1]
+                p = self.discriminator(tf.expand_dims(y, 2))
+                p_hat = self.discriminator(y_hat)
+
+                real_loss = 0.0
+                fake_loss = 0.0
+                for i in range(len(p)):
+                    real_loss += tf.reduce_mean(tf.nn.relu(1.0 - p[i][-1]))
+                    fake_loss += tf.reduce_mean(tf.nn.relu(1.0 + p_hat[i][-1]))
+
+                dis_loss = real_loss + fake_loss
+
+                if self.is_discriminator_mixed_precision:
+                    scaled_dis_loss = self.dis_optimizer.get_scaled_loss(dis_loss)
+
+            if self.is_discriminator_mixed_precision:
+                scaled_dis_gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
+                dis_gradients = self.dis_optimizer.get_unscaled_gradients(scaled_dis_gradients)
+            else:
+                dis_gradients = d_tape.gradient(dis_loss, self.discriminator.trainable_variables)
+
+            self.dis_optimizer.apply_gradients(zip(dis_gradients, self.discriminator.trainable_variables))
+
+            # train generator
             p_hat = self.discriminator(y_hat)
-            p = self.discriminator(tf.expand_dims(y, 2))
 
             adv_loss = 0.0
             for i in range(len(p_hat)):
-                adv_loss += melgan_relu_error(0.0, 1.0 * p_hat[i][-1])
+                adv_loss += -tf.reduce_mean(p_hat[i][-1])
 
             # define feature-matching loss
             fm_loss = 0.0
@@ -133,44 +155,18 @@ class MelganTrainer(GanBasedTrainer):
                 scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
 
         if self.is_generator_mixed_precision:
-            scaled_gradients = g_tape.gradient(scaled_gen_loss, self.generator.trainable_variables)
-            gradients = self.gen_optimizer.get_unscaled_gradients(scaled_gradients)
+            scaled_gen_gradients = g_tape.gradient(scaled_gen_loss, self.generator.trainable_variables)
+            gen_gradients = self.gen_optimizer.get_unscaled_gradients(scaled_gen_gradients)
         else:
-            gradients = g_tape.gradient(gen_loss, self.generator.trainable_variables)
-        self.gen_optimizer.apply_gradients(zip(gradients, self.generator.trainable_variables))
+            gen_gradients = g_tape.gradient(gen_loss, self.generator.trainable_variables)
 
-        # accumulate loss into metrics
+        self.gen_optimizer.apply_gradients(zip(gen_gradients, self.generator.trainable_variables))
+
+        # save tensorboard
         self.train_metrics["adversarial_loss"].update_state(adv_loss)
         self.train_metrics["fm_loss"].update_state(fm_loss)
         self.train_metrics["gen_loss"].update_state(gen_loss)
-        return y, y_hat
 
-    @tf.function(experimental_relax_shapes=True)
-    def _one_step_discriminator(self, y, y_hat):
-        """One step discriminator training."""
-        with tf.GradientTape() as d_tape:
-            y = tf.expand_dims(y, 2)
-            p = self.discriminator(y)
-            p_hat = self.discriminator(y_hat)
-            real_loss = 0.0
-            fake_loss = 0.0
-            for i in range(len(p)):
-                real_loss += melgan_relu_error(1.0, p[i][-1])
-                fake_loss += melgan_relu_error(1.0, -p_hat[i][-1])
-
-            dis_loss = real_loss + fake_loss
-
-            if self.is_discriminator_mixed_precision:
-                scaled_dis_loss = self.dis_optimizer.get_scaled_loss(dis_loss)
-
-        if self.is_discriminator_mixed_precision:
-            scaled_gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
-            gradients = self.dis_optimizer.get_unscaled_gradients(scaled_gradients)
-        else:
-            gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
-        self.dis_optimizer.apply_gradients(zip(gradients, self.discriminator.trainable_variables))
-
-        # accumulate loss into metrics
         self.train_metrics["real_loss"].update_state(real_loss)
         self.train_metrics["fake_loss"].update_state(fake_loss)
         self.train_metrics["dis_loss"].update_state(dis_loss)
@@ -207,11 +203,11 @@ class MelganTrainer(GanBasedTrainer):
         y, mels = batch  # [B, T], [B, T, 80]
 
         # Generator
-        y_hat = self.predict(mels)
+        y_hat = self.generator(mels)
         p_hat = self.discriminator(y_hat)
         adv_loss = 0.0
         for i in range(len(p_hat)):
-            adv_loss += melgan_relu_error(0.0, 1.0 * p_hat[i][-1])
+            adv_loss += -tf.reduce_mean(p_hat[i][-1])
 
         p = self.discriminator(tf.expand_dims(y, 2))
         fm_loss = 0.0
@@ -230,8 +226,8 @@ class MelganTrainer(GanBasedTrainer):
         real_loss = 0.0
         fake_loss = 0.0
         for i in range(len(p)):
-            real_loss += melgan_relu_error(1.0, p[i][-1])
-            fake_loss += melgan_relu_error(1.0, -p_hat[i][-1])
+            real_loss += tf.reduce_mean(tf.nn.relu(1.0 - p[i][-1]))
+            fake_loss += tf.reduce_mean(tf.nn.relu(1.0 + p_hat[i][-1]))
 
         dis_loss = real_loss + fake_loss
 
