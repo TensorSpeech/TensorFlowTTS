@@ -152,7 +152,7 @@ class TFResidualStack(tf.keras.layers.Layer):
         return shortcut + _x
 
     def _apply_weightnorm(self, list_layers):
-        """Try apply weightnorm for all layer in list_layers"""
+        """Try apply weightnorm for all layer in list_layers."""
         for i in range(len(list_layers)):
             try:
                 layer_name = list_layers[i].name.lower()
