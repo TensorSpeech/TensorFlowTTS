@@ -9,6 +9,19 @@ import tensorflow as tf
 from tensorflow_tts.utils import WeightNormalization
 
 
+def get_initializer(initializer_range=0.02):
+    """Creates a `tf.initializers.truncated_normal` with the given range.
+
+    Args:
+        initializer_range: float, initializer range for stddev.
+
+    Returns:
+        TruncatedNormal initializer with stddev = `initializer_range`.
+
+    """
+    return tf.keras.initializers.TruncatedNormal(stddev=initializer_range)
+
+
 class TFReflectionPad1d(tf.keras.layers.Layer):
     """Tensorflow ReflectionPad1d module."""
 
@@ -36,7 +49,14 @@ class TFReflectionPad1d(tf.keras.layers.Layer):
 class TFConvTranspose1d(tf.keras.layers.Layer):
     """Tensorflow ConvTranspose1d module."""
 
-    def __init__(self, filters, kernel_size, strides, padding, is_weight_norm, **kwargs):
+    def __init__(self,
+                 filters,
+                 kernel_size,
+                 strides,
+                 padding,
+                 is_weight_norm,
+                 initializer_range,
+                 **kwargs):
         """Initialize TFConvTranspose1d( module.
         Args:
             filters (int): Number of filters.
@@ -49,7 +69,8 @@ class TFConvTranspose1d(tf.keras.layers.Layer):
             filters=filters,
             kernel_size=(kernel_size, 1),
             strides=(strides, 1),
-            padding="same"
+            padding="same",
+            kernel_initializer=get_initializer(initializer_range)
         )
         if is_weight_norm:
             self.conv1d_transpose = WeightNormalization(self.conv1d_transpose)
@@ -78,6 +99,7 @@ class TFResidualStack(tf.keras.layers.Layer):
                  nonlinear_activation,
                  nonlinear_activation_params,
                  is_weight_norm,
+                 initializer_range,
                  **kwargs):
         """Initialize TFResidualStack module.
         Args:
@@ -97,11 +119,19 @@ class TFResidualStack(tf.keras.layers.Layer):
                 kernel_size=kernel_size,
                 dilation_rate=dilation_rate,
                 use_bias=use_bias,
+                kernel_initializer=get_initializer(initializer_range)
             ),
             getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params),
-            tf.keras.layers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias)
+            tf.keras.layers.Conv1D(filters=filters,
+                                   kernel_size=1,
+                                   use_bias=use_bias,
+                                   kernel_initializer=get_initializer(initializer_range))
         ]
-        self.shortcut = tf.keras.layers.Conv1D(filters=filters, kernel_size=1, use_bias=use_bias, name='shortcut')
+        self.shortcut = tf.keras.layers.Conv1D(filters=filters,
+                                               kernel_size=1,
+                                               use_bias=use_bias,
+                                               kernel_initializer=get_initializer(initializer_range),
+                                               name='shortcut')
 
         # apply weightnorm
         if is_weight_norm:

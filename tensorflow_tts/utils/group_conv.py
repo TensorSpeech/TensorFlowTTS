@@ -20,6 +20,8 @@ from tensorflow.python.ops import nn
 from tensorflow.python.ops import nn_ops
 from tensorflow.python.util.tf_export import keras_export
 
+from tensorflow.python.keras.layers import Conv1D, SeparableConv1D
+
 
 class Convolution(object):
     """Helper class for convolution.
@@ -108,20 +110,8 @@ class Convolution(object):
             strides=self.strides,
             name=self.name)
 
-    def __call__(self, inp, filter):  # pylint: disable=redefined-builtin
-        # TPU convolution supports dilations greater than 1.
-        if enclosing_tpu_context() is not None:
-            return convolution_internal(
-                inp,
-                filter,
-                strides=self.strides,
-                padding=self.padding,
-                data_format=self.data_format,
-                dilations=self.dilation_rate,
-                name=self.name,
-                call_from_convolution=False)
-        else:
-            return self.conv_op(inp, filter)
+    def __call__(self, inp, filter):
+        return self.conv_op(inp, filter)
 
 
 class Conv(Layer):

@@ -200,7 +200,7 @@ class AudioDataset(tf.data.Dataset):
         )
 
         if allow_cache:
-            audio_mel_datasets = audio_mel_datasets.cache()
+            audio_datasets = audio_datasets.cache()
 
         if shuffle_buffer_size != -1:
             audio_datasets = audio_datasets.shuffle(
@@ -291,7 +291,7 @@ class MelDataset(tf.data.Dataset):
             output_types=output_types,
             args=()
         )
-        
+
         if allow_cache:
             mel_datasets = mel_datasets.cache()
 

@@ -19,6 +19,19 @@ from tensorflow_tts.utils import WeightNormalization
 from tensorflow_tts.utils import GroupConv1D
 
 
+def get_initializer(initializer_range=0.02):
+    """Creates a `tf.initializers.truncated_normal` with the given range.
+
+    Args:
+        initializer_range: float, initializer range for stddev.
+
+    Returns:
+        TruncatedNormal initializer with stddev = `initializer_range`.
+
+    """
+    return tf.keras.initializers.TruncatedNormal(stddev=initializer_range)
+
+
 class TFMelGANGenerator(tf.keras.Model):
     """Tensorflow MelGAN generator module."""
 
@@ -42,7 +55,8 @@ class TFMelGANGenerator(tf.keras.Model):
                               name='first_reflect_padding'),
             tf.keras.layers.Conv1D(filters=config.filters,
                                    kernel_size=config.kernel_size,
-                                   use_bias=config.use_bias)
+                                   use_bias=config.use_bias,
+                                   kernel_initializer=get_initializer(config.initializer_range))
         ]
 
         for i, upsample_scale in enumerate(config.upsample_scales):
@@ -55,6 +69,7 @@ class TFMelGANGenerator(tf.keras.Model):
                     strides=upsample_scale,
                     padding='same',
                     is_weight_norm=config.is_weight_norm,
+                    initializer_range=config.initializer_range,
                     name='conv_transpose_._{}'.format(i)
                 )
             ]
@@ -70,6 +85,7 @@ class TFMelGANGenerator(tf.keras.Model):
                         nonlinear_activation=config.nonlinear_activation,
                         nonlinear_activation_params=config.nonlinear_activation_params,
                         is_weight_norm=config.is_weight_norm,
+                        initializer_range=config.initializer_range,
                         name='residual_stack_._{}._._{}'.format(i, j)
                     )
                 ]
@@ -81,7 +97,8 @@ class TFMelGANGenerator(tf.keras.Model):
                               name='last_reflect_padding'),
             tf.keras.layers.Conv1D(filters=config.out_channels,
                                    kernel_size=config.kernel_size,
-                                   use_bias=config.use_bias)
+                                   use_bias=config.use_bias,
+                                   kernel_initializer=get_initializer(config.initializer_range))
         ]
         if config.use_final_nolinear_activation:
             layers += [tf.keras.layers.Activation("tanh")]
@@ -127,7 +144,9 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
                  nonlinear_activation="LeakyReLU",
                  nonlinear_activation_params={"alpha": 0.2},
                  padding_type="REFLECT",
-                 is_weight_norm=True, **kwargs):
+                 is_weight_norm=True,
+                 initializer_range=0.02,
+                 **kwargs):
         """Initilize MelGAN discriminator module.
         Args:
             out_channels (int): Number of output channels.
@@ -157,7 +176,8 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
             tf.keras.layers.Conv1D(
                 filters=filters,
                 kernel_size=int(np.prod(kernel_sizes)),
-                use_bias=use_bias
+                use_bias=use_bias,
+                kernel_initializer=get_initializer(initializer_range)
             ),
             getattr(tf.keras.layers, nonlinear_activation)(**nonlinear_activation_params)
         ]
@@ -174,7 +194,8 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
                         strides=downsample_scale,
                         padding='same',
                         use_bias=use_bias,
-                        groups=in_chs // 4
+                        groups=in_chs // 4,
+                        kernel_initializer=get_initializer(initializer_range)
                     )
                 ]
                 discriminator += [
@@ -189,7 +210,8 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
                 filters=out_chs,
                 kernel_size=kernel_sizes[0],
                 padding='same',
-                use_bias=use_bias
+                use_bias=use_bias,
+                kernel_initializer=get_initializer(initializer_range)
             )
         ]
         discriminator += [
@@ -200,7 +222,8 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
                 filters=out_channels,
                 kernel_size=kernel_sizes[1],
                 padding='same',
-                use_bias=use_bias
+                use_bias=use_bias,
+                kernel_initializer=get_initializer(initializer_range)
             )
         ]
 
@@ -261,6 +284,7 @@ class TFMelGANMultiScaleDiscriminator(tf.keras.Model):
                     nonlinear_activation_params=config.nonlinear_activation_params,
                     padding_type=config.padding_type,
                     is_weight_norm=config.is_weight_norm,
+                    initializer_range=config.initializer_range,
                     name='melgan_discriminator_scale_._{}'.format(i)
                 )
             ]

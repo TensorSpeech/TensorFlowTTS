@@ -80,10 +80,5 @@ def test_melgan_trainable(dict_g, dict_d, dict_loss):
     args_g = MelGANGeneratorConfig(**args_g)
     args_d = MelGANDiscriminatorConfig(**args_d)
 
-    mels_spec = tf.random.uniform(shape=[batch_size, 4096 // 256, 80],
-                                  dtype=tf.float32)
-    y = tf.random.uniform(shape=[batch_size, batch_length, 1], minval=0, maxval=1,
-                          dtype=tf.float32)
-
     generator = TFMelGANGenerator(args_g)
     discriminator = TFMelGANMultiScaleDiscriminator(args_d)
