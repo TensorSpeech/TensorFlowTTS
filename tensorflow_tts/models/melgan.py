@@ -121,7 +121,7 @@ class TFMelGANGenerator(tf.keras.Model):
         return self.melgan(c)
 
     def _apply_weightnorm(self, list_layers):
-        """Try apply weightnorm for all layer in list_layers"""
+        """Try apply weightnorm for all layer in list_layers."""
         for i in range(len(list_layers)):
             try:
                 layer_name = list_layers[i].name.lower()
@@ -152,7 +152,7 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
             out_channels (int): Number of output channels.
             kernel_sizes (list): List of two kernel sizes. The prod will be used for the first conv layer,
                 and the first and the second kernel sizes will be used for the last two layers.
-                For example if kernel_sizes = [5, 3], the first layer kernel size will be 5 * 3 = 15,
+                For example if kernel_sizes = [5, 3], the first layer kernel size will be 5 * 3 = 15.
                 the last two layers' kernel size will be 5 and 3, respectively.
             filters (int): Initial number of filters for conv layer.
             max_downsample_filters (int): Maximum number of filters for downsampling layers.
@@ -248,7 +248,7 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
         return outs
 
     def _apply_weightnorm(self, list_layers):
-        """Try apply weightnorm for all layer in list_layers"""
+        """Try apply weightnorm for all layer in list_layers."""
         for i in range(len(list_layers)):
             try:
                 layer_name = list_layers[i].name.lower()

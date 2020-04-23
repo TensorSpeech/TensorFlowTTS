@@ -3,6 +3,8 @@
 # Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
 
+"""Weight Norm Modules."""
+
 import tensorflow as tf
 import warnings
 

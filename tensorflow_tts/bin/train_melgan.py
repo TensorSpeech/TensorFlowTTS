@@ -20,7 +20,8 @@ import tensorflow_tts
 from tqdm import tqdm
 
 from tensorflow_tts.trainers import GanBasedTrainer
-from tensorflow_tts.utils import read_hdf5, find_files
+from tensorflow_tts.utils import read_hdf5
+from tensorflow_tts.utils import find_files
 from tensorflow_tts.datasets import AudioMelDataset
 from tensorflow_tts.datasets import AudioMelSCPDataset
 

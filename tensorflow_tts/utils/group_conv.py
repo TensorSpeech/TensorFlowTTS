@@ -3,6 +3,8 @@
 # Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
 
+"""Group Convolution Modules."""
+
 from tensorflow.python.eager import context
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras import activations
@@ -20,7 +22,8 @@ from tensorflow.python.ops import nn
 from tensorflow.python.ops import nn_ops
 from tensorflow.python.util.tf_export import keras_export
 
-from tensorflow.python.keras.layers import Conv1D, SeparableConv1D
+from tensorflow.python.keras.layers import Conv1D
+from tensorflow.python.keras.layers import SeparableConv1D
 
 
 class Convolution(object):
