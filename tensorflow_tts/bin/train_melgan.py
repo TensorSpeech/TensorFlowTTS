@@ -475,7 +475,7 @@ def main():
             mel_query=mel_query,
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
-            mel_length_threshold=mel_length_threshold,            
+            mel_length_threshold=mel_length_threshold,
         ).create(
             is_shuffle=True,
             map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
@@ -500,7 +500,7 @@ def main():
             mel_query=mel_query,
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
-            mel_length_threshold=mel_length_threshold,            
+            mel_length_threshold=mel_length_threshold,
         ).create(
             is_shuffle=True,
             map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
