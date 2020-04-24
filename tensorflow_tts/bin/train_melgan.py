@@ -469,15 +469,15 @@ def main():
             raise ValueError("Only hdf5 and npy are supported.")
 
     if args.train_dumpdir is not None:
-        mel_files = sorted(find_files(args.train_dumpdir, mel_query))
         train_dataset = AudioMelDataset(
             root_dir=args.train_dumpdir,
             audio_query=audio_query,
             mel_query=mel_query,
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
-            mel_length_threshold=mel_length_threshold,
-            shuffle_buffer_size=len(mel_files),
+            mel_length_threshold=mel_length_threshold,            
+        ).create(
+            is_shuffle=True,
             map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
             allow_cache=config["allow_cache"],
             batch_size=config["batch_size"]
@@ -494,17 +494,17 @@ def main():
             batch_size=config["batch_size"]
         )
     if args.dev_dumpdir is not None:
-        mel_files = sorted(find_files(args.dev_dumpdir, mel_query))
         dev_dataset = AudioMelDataset(
             root_dir=args.dev_dumpdir,
             audio_query=audio_query,
             mel_query=mel_query,
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
-            mel_length_threshold=mel_length_threshold,
-            shuffle_buffer_size=len(mel_files),
+            mel_length_threshold=mel_length_threshold,            
+        ).create(
+            is_shuffle=True,
             map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
-            allow_cache=True,
+            allow_cache=config["allow_cache"],
             batch_size=1
         )
     else:

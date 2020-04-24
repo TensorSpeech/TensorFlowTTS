@@ -15,25 +15,22 @@ import tensorflow as tf
 from tensorflow_tts.utils import find_files
 from tensorflow_tts.utils import read_hdf5
 
+from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 
-class AudioMelDataset(tf.data.Dataset):
-    """Tensorflow compatible audio and mel dataset."""
 
-    def __new__(self,
-                root_dir,
-                audio_query="*.h5",
-                mel_query="*.h5",
-                audio_load_fn=lambda x: read_hdf5(x, "wave"),
-                mel_load_fn=lambda x: read_hdf5(x, "feats"),
-                audio_length_threshold=None,
-                mel_length_threshold=None,
-                return_utt_id=False,
-                allow_cache=False,
-                batch_size=1,
-                shuffle_buffer_size=64,
-                map_fn=None,
-                reshuffle_each_iteration=True
-                ):
+class AudioMelDataset(AbstractDataset):
+    """Tensorflow Audio Mel dataset."""
+
+    def __init__(self,
+                 root_dir,
+                 audio_query="*.h5",
+                 mel_query="*.h5",
+                 audio_load_fn=lambda x: read_hdf5(x, "wave"),
+                 mel_load_fn=lambda x: read_hdf5(x, "feats"),
+                 audio_length_threshold=None,
+                 mel_length_threshold=None,
+                 return_utt_id=False
+                 ):
         """Initialize dataset.
 
         Args:
@@ -79,83 +76,63 @@ class AudioMelDataset(tf.data.Dataset):
         else:
             utt_ids = [os.path.splitext(os.path.basename(f))[0] for f in audio_files]
 
-        def generator():
-            for i, utt_id in enumerate(utt_ids):
-                audio_file = audio_files[i]
-                mel_file = mel_files[i]
+        # set global params
+        self.utt_ids = utt_ids
+        self.audio_files = audio_files
+        self.mel_files = mel_files
+        self.audio_load_fn = audio_load_fn
+        self.mel_load_fn = mel_load_fn
+        self.return_utt_id = return_utt_id
 
-                # map function
-                audio = audio_load_fn(audio_file)  # [T]
-                mel = mel_load_fn(mel_file)
+    def get_args(self):
+        return [self.utt_ids]
 
-                if return_utt_id:
-                    items = utt_id, audio, mel
-                else:
-                    items = audio, mel
+    def generator(self, utt_ids):
+        for i, utt_id in enumerate(utt_ids):
+            audio_file = self.audio_files[i]
+            mel_file = self.mel_files[i]
+            audio = self.audio_load_fn(audio_file)  # [T]
+            mel = self.mel_load_fn(mel_file)
+            if self.return_utt_id:
+                items = utt_id, audio, mel
+            else:
+                items = audio, mel
+            yield items
 
-                yield items
-
+    def get_output_dtypes(self):
         output_types = (tf.float32, tf.float32)
-        if return_utt_id:
+        if self.return_utt_id:
             output_types = (tf.dtypes.string, *output_types)
+        return output_types
 
-        audio_mel_datasets = tf.data.Dataset.from_generator(
-            generator,
-            output_types=output_types,
-            args=()
-        )
-
-        if allow_cache:
-            audio_mel_datasets = audio_mel_datasets.cache()
-
-        if shuffle_buffer_size != -1:
-            audio_mel_datasets = audio_mel_datasets.shuffle(
-                shuffle_buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
-
-        if batch_size > 1 and map_fn is None:
-            raise ValueError("map function must define when batch_size > 1.")
-
-        if map_fn is not None:
-            audio_mel_datasets = audio_mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
-
-        audio_mel_datasets = audio_mel_datasets.batch(batch_size)
-        audio_mel_datasets = audio_mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return audio_mel_datasets
+    def get_len_dataset(self):
+        return len(self.utt_ids)
 
     def __name__(self):
-        return "Dataset"
+        return "AudioMelDataset"
 
 
-class AudioDataset(tf.data.Dataset):
+class AudioDataset(AbstractDataset):
     """Tensorflow compatible audio dataset."""
 
-    def __new__(self,
-                root_dir,
-                audio_query="*.h5",
-                audio_load_fn=lambda x: read_hdf5(x, "wave"),
-                audio_length_threshold=None,
-                return_utt_id=False,
-                allow_cache=False,
-                batch_size=1,
-                shuffle_buffer_size=64,
-                map_fn=None,
-                reshuffle_each_iteration=True,
-                ):
+    def __init__(self,
+                 root_dir,
+                 audio_query="*.h5",
+                 audio_load_fn=lambda x: read_hdf5(x, "wave"),
+                 audio_length_threshold=None,
+                 return_utt_id=False,
+                 ):
         """Initialize dataset.
 
         Args:
             root_dir (str): Root directory including dumped files.
             audio_query (str): Query to find audio files in root_dir.
-            mel_query (str): Query to find feature files in root_dir.
             audio_load_fn (func): Function to load audio file.
-            mel_load_fn (func): Function to load feature file.
             audio_length_threshold (int): Threshold to remove short audio files.
-            mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
 
         """
-        # find all of audio and mel files.
+        # find all of audio files.
         audio_files = sorted(find_files(root_dir, audio_query))
 
         # filter by threshold
@@ -175,80 +152,56 @@ class AudioDataset(tf.data.Dataset):
         else:
             utt_ids = [os.path.splitext(os.path.basename(f))[0] for f in audio_files]
 
-        def generator():
-            for i, utt_id in enumerate(utt_ids):
-                audio_file = audio_files[i]
+        # set global params
+        self.utt_ids = utt_ids
+        self.audio_files = audio_files
+        self.audio_load_fn = audio_load_fn
+        self.return_utt_id = return_utt_id
 
-                # map function
-                audio = audio_load_fn(audio_file)  # [T]
+    def get_args(self):
+        return [self.utt_ids]
 
-                if return_utt_id:
-                    items = utt_id, audio
-                else:
-                    items = audio
+    def generator(self, utt_ids):
+        for i, utt_id in enumerate(utt_ids):
+            audio_file = self.audio_files[i]
+            audio = self.audio_load_fn(audio_file)  # [T]
+            if self.return_utt_id:
+                items = utt_id, audio
+            else:
+                items = audio
+            yield items
 
-                yield items
-
+    def get_output_dtypes(self):
         output_types = (tf.float32)
-        if return_utt_id:
+        if self.return_utt_id:
             output_types = (tf.dtypes.string, *output_types)
-
-        audio_datasets = tf.data.Dataset.from_generator(
-            generator,
-            output_types=output_types,
-            args=()
-        )
-
-        if allow_cache:
-            audio_datasets = audio_datasets.cache()
-
-        if shuffle_buffer_size != -1:
-            audio_datasets = audio_datasets.shuffle(
-                shuffle_buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
-
-        if batch_size > 1 and map_fn is None:
-            raise ValueError("map function must define when batch_size > 1.")
-
-        if map_fn is not None:
-            audio_datasets = audio_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
-
-        audio_datasets = audio_datasets.batch(batch_size)
-        audio_datasets = audio_datasets.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return audio_datasets
+        return output_types
 
     def __name__(self):
-        return "Dataset"
+        return "AudioDataset"
 
 
-class MelDataset(tf.data.Dataset):
+class MelDataset(AbstractDataset):
     """Tensorflow compatible mel dataset."""
 
-    def __new__(self,
-                root_dir,
-                mel_query="*.h5",
-                mel_load_fn=lambda x: read_hdf5(x, "feats"),
-                mel_length_threshold=None,
-                return_utt_id=False,
-                allow_cache=False,
-                batch_size=1,
-                shuffle_buffer_size=64,
-                map_fn=None,
-                ):
+    def __init__(self,
+                 root_dir,
+                 mel_query="*.h5",
+                 mel_load_fn=lambda x: read_hdf5(x, "feats"),
+                 mel_length_threshold=None,
+                 return_utt_id=False
+                 ):
         """Initialize dataset.
 
         Args:
             root_dir (str): Root directory including dumped files.
-            audio_query (str): Query to find audio files in root_dir.
             mel_query (str): Query to find feature files in root_dir.
-            audio_load_fn (func): Function to load audio file.
             mel_load_fn (func): Function to load feature file.
-            audio_length_threshold (int): Threshold to remove short audio files.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
 
         """
-        # find all of audio and mel files.
+        # find all of mel files.
         mel_files = sorted(find_files(root_dir, mel_query))
 
         # filter by threshold
@@ -268,46 +221,30 @@ class MelDataset(tf.data.Dataset):
         else:
             utt_ids = [os.path.splitext(os.path.basename(f))[0] for f in mel_files]
 
-        def generator():
-            for i, utt_id in enumerate(utt_ids):
-                mel_file = mel_files[i]
+        # set global params
+        self.utt_ids = utt_ids
+        self.mel_files = mel_files
+        self.mel_load_fn = mel_load_fn
+        self.return_utt_id = return_utt_id
 
-                # map function
-                mel = mel_load_fn(mel_file)
+    def get_args(self):
+        return [self.utt_ids]
 
-                if return_utt_id:
-                    items = utt_id, mel
-                else:
-                    items = mel
+    def generator(self, utt_ids):
+        for i, utt_id in enumerate(utt_ids):
+            mel_file = self.mel_files[i]
+            mel = self.mel_load_fn(mel_file)
+            if self.return_utt_id:
+                items = utt_id, mel
+            else:
+                items = mel
+            yield items
 
-                yield items
-
+    def get_output_dtypes(self):
         output_types = (tf.float32)
-        if return_utt_id:
+        if self.return_utt_id:
             output_types = (tf.dtypes.string, *output_types)
-
-        mel_datasets = tf.data.Dataset.from_generator(
-            generator,
-            output_types=output_types,
-            args=()
-        )
-
-        if allow_cache:
-            mel_datasets = mel_datasets.cache()
-
-        if shuffle_buffer_size != -1:
-            mel_datasets = mel_datasets.shuffle(shuffle_buffer_size)
-
-        if batch_size > 1 and map_fn is None:
-            raise ValueError("map function must define when batch_size > 1.")
-
-        if map_fn is not None:
-            mel_datasets = mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
-
-        mel_datasets = mel_datasets.batch(batch_size)
-        mel_datasets = mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
-
-        return mel_datasets
+        return output_types
 
     def __name__(self):
-        return "Dataset"
+        return "MelDataset"
