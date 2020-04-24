@@ -21,6 +21,7 @@ from tqdm import tqdm
 
 from tensorflow_tts.trainers import GanBasedTrainer
 from tensorflow_tts.utils import read_hdf5
+from tensorflow_tts.utils import find_files
 from tensorflow_tts.datasets import AudioMelDataset
 from tensorflow_tts.datasets import AudioMelSCPDataset
 
@@ -28,9 +29,6 @@ from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
 
 import tensorflow_tts.configs.melgan as MELGAN_CONFIG
-
-from tensorflow_tts.losses import melgan_relu_error
-from tensorflow_tts.losses import mae_error
 
 
 class MelganTrainer(GanBasedTrainer):
@@ -57,6 +55,10 @@ class MelganTrainer(GanBasedTrainer):
                                             config,
                                             is_generator_mixed_precision,
                                             is_discriminator_mixed_precision)
+        # define loss
+        self.mse_loss = tf.keras.losses.MeanSquaredError()
+        self.mae_loss = tf.keras.losses.MeanAbsoluteError()
+
         # define metrics to aggregates data and use tf.summary logs them
         self.list_metrics_name = [
             "adversarial_loss",
@@ -105,29 +107,32 @@ class MelganTrainer(GanBasedTrainer):
         self.tqdm.update(1)
         self._check_train_finish()
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec([None, None]),
+                                  tf.TensorSpec([None, None, 80])])
     def _one_step_generator(self, y, mels):
         """One step generator training."""
         with tf.GradientTape() as g_tape:
             y_hat = self.generator(mels)  # [B, T, 1]
             p_hat = self.discriminator(y_hat)
-            p = self.discriminator(tf.expand_dims(y, 2))
-
             adv_loss = 0.0
             for i in range(len(p_hat)):
-                adv_loss += melgan_relu_error(0.0, 1.0 * p_hat[i][-1])
+                adv_loss += self.mse_loss(
+                    p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
+                )
+            adv_loss /= (i + 1)
 
+            p = self.discriminator(tf.expand_dims(y, 2))
             # define feature-matching loss
             fm_loss = 0.0
-            feat_weights = 4.0 / (len(self.config["discriminator_params"]["downsample_scales"]) + 1)
-            p_weights = 1.0 / self.config["discriminator_params"]["scales"]
-            wt = p_weights * feat_weights
-
             for i in range(len(p_hat)):
                 for j in range(len(p_hat[i]) - 1):
-                    fm_loss += wt * mae_error(p_hat[i][j], p[i][j])
-
-            gen_loss = adv_loss + self.config["lambda_feat_match"] * fm_loss
+                    fm_loss += self.mae_loss(
+                        p_hat[i][j], p[i][j]
+                    )
+            fm_loss /= (i + 1) * (j + 1)
+            adv_loss += self.config["lambda_feat_match"] * fm_loss
+            gen_loss = adv_loss
 
             if self.is_generator_mixed_precision:
                 scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
@@ -143,9 +148,14 @@ class MelganTrainer(GanBasedTrainer):
         self.train_metrics["adversarial_loss"].update_state(adv_loss)
         self.train_metrics["fm_loss"].update_state(fm_loss)
         self.train_metrics["gen_loss"].update_state(gen_loss)
+
+        # recompute y_hat after 1 step generator for discriminator training.
+        y_hat = self.generator(mels)
         return y, y_hat
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec([None, None]),
+                                  tf.TensorSpec([None, None, 1])])
     def _one_step_discriminator(self, y, y_hat):
         """One step discriminator training."""
         with tf.GradientTape() as d_tape:
@@ -155,9 +165,14 @@ class MelganTrainer(GanBasedTrainer):
             real_loss = 0.0
             fake_loss = 0.0
             for i in range(len(p)):
-                real_loss += melgan_relu_error(1.0, p[i][-1])
-                fake_loss += melgan_relu_error(1.0, -p_hat[i][-1])
-
+                real_loss += self.mse_loss(
+                    p[i][-1], tf.ones_like(p[i][-1], dtype=tf.float32)
+                )
+                fake_loss += self.mse_loss(
+                    p_hat[i][-1], tf.zeros_like(p_hat[i][-1], dtype=tf.float32)
+                )
+            real_loss /= (i + 1)
+            fake_loss /= (i + 1)
             dis_loss = real_loss + fake_loss
 
             if self.is_discriminator_mixed_precision:
@@ -167,7 +182,7 @@ class MelganTrainer(GanBasedTrainer):
             scaled_gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
             gradients = self.dis_optimizer.get_unscaled_gradients(scaled_gradients)
         else:
-            gradients = d_tape.gradient(scaled_dis_loss, self.discriminator.trainable_variables)
+            gradients = d_tape.gradient(dis_loss, self.discriminator.trainable_variables)
         self.dis_optimizer.apply_gradients(zip(gradients, self.discriminator.trainable_variables))
 
         # accumulate loss into metrics
@@ -201,28 +216,30 @@ class MelganTrainer(GanBasedTrainer):
         # reset
         self.reset_states_eval()
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[(tf.TensorSpec([None, None]),
+                                   tf.TensorSpec([None, None, 80]))])
     def _eval_step(self, batch):
         """Evaluate model on step."""
         y, mels = batch  # [B, T], [B, T, 80]
 
         # Generator
-        y_hat = self.predict(mels)
+        y_hat = self.generator(mels)
         p_hat = self.discriminator(y_hat)
         adv_loss = 0.0
         for i in range(len(p_hat)):
-            adv_loss += melgan_relu_error(0.0, 1.0 * p_hat[i][-1])
+            adv_loss += self.mse_loss(
+                p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
+            )
+        adv_loss /= (i + 1)
 
         p = self.discriminator(tf.expand_dims(y, 2))
         fm_loss = 0.0
-        feat_weights = 4.0 / (len(self.config["discriminator_params"]["downsample_scales"]) + 1)
-        p_weights = 1.0 / self.config["discriminator_params"]["scales"]
-        wt = p_weights * feat_weights
-
         for i in range(len(p_hat)):
             for j in range(len(p_hat[i]) - 1):
-                fm_loss += wt * mae_error(p_hat[i][j], p[i][j])
+                fm_loss += self.mae_loss(p_hat[i][j], p[i][j])
 
+        fm_loss /= (i + 1) * (j + 1)
         gen_loss = adv_loss + self.config["lambda_feat_match"] * fm_loss
 
         # discriminator
@@ -230,9 +247,14 @@ class MelganTrainer(GanBasedTrainer):
         real_loss = 0.0
         fake_loss = 0.0
         for i in range(len(p)):
-            real_loss += melgan_relu_error(1.0, p[i][-1])
-            fake_loss += melgan_relu_error(1.0, -p_hat[i][-1])
-
+            real_loss += self.mse_loss(
+                p[i][-1], tf.ones_like(p[i][-1], tf.float32)
+            )
+            fake_loss += self.mse_loss(
+                p_hat[i][-1], tf.zeros_like(p_hat[i][-1], tf.float32)
+            )
+        real_loss /= (i + 1)
+        fake_loss /= (i + 1)
         dis_loss = real_loss + fake_loss
 
         # add to total eval loss
@@ -254,10 +276,11 @@ class MelganTrainer(GanBasedTrainer):
             # reset
             self.reset_states_train()
 
-    @tf.function(experimental_relax_shapes=True)
-    def predict(self, batch):
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec([None, None, 80])])
+    def predict(self, mels):
         """Predict."""
-        return self.generator(batch)
+        return self.generator(mels)
 
     def generate_and_save_intermediate_result(self, batch, idx):
         """Generate and save intermediate result."""
@@ -303,7 +326,7 @@ class MelganTrainer(GanBasedTrainer):
 
 
 def collater(audio, mel,
-             batch_max_steps=tf.constant(25600, dtype=tf.int32),
+             batch_max_steps=tf.constant(8192, dtype=tf.int32),
              hop_size=tf.constant(256, dtype=tf.int32)):
     """Initialize collater (mapping function) for Tensorflow Audio-Mel Dataset.
 
@@ -314,6 +337,7 @@ def collater(audio, mel,
     """
     if batch_max_steps is None:
         batch_max_steps = (tf.shape(audio)[0] // hop_size) * hop_size
+
     batch_max_frames = batch_max_steps // hop_size
     if len(audio) < len(mel) * hop_size:
         audio = tf.pad(audio, [[0, len(mel) * hop_size - len(audio)]])
@@ -375,15 +399,18 @@ def main():
                         help="logging level. higher is more logging. (default=1)")
     parser.add_argument("--rank", "--local_rank", default=0, type=int,
                         help="rank for distributed training. no need to explictly specify.")
-    parser.add_argument("--generator_mixed_precision", default=False, type=bool,
+    parser.add_argument("--generator_mixed_precision", default=0, type=int,
                         help="using mixed precision for generator or not.")
-    parser.add_argument("--discriminator_mixed_precision", default=False, type=bool,
+    parser.add_argument("--discriminator_mixed_precision", default=0, type=int,
                         help="using mixed precision for discriminator or not.")
     args = parser.parse_args()
 
     # set mixed precision config
-    if args.generator_mixed_precision is True or args.discriminator_mixed_precision is True:
+    if args.generator_mixed_precision == 1 or args.discriminator_mixed_precision == 1:
         tf.config.optimizer.set_experimental_options({"auto_mixed_precision": True})
+
+    args.generator_mixed_precision = bool(args.generator_mixed_precision)
+    args.discriminator_mixed_precision = bool(args.discriminator_mixed_precision)
 
     # set logger
     if args.verbose > 1:
@@ -442,6 +469,7 @@ def main():
             raise ValueError("Only hdf5 and npy are supported.")
 
     if args.train_dumpdir is not None:
+        mel_files = sorted(find_files(args.train_dumpdir, mel_query))
         train_dataset = AudioMelDataset(
             root_dir=args.train_dumpdir,
             audio_query=audio_query,
@@ -449,8 +477,8 @@ def main():
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
             mel_length_threshold=mel_length_threshold,
-            shuffle_buffer_size=64,
-            map_fn=collater,
+            shuffle_buffer_size=len(mel_files),
+            map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
             allow_cache=config["allow_cache"],
             batch_size=config["batch_size"]
         )
@@ -460,11 +488,13 @@ def main():
             feats_scp=args.train_feats_scp,
             segments=args.train_segments,
             mel_length_threshold=mel_length_threshold,
-            map_fn=collater,
+            is_shuffle=True,
+            map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
             allow_cache=config["allow_cache"],
             batch_size=config["batch_size"]
         )
     if args.dev_dumpdir is not None:
+        mel_files = sorted(find_files(args.dev_dumpdir, mel_query))
         dev_dataset = AudioMelDataset(
             root_dir=args.dev_dumpdir,
             audio_query=audio_query,
@@ -472,9 +502,9 @@ def main():
             audio_load_fn=audio_load_fn,
             mel_load_fn=mel_load_fn,
             mel_length_threshold=mel_length_threshold,
-            shuffle_buffer_size=64,
+            shuffle_buffer_size=len(mel_files),
             map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
-            allow_cache=config["allow_cache"],
+            allow_cache=True,
             batch_size=1
         )
     else:
@@ -483,15 +513,26 @@ def main():
             feats_scp=args.dev_feats_scp,
             segments=args.dev_segments,
             mel_length_threshold=mel_length_threshold,
+            is_shuffle=True,
             map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
-            allow_cache=config["allow_cache"],
+            allow_cache=True,
             batch_size=1
         )
 
     # define generator and discriminator
-    generator = TFMelGANGenerator(MELGAN_CONFIG.MelGANGeneratorConfig(), name='melgan_generator')
+    generator = TFMelGANGenerator(
+        MELGAN_CONFIG.MelGANGeneratorConfig(**config["generator_params"]), name='melgan_generator')
+
     discriminator = TFMelGANMultiScaleDiscriminator(
-        MELGAN_CONFIG.MelGANDiscriminatorConfig(), name='melgan_discriminator')
+        MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["discriminator_params"]), name='melgan_discriminator')
+
+    # dummy input to build input shape
+    fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
+    y_hat = generator(fake_mels)
+    discriminator(y_hat)
+
+    generator.summary()
+    discriminator.summary()
 
     # define trainer
     trainer = MelganTrainer(config=config,
@@ -512,7 +553,7 @@ def main():
 
     # create checkpoint manager
     trainer.create_checkpoint_manager(saved_path=config["outdir"] + '/checkpoints/',
-                                      max_to_keep=20)
+                                      max_to_keep=10000000)
 
     # load pretrained
     if len(args.resume) != 0:

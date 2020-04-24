@@ -101,10 +101,9 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
             saved_path = self.config["outdir"] + '/checkpoints/'
             os.makedirs(saved_path, exist_ok=True)
 
+        self.saved_path = saved_path
         self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),
                                         epochs=tf.Variable(1),
-                                        generator=self.get_gen_model(),
-                                        discriminator=self.get_dis_model(),
                                         gen_optimizer=self.get_gen_optimizer(),
                                         dis_optimizer=self.get_dis_optimizer())
         self.ckp_manager = tf.train.CheckpointManager(self.ckpt,
@@ -130,16 +129,18 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         self.ckpt.steps.assign(self.steps)
         self.ckpt.epochs.assign(self.epochs)
         self.ckp_manager.save(checkpoint_number=self.steps)
+        self.generator.save_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
+        self.discriminator.save_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
 
     def load_checkpoint(self, pretrained_path):
         """Load checkpoint."""
         self.ckpt.restore(pretrained_path)
         self.steps = self.ckpt.steps.numpy()
         self.epochs = self.ckpt.epochs.numpy()
-        self.generator = self.ckpt.generator
-        self.discriminator = self.ckpt.discriminator
         self.gen_optimizer = self.ckpt.gen_optimizer
         self.dis_optimizer = self.ckpt.dis_optimizer
+        self.generator.load_weights(self.saved_path + 'generator-{}.h5'.format(self.steps), by_name=True)
+        self.discriminator.load_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps), by_name=True)
 
     def _train_epoch(self):
         """Train model one epoch."""
