@@ -24,6 +24,7 @@ from tensorflow_tts.processor import LJSpeechProcessor
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
+
 def logmelfilterbank(audio,
                      sampling_rate,
                      fft_size=1024,
@@ -163,7 +164,6 @@ def main():
         if duration_exist:
             assert len(duration) == len(text_ids), \
                 f"{utt_id} seems to have a different len between text_ids and duration."
-            
 
         # trim silence
         if config["trim_silence"]:
@@ -227,7 +227,7 @@ def main():
                     text_ids.astype(np.int32), allow_pickle=False)
             if duration_exist:
                 np.save(os.path.join(args.outdir, subdir, "durations", f"{utt_id}-durations.npy"),
-                        duration.astype(np.int32), allow_pickle=False)                
+                        duration.astype(np.int32), allow_pickle=False)
         else:
             raise ValueError("support only npy format.")
 

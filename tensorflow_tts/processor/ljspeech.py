@@ -44,6 +44,8 @@ _curly_re = re.compile(r'(.*?)\{(.+?)\}(.*)')
 
 
 class LJSpeechProcessor(object):
+    """LJSpeech processor."""
+
     def __init__(self, root_path, cleaner_names):
         self.root_path = root_path
         self.cleaner_names = cleaner_names
@@ -53,7 +55,7 @@ class LJSpeechProcessor(object):
         with open(os.path.join(root_path, 'metadata.csv'), encoding='utf-8') as ttf:
             for line in ttf:
                 parts = line.strip().split('|')
-                wav_path = os.path.join(root_path, 'wavs','%s.wav' % parts[0])
+                wav_path = os.path.join(root_path, 'wavs', '%s.wav' % parts[0])
                 text = parts[2]
                 items.append([text, wav_path, self.speaker_name])
 
@@ -116,4 +118,4 @@ def _arpabet_to_sequence(text):
 
 
 def _should_keep_symbol(s):
-    return s in _symbol_to_id and s is not '_' and s is not '~'
+    return s in _symbol_to_id and s != '_' and s != '~'

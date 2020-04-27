@@ -26,6 +26,9 @@ from tensorflow_tts.models import TFFastSpeech
 
 import tensorflow_tts.configs.fastspeech as FASTSPEECH_CONFIG
 
+from tensorflow_tts.optimizers import WarmUp
+from tensorflow_tts.optimizers import AdamWeightDecay
+
 
 class FastSpeechTrainer(Seq2SeqBasedTrainer):
     """FastSpeech Trainer class based on Seq2SeqBasedTrainer."""
@@ -321,7 +324,7 @@ def main():
 
     # get dataset
     if config["remove_short_samples"]:
-        mel_length_threshold = config["batch_max_steps"]
+        mel_length_threshold = config["mel_length_threshold"]
     else:
         mel_length_threshold = None
 
@@ -344,7 +347,7 @@ def main():
         charactor_load_fn=charactor_load_fn,
         mel_load_fn=mel_load_fn,
         duration_load_fn=duration_load_fn,
-        mel_length_threshold=32,
+        mel_length_threshold=mel_length_threshold,
         return_utt_id=False
     ).create(
         is_shuffle=False,
@@ -377,9 +380,31 @@ def main():
                                 epochs=0,
                                 is_mixed_precision=False)
 
+    # AdamW for fastspeech
+    learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
+        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+        decay_steps=config["optimizer_params"]["decay_steps"],
+        end_learning_rate=config["optimizer_params"]["end_learning_rate"]
+    )
+
+    learning_rate_fn = WarmUp(
+        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+        decay_schedule_fn=learning_rate_fn,
+        warmup_steps=int(config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"])
+    )
+
+    optimizer = AdamWeightDecay(
+        learning_rate=learning_rate_fn,
+        weight_decay_rate=config["optimizer_params"]["weight_decay"],
+        beta_1=0.9,
+        beta_2=0.98,
+        epsilon=1e-6,
+        exclude_from_weight_decay=['LayerNorm', 'layer_norm', 'bias']
+    )
+
     # compile trainer
     trainer.compile(model=fastspeech,
-                    optimizer=tf.keras.optimizers.Adam(lr=0.001))
+                    optimizer=optimizer)
 
     # load pretrained
     if len(args.resume) != 0:

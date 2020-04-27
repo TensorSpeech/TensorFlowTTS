@@ -21,6 +21,7 @@ from tensorflow_tts.utils import write_hdf5
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
+
 def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(

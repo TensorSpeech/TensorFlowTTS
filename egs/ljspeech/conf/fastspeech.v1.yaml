@@ -37,27 +37,26 @@ fastspeech_params:
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 16              # Batch size.
+batch_size: 32              # Batch size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
+mel_length_threshold: 32
 
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
 ###########################################################
-generator_optimizer_params:
-    lr: 0.0001             # Generator's learning rate.
-    beta_1: 0.5
-    beta_2: 0.9
+optimizer_params:
+    initial_learning_rate: 0.002
+    end_learning_rate: 0.0001
+    decay_steps: 100000          # < train_max_steps is recommend.
+    warmup_proportion: 0.05
+    weight_decay: 0.002
     
-discriminator_optimizer_params:
-    lr: 0.0001            # Discriminator's learning rate.
-    beta_1: 0.5
-    beta_2: 0.9
-
+    
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
-train_max_steps: 4000000                # Number of training steps.
+train_max_steps: 200000                # Number of training steps.
 save_interval_steps: 10000               # Interval steps to save checkpoint.
 eval_interval_steps: 5000              # Interval steps to evaluate the network.
 log_interval_steps: 200                # Interval steps to record the training log.
@@ -65,4 +64,4 @@ log_interval_steps: 200                # Interval steps to record the training l
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
-num_save_intermediate_results: 16  # Number of results to be saved as intermediate results.
+num_save_intermediate_results: 8  # Number of results to be saved as intermediate results.

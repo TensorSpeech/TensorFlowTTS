@@ -148,7 +148,8 @@ class AudioDataset(AbstractDataset):
         assert len(audio_files) != 0, f"Not found any audio files in ${root_dir}."
 
         if ".npy" in audio_query:
-            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]]) for f in audio_files]
+            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]])
+                       for f in audio_files]
 
         # set global params
         self.utt_ids = utt_ids
@@ -218,7 +219,8 @@ class MelDataset(AbstractDataset):
         assert len(mel_files) != 0, f"Not found any mel files in ${root_dir}."
 
         if ".npy" in mel_query:
-            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]]) for f in mel_files]
+            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]])
+                       for f in mel_files]
 
         # set global params
         self.utt_ids = utt_ids
@@ -244,7 +246,7 @@ class MelDataset(AbstractDataset):
         if self.return_utt_id:
             output_types = (tf.dtypes.string, output_types)
         return output_types
-        
+
     def get_len_dataset(self):
         return len(self.utt_ids)
 
