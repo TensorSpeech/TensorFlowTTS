@@ -14,13 +14,12 @@ import yaml
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.datasets import AudioMelSCPDataset
 from tensorflow_tts.datasets import AudioMelDataset
-from tensorflow_tts.datasets import MelSCPDataset
 from tensorflow_tts.datasets import MelDataset
 from tensorflow_tts.utils import read_hdf5
 from tensorflow_tts.utils import write_hdf5
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 def main():
     """Run preprocessing process."""
@@ -29,20 +28,10 @@ def main():
     parser.add_argument("--rootdir", default=None, type=str,
                         help="directory including feature files to be normalized. "
                              "you need to specify either *-scp or rootdir.")
-    parser.add_argument("--wav-scp", default=None, type=str,
-                        help="kaldi-style wav.scp file. "
-                             "you need to specify either *-scp or rootdir.")
-    parser.add_argument("--feats-scp", default=None, type=str,
-                        help="kaldi-style feats.scp file. "
-                             "you need to specify either *-scp or rootdir.")
-    parser.add_argument("--segments", default=None, type=str,
-                        help="kaldi-style segments file.")
-    parser.add_argument("--dumpdir", type=str, required=True,
+    parser.add_argument("--outdir", type=str, required=True,
                         help="directory to dump normalized feature files.")
     parser.add_argument("--stats", type=str, required=True,
                         help="statistics file.")
-    parser.add_argument("--skip-wav-copy", default=False, action="store_true",
-                        help="whether to skip the copy of wav files.")
     parser.add_argument("--config", type=str, required=True,
                         help="yaml format configuration file.")
     parser.add_argument("--verbose", type=int, default=1,
@@ -66,98 +55,59 @@ def main():
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
 
-    # check arguments
-    if (args.feats_scp is not None and args.rootdir is not None) or \
-            (args.feats_scp is None and args.rootdir is None):
-        raise ValueError("Please specify either --rootdir or --feats-scp.")
-
     # check directory existence
-    if not os.path.exists(args.dumpdir):
-        os.makedirs(args.dumpdir)
+    os.makedirs(args.outdir, exist_ok=True)
+    os.makedirs(os.path.join(args.outdir, 'train', 'norm-feats'), exist_ok=True)
+    os.makedirs(os.path.join(args.outdir, 'valid', 'norm-feats'), exist_ok=True)
 
     # get dataset
     if args.rootdir is not None:
-        if config["format"] == "hdf5":
-            audio_query, mel_query = "*.h5", "*.h5"
-            audio_load_fn = lambda x: read_hdf5(x, "wave")
-            mel_load_fn = lambda x: read_hdf5(x, "feats")
-        elif config["format"] == "npy":
-            audio_query, mel_query = "*-wave.npy", "*-feats.npy"
-            audio_load_fn = lambda x: np.load(x, allow_pickle=True)
-            mel_load_fn = lambda x: np.load(x, allow_pickle=True)
+        if config["format"] == "npy":
+            mel_query = "*-feats.npy"
+            def mel_load_fn(x): return np.load(x, allow_pickle=True)
         else:
-            raise ValueError("support only hdf5 or npy format.")
-        if not args.skip_wav_copy:
-            dataset = AudioMelDataset(
-                args.rootdir,
-                audio_query=audio_query,
-                mel_query=mel_query,
-                audio_load_fn=audio_load_fn,
-                mel_load_fn=mel_load_fn,
-                return_utt_id=True,
-            )
-        else:
-            dataset = MelDataset(
-                args.rootdir,
-                mel_query=mel_query,
-                mel_load_fn=mel_load_fn,
-                return_utt_id=True,
-            )
-    else:
-        if not args.skip_wav_copy:
-            dataset = AudioMelSCPDataset(
-                wav_scp=args.wav_scp,
-                feats_scp=args.feats_scp,
-                segments=args.segments,
-                return_utt_id=True,
-            )
-        else:
-            dataset = MelSCPDataset(
-                feats_scp=args.feats_scp,
-                return_utt_id=True,
-            )
+            raise ValueError("support only npy format.")
+
+        dataset = MelDataset(
+            args.rootdir,
+            mel_query=mel_query,
+            mel_load_fn=mel_load_fn,
+            return_utt_id=True,
+        ).create(batch_size=1)
 
     # restore scaler
     scaler = StandardScaler()
-    if config["format"] == "hdf5":
-        scaler.mean_ = read_hdf5(args.stats, "mean")
-        scaler.scale_ = read_hdf5(args.stats, "scale")
-    elif config["format"] == "npy":
+    if config["format"] == "npy":
         scaler.mean_ = np.load(args.stats)[0]
         scaler.scale_ = np.load(args.stats)[1]
     else:
-        raise ValueError("Support only hdf5 or npy format")
+        raise ValueError("Support only npy format")
+
+    # load train/valid utt_ids
+    train_utt_ids = np.load(os.path.join(args.rootdir, 'train_utt_ids.npy'))
+    valid_utt_ids = np.load(os.path.join(args.rootdir, 'valid_utt_ids.npy'))
 
     # process each file
     for items in tqdm(dataset):
-        if not args.skip_wav_copy:
-            utt_id, audio, mel = items
-        else:
-            utt_id, mel = items
+        utt_id, mel = items
 
         # convert to numpy
         utt_id = utt_id[0].numpy().decode("utf-8")
-        audio = audio[0].numpy()
         mel = mel[0].numpy()
 
         # normalize
         mel = scaler.transform(mel)
 
         # save
-        if config["format"] == "hdf5":
-            write_hdf5(os.path.join(args.dumpdir, f"{utt_id}.h5"),
-                       "feats", mel.astype(np.float32))
-            if not args.skip_wav_copy:
-                write_hdf5(os.path.join(args.dumpdir, f"{utt_id}.h5"),
-                           "wave", audio.astype(np.float32))
-        elif config["format"] == "npy":
-            np.save(os.path.join(args.dumpdir, f"{utt_id}-feats.npy"),
+        if config["format"] == "npy":
+            if utt_id in train_utt_ids:
+                subdir = "train"
+            elif utt_id in valid_utt_ids:
+                subdir = "valid"
+            np.save(os.path.join(args.outdir, subdir, "norm-feats", f"{utt_id}-norm-feats.npy"),
                     mel.astype(np.float32), allow_pickle=False)
-            if not args.skip_wav_copy:
-                np.save(os.path.join(args.dumpdir, f"{utt_id}-wave.npy"),
-                        audio.astype(np.float32), allow_pickle=False)
         else:
-            raise ValueError("support only hdf5 or npy format.")
+            raise ValueError("support only npy format.")
 
 
 if __name__ == "__main__":

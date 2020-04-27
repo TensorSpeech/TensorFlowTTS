@@ -1,9 +1,6 @@
-from tensorflow_tts.datasets.scp_dataset import AudioMelSCPDataset
-from tensorflow_tts.datasets.scp_dataset import AudioSCPDataset
-from tensorflow_tts.datasets.scp_dataset import MelSCPDataset
-
 from tensorflow_tts.datasets.audio_mel_dataset import AudioMelDataset
 from tensorflow_tts.datasets.audio_mel_dataset import AudioDataset
 from tensorflow_tts.datasets.audio_mel_dataset import MelDataset
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
+from tensorflow_tts.datasets.fastspeech_dataset import CharactorDurationMelDataset

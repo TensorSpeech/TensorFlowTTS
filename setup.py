@@ -33,6 +33,9 @@ requirements = {
         "tqdm>=4.26.1",
         "h5py>=2.10.0",
         "kaldiio>=2.14.1",
+        "pathos>=0.2.5",
+        "unidecode>=1.1.1",
+        "inflect>=4.1.0"
     ],
     "setup": [
         "numpy",
@@ -52,7 +55,8 @@ entry_points = {
         "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:main",
         "tensorflow-tts-compute-statistics=tensorflow_tts.bin.compute_statistics:main",
         "tensorflow-tts-normalize=tensorflow_tts.bin.normalize:main",
-        "tensorflow-tts-train-melgan=tensorflow_tts.bin.train_melgan:main"
+        "tensorflow-tts-train-melgan=tensorflow_tts.bin.train_melgan:main",
+        "tensorflow-tts-train-fastspeech=tensorflow_tts.bin.train_fastspeech:main"
     ]
 }
 

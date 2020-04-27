@@ -55,12 +55,14 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         self.vocab_size = config.vocab_size
         self.hidden_size = config.hidden_size
         self.initializer_range = config.initializer_range
+        self.config = config
 
         self.position_embeddings = tf.keras.layers.Embedding(
             config.max_position_embeddings,
             config.hidden_size,
-            embeddings_initializer=get_initializer(self.initializer_range),
+            weights=[self._sincos_embedding()],
             name="position_embeddings",
+            trainable=False,
         )
         self.speaker_embeddings = tf.keras.layers.Embedding(
             config.n_speakers,
@@ -115,6 +117,16 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings, training=training)
         return embeddings
+
+    def _sincos_embedding(self):
+        position_enc = np.array([
+            [pos / np.power(10000, 2.0 * i / self.hidden_size) for i in range(self.hidden_size)]
+            for pos in range(self.config.max_position_embeddings)
+        ])
+
+        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
+        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
+        return position_enc
 
 
 class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
@@ -234,8 +246,19 @@ class TFFastSpeechIntermediate(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
-        self.dense = tf.keras.layers.Dense(
-            config.intermediate_size, kernel_initializer=get_initializer(config.initializer_range), name="dense"
+        self.conv1d_1 = tf.keras.layers.Conv1D(
+            config.intermediate_size,
+            kernel_size=config.intermediate_kernel_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            padding='same',
+            name="conv1d_1"
+        )
+        self.conv1d_2 = tf.keras.layers.Conv1D(
+            config.hidden_size,
+            kernel_size=config.intermediate_kernel_size,
+            kernel_initializer=get_initializer(config.initializer_range),
+            padding='same',
+            name="conv1d_2"
         )
         if isinstance(config.hidden_act, str):
             self.intermediate_act_fn = ACT2FN[config.hidden_act]
@@ -244,7 +267,9 @@ class TFFastSpeechIntermediate(tf.keras.layers.Layer):
 
     def call(self, hidden_states):
         """Call logic."""
-        hidden_states = self.dense(hidden_states)
+        hidden_states = self.conv1d_1(hidden_states)
+        hidden_states = self.intermediate_act_fn(hidden_states)
+        hidden_states = self.conv1d_2(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
 
@@ -337,7 +362,7 @@ class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
-        self.output_layer = tf.keras.layers.Dense(1)
+        self.output_layer = tf.keras.layers.Dense(1, activation=tf.nn.relu)
         self.relu6 = tf.keras.layers.Activation(tf.nn.relu6)
         self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
         self.dropout = tf.keras.layers.Dropout(config.duration_predictor_dropout_probs)

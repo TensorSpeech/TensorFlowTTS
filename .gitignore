@@ -22,8 +22,6 @@ coverage.xml*
 .ipynb_checkpoints
 
 # recipe related
-egs/*/*/data
-egs/*/*/downloads
-egs/*/*/dump
-egs/*/*/exp
-egs/*/*/conf/tuning
+egs/*/datasets
+egs/*/dump
+egs/*/exp

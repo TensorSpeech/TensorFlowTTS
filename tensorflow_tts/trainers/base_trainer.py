@@ -13,31 +13,19 @@ from tqdm import tqdm
 import tensorflow as tf
 
 
-class GanBasedTrainer(metaclass=abc.ABCMeta):
-    """Customized trainer module for MelGAN training."""
+class BasedTrainer(metaclass=abc.ABCMeta):
+    """Customized trainer module for all models."""
 
     def __init__(self,
                  steps,
                  epochs,
-                 config,
-                 is_generator_mixed_precision=False,
-                 is_discriminator_mixed_precision=False,
-                 ):
-        """Initialize trainer.
-
-        Args:
-            steps (int): Initial global steps.
-            epochs (int): Initial global epochs.
-            config (dict): Config dict loaded from yaml format configuration file.
-
-        """
+                 config):
         self.steps = steps
         self.epochs = epochs
         self.config = config
-        self.writer = tf.summary.create_file_writer(config["outdir"])
         self.finish_train = False
-        self.is_generator_mixed_precision = is_generator_mixed_precision
-        self.is_discriminator_mixed_precision = is_discriminator_mixed_precision
+        self.writer = tf.summary.create_file_writer(config["outdir"])
+        self.train_data_loader = None
 
     def set_train_data_loader(self, train_dataset):
         """Set train data loader (MUST)."""
@@ -55,60 +43,16 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         """Get eval data loader."""
         return self.eval_data_loader
 
-    def set_gen_model(self, generator_model):
-        """Set generator class model (MUST)."""
-        self.generator = generator_model
+    @abc.abstractmethod
+    def compile(self):
+        pass
 
-    def get_gen_model(self):
-        """Get generator model."""
-        return self.generator
-
-    def set_dis_model(self, discriminator_model):
-        """Set discriminator class model (MUST)."""
-        self.discriminator = discriminator_model
-
-    def get_dis_model(self):
-        """Get discriminator model."""
-        return self.discriminator
-
-    def set_gen_optimizer(self, generator_optimizer):
-        """Set generator optimizer (MUST)."""
-        self.gen_optimizer = generator_optimizer
-        if self.is_generator_mixed_precision:
-            self.gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                self.gen_optimizer, 'dynamic')
-
-    def get_gen_optimizer(self):
-        """Get generator optimizer."""
-        return self.gen_optimizer
-
-    def set_dis_optimizer(self, discriminator_optimizer):
-        """Set discriminator optimizer (MUST)."""
-        self.dis_optimizer = discriminator_optimizer
-        if self.is_discriminator_mixed_precision:
-            self.dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                self.dis_optimizer, 'dynamic')
-
-    def get_dis_optimizer(self):
-        """Get discriminator optimizer."""
-        return self.dis_optimizer
-
+    @abc.abstractmethod
     def create_checkpoint_manager(self,
                                   saved_path=None,
                                   max_to_keep=10):
         """Create checkpoint management."""
-        if saved_path is None:
-            saved_path = self.config["outdir"] + '/checkpoints/'
-            os.makedirs(saved_path, exist_ok=True)
-
-        self.saved_path = saved_path
-        self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),
-                                        epochs=tf.Variable(1),
-                                        gen_optimizer=self.get_gen_optimizer(),
-                                        dis_optimizer=self.get_dis_optimizer())
-        self.ckp_manager = tf.train.CheckpointManager(self.ckpt,
-                                                      saved_path,
-                                                      max_to_keep=max_to_keep)
+        pass
 
     def run(self):
         """Run training."""
@@ -124,23 +68,15 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         self.tqdm.close()
         logging.info("Finish training.")
 
+    @abc.abstractmethod
     def save_checkpoint(self):
         """Save checkpoint."""
-        self.ckpt.steps.assign(self.steps)
-        self.ckpt.epochs.assign(self.epochs)
-        self.ckp_manager.save(checkpoint_number=self.steps)
-        self.generator.save_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
-        self.discriminator.save_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
+        pass
 
+    @abc.abstractmethod
     def load_checkpoint(self, pretrained_path):
         """Load checkpoint."""
-        self.ckpt.restore(pretrained_path)
-        self.steps = self.ckpt.steps.numpy()
-        self.epochs = self.ckpt.epochs.numpy()
-        self.gen_optimizer = self.ckpt.gen_optimizer
-        self.dis_optimizer = self.ckpt.dis_optimizer
-        self.generator.load_weights(self.saved_path + 'generator-{}.h5'.format(self.steps), by_name=True)
-        self.discriminator.load_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps), by_name=True)
+        pass
 
     def _train_epoch(self):
         """Train model one epoch."""
@@ -184,6 +120,10 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
         """Save log interval."""
         pass
 
+    @abc.abstractmethod
+    def fit(self):
+        pass
+
     def _check_eval_interval(self):
         """Evaluation interval step."""
         if self.steps % self.config["eval_interval_steps"] == 0:
@@ -205,3 +145,180 @@ class GanBasedTrainer(metaclass=abc.ABCMeta):
             for key, value in list_metrics.items():
                 tf.summary.scalar(stage + "/" + key, value.result(), step=self.steps)
                 self.writer.flush()
+
+
+class GanBasedTrainer(BasedTrainer):
+    """Customized trainer module for GAN TTS training (MelGAN, GAN-TTS, ParallelWaveGAN)."""
+
+    def __init__(self,
+                 steps,
+                 epochs,
+                 config,
+                 is_generator_mixed_precision=False,
+                 is_discriminator_mixed_precision=False,
+                 ):
+        """Initialize trainer.
+
+        Args:
+            steps (int): Initial global steps.
+            epochs (int): Initial global epochs.
+            config (dict): Config dict loaded from yaml format configuration file.
+
+        """
+        super().__init__(steps, epochs, config)
+        self.is_generator_mixed_precision = is_generator_mixed_precision
+        self.is_discriminator_mixed_precision = is_discriminator_mixed_precision
+
+    def set_gen_model(self, generator_model):
+        """Set generator class model (MUST)."""
+        self.generator = generator_model
+
+    def get_gen_model(self):
+        """Get generator model."""
+        return self.generator
+
+    def set_dis_model(self, discriminator_model):
+        """Set discriminator class model (MUST)."""
+        self.discriminator = discriminator_model
+
+    def get_dis_model(self):
+        """Get discriminator model."""
+        return self.discriminator
+
+    def set_gen_optimizer(self, generator_optimizer):
+        """Set generator optimizer (MUST)."""
+        self.gen_optimizer = generator_optimizer
+        if self.is_generator_mixed_precision:
+            self.gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self.gen_optimizer, 'dynamic')
+
+    def get_gen_optimizer(self):
+        """Get generator optimizer."""
+        return self.gen_optimizer
+
+    def set_dis_optimizer(self, discriminator_optimizer):
+        """Set discriminator optimizer (MUST)."""
+        self.dis_optimizer = discriminator_optimizer
+        if self.is_discriminator_mixed_precision:
+            self.dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self.dis_optimizer, 'dynamic')
+
+    def get_dis_optimizer(self):
+        """Get discriminator optimizer."""
+        return self.dis_optimizer
+
+    def compile(self, gen_model, dis_model, gen_optimizer, dis_optimizer):
+        self.set_gen_model(gen_model)
+        self.set_dis_model(dis_model)
+        self.set_gen_optimizer(gen_optimizer)
+        self.set_dis_optimizer(dis_optimizer)
+
+    def create_checkpoint_manager(self,
+                                  saved_path=None,
+                                  max_to_keep=10):
+        """Create checkpoint management."""
+        if saved_path is None:
+            saved_path = self.config["outdir"] + '/checkpoints/'
+            os.makedirs(saved_path, exist_ok=True)
+
+        self.saved_path = saved_path
+        self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),
+                                        epochs=tf.Variable(1),
+                                        gen_optimizer=self.get_gen_optimizer(),
+                                        dis_optimizer=self.get_dis_optimizer())
+        self.ckp_manager = tf.train.CheckpointManager(self.ckpt,
+                                                      saved_path,
+                                                      max_to_keep=max_to_keep)
+
+    def save_checkpoint(self):
+        """Save checkpoint."""
+        self.ckpt.steps.assign(self.steps)
+        self.ckpt.epochs.assign(self.epochs)
+        self.ckp_manager.save(checkpoint_number=self.steps)
+        self.generator.save_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
+        self.discriminator.save_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
+
+    def load_checkpoint(self, pretrained_path):
+        """Load checkpoint."""
+        self.ckpt.restore(pretrained_path)
+        self.steps = self.ckpt.steps.numpy()
+        self.epochs = self.ckpt.epochs.numpy()
+        self.gen_optimizer = self.ckpt.gen_optimizer
+        self.dis_optimizer = self.ckpt.dis_optimizer
+        self.generator.load_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
+        self.discriminator.load_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
+
+
+class Seq2SeqBasedTrainer(BasedTrainer):
+    """Customized trainer module for Seq2Seq TTS training (Tacotron, FastSpeech)."""
+
+    def __init__(self,
+                 steps,
+                 epochs,
+                 config,
+                 is_mixed_precision=False,
+                 ):
+        """Initialize trainer.
+
+        Args:
+            steps (int): Initial global steps.
+            epochs (int): Initial global epochs.
+            config (dict): Config dict loaded from yaml format configuration file.
+
+        """
+        super().__init__(steps, epochs, config)
+        self.is_mixed_precision = is_mixed_precision
+
+    def set_model(self, model):
+        """Set generator class model (MUST)."""
+        self.model = model
+
+    def get_model(self):
+        """Get generator model."""
+        return self.model
+
+    def set_optimizer(self, optimizer):
+        """Set optimizer (MUST)."""
+        self.optimizer = optimizer
+        if self.is_mixed_precision:
+            self.optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self.optimizer, 'dynamic')
+
+    def get_optimizer(self):
+        """Get optimizer."""
+        return self.optimizer
+
+    def compile(self, model, optimizer):
+        self.set_model(model)
+        self.set_optimizer(optimizer)
+
+    def create_checkpoint_manager(self,
+                                  saved_path=None,
+                                  max_to_keep=10):
+        """Create checkpoint management."""
+        if saved_path is None:
+            saved_path = self.config["outdir"] + '/checkpoints/'
+            os.makedirs(saved_path, exist_ok=True)
+
+        self.saved_path = saved_path
+        self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),
+                                        epochs=tf.Variable(1),
+                                        optimizer=self.get_optimizer())
+        self.ckp_manager = tf.train.CheckpointManager(self.ckpt,
+                                                      saved_path,
+                                                      max_to_keep=max_to_keep)
+
+    def save_checkpoint(self):
+        """Save checkpoint."""
+        self.ckpt.steps.assign(self.steps)
+        self.ckpt.epochs.assign(self.epochs)
+        self.ckp_manager.save(checkpoint_number=self.steps)
+        self.model.save_weights(self.saved_path + 'model-{}.h5'.format(self.steps))
+
+    def load_checkpoint(self, pretrained_path):
+        """Load checkpoint."""
+        self.ckpt.restore(pretrained_path)
+        self.steps = self.ckpt.steps.numpy()
+        self.epochs = self.ckpt.epochs.numpy()
+        self.optimizer = self.ckpt.optimizer
+        self.model.load_weights(self.saved_path + 'model-{}.h5'.format(self.steps))
