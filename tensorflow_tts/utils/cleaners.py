@@ -4,7 +4,7 @@
 #  MIT License (https://opensource.org/licenses/MIT)
 
 
-""" Cleaner module for english. """
+"""Cleaner module for english."""
 
 
 # Regular expression matching whitespace:

@@ -18,7 +18,7 @@ import operator
 import numpy as np
 
 import tensorflow as tf
-tf.get_logger().setLevel(logging.ERROR)
+# tf.get_logger().setLevel(logging.ERROR)
 
 
 class CharactorDurationMelDataset(AbstractDataset):
@@ -95,7 +95,8 @@ class CharactorDurationMelDataset(AbstractDataset):
         # assert the number of files
         assert len(mel_files) != 0, f"Not found any mels files in ${root_dir}."
         assert len(mel_files) == len(charactor_files) == len(duration_files), \
-            f"Number of charactor, mel and duration files are different ({len(mel_files)} vs {len(charactor_files)} vs {len(duration_files)})."
+            f"Number of charactor, mel and duration files are different \
+                ({len(mel_files)} vs {len(charactor_files)} vs {len(duration_files)})."
 
         if ".npy" in charactor_query:
             utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
@@ -114,7 +115,7 @@ class CharactorDurationMelDataset(AbstractDataset):
         return [self.utt_ids]
 
     def generator(self, utt_ids):
-        for i, utt_id in enumerate(utt_ids):
+        for i, utt_id in enumerate(utt_ids[:4]):
             mel_file = self.mel_files[i]
             charactor_file = self.charactor_files[i]
             duration_file = self.duration_files[i]
@@ -180,18 +181,10 @@ class CharactorDurationMelDataset(AbstractDataset):
 #     optimizer = tf.keras.optimizers.Adam(lr=0.001)
 
 #     datasets = CharactorDurationMelDataset(
-#         root_dir="./egs/ljspeech/voc1/dump/train/",
+#         root_dir="./egs/ljspeech/dump/train/",
 #         return_utt_id=False,
 #         mel_length_threshold=32,
 #     ).create(allow_cache=False, is_shuffle=False, batch_size=4)
-
-#     total_length = 0
-#     for i, data in enumerate(datasets):
-#         mel = data[2]
-#         total_length += tf.shape(mel)[1].numpy()
-
-#     print(total_length)
-
 
 #     mel_plot = None
 
@@ -205,14 +198,15 @@ class CharactorDurationMelDataset(AbstractDataset):
 #                 duration_gts=data[1],
 #                 training=True
 #             )
-#             duration_loss = tf.keras.losses.MeanSquaredError()(data[1], masked_duration_outputs)
+#             duration_loss = tf.keras.losses.MeanSquaredError()(
+#                 data[1], masked_duration_outputs)
 #             mel_loss = tf.keras.losses.MeanSquaredError()(data[2], masked_mel_outputs)
-#             loss = 0.0 * duration_loss + mel_loss
+#             loss = duration_loss + mel_loss
 
 #         gradients = tape.gradient(loss, fastspeech.trainable_variables)
 #         optimizer.apply_gradients(zip(gradients, fastspeech.trainable_variables))
 
-#         tf.print(loss)
+#         tf.print(duration_loss)
 #         # tf.print(masked_duration_outputs)
 
 #         return masked_mel_outputs

@@ -64,10 +64,9 @@ class LJSpeechProcessor(object):
     def get_one_sample(self, idx):
         text, wav_file, speaker_name = self.items[idx]
 
-        # normalize audio signal to be [-1, 1]
+        # normalize audio signal to be [-1, 1], soundfine already norm.
         audio, rate = sf.read(wav_file)
         audio = audio.astype(np.float32)
-        audio /= (1 << (16 - 1))  # assume that wav is PCM 16 bit
 
         # convert text to ids
         text_ids = np.asarray(self.text_to_sequence(text, [self.cleaner_names]), np.int32)

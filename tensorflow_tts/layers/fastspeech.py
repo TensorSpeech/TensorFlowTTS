@@ -312,7 +312,7 @@ class TFFastSpeechLayer(tf.keras.layers.Layer):
 
         attention_outputs = self.attention([hidden_states, attention_mask], training=training)
         attention_output = attention_outputs[0]
-        intermediate_output = self.intermediate(attention_output)
+        intermediate_output = self.intermediate(attention_output, training=training)
         layer_output = self.bert_output([intermediate_output, attention_output], training=training)
         outputs = (layer_output,) + attention_outputs[1:]  # add attentions if we output them
         return outputs
@@ -356,13 +356,45 @@ class TFFastSpeechEncoder(tf.keras.layers.Layer):
         return outputs  # outputs, (hidden states), (attentions)
 
 
+class TFFastSpeechDecoder(TFFastSpeechEncoder):
+    """Fast Speech decoder module."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        # create decoder positional embedding
+        self.decoder_positional_embeddings = tf.keras.layers.Embedding(
+            config.max_position_embeddings,
+            config.hidden_size,
+            weights=[self._sincos_embedding()],
+            name="position_embeddings",
+            trainable=False
+        )
+
+    def call(self, inputs, training=False):
+        hidden_states, decoder_mask, decoder_pos = inputs
+
+        # calculate new hidden states.
+        hidden_states = hidden_states + self.decoder_positional_embeddings(decoder_pos)
+        return super().call([hidden_states, decoder_mask], training=training)
+
+    def _sincos_embedding(self):
+        position_enc = np.array([
+            [pos / np.power(10000, 2.0 * i / self.hidden_size) for i in range(self.hidden_size)]
+            for pos in range(self.config.max_position_embeddings)
+        ])
+
+        position_enc[:, 0::2] = np.sin(position_enc[:, 0::2])
+        position_enc[:, 1::2] = np.cos(position_enc[:, 1::2])
+        return position_enc
+
+
 class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):
     """FastSpeech duration predictor module."""
 
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
-        self.output_layer = tf.keras.layers.Dense(1, activation=tf.nn.relu)
+        self.output_layer = tf.keras.layers.Dense(1)
         self.relu6 = tf.keras.layers.Activation(tf.nn.relu6)
         self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
         self.dropout = tf.keras.layers.Dropout(config.duration_predictor_dropout_probs)
@@ -388,7 +420,7 @@ class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):
             outputs = self.dropout(outputs, training=training)
 
         outputs = self.output_layer(outputs)
-        return tf.squeeze(tf.nn.relu(outputs), -1)  # make sure positive value.
+        return tf.squeeze(self.relu6(outputs), -1)  # make sure positive value.
 
 
 class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):

@@ -325,10 +325,13 @@ class MelganTrainer(GanBasedTrainer):
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
 
-    def fit(self, train_data_loader, valid_data_loader, saved_path):
+    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
         self.set_train_data_loader(train_data_loader)
         self.set_eval_data_loader(valid_data_loader)
         self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
+        if resume is not None:
+            self.load_checkpoint(resume)
+            logging.info(f"Successfully resumed from {resume}.")
         self.run()
 
 
@@ -512,16 +515,12 @@ def main():
                     gen_optimizer=tf.keras.optimizers.Adam(**config["generator_optimizer_params"]),
                     dis_optimizer=tf.keras.optimizers.Adam(**config["discriminator_optimizer_params"]))
 
-    # load pretrained
-    if len(args.resume) != 0:
-        trainer.load_checkpoint(args.resume)
-        logging.info(f"Successfully resumed from {args.resume}.")
-
     # start training
     try:
         trainer.fit(train_dataset,
                     valid_dataset,
-                    saved_path=config["outdir"] + '/checkpoints/')
+                    saved_path=config["outdir"] + '/checkpoints/',
+                    resume=args.resume)
     except KeyboardInterrupt:
         trainer.save_checkpoint()
         logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")

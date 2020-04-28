@@ -114,7 +114,8 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
                 duration_gts=duration,
                 training=True
             )
-            duration_loss = self.mse_log(duration, masked_duration_outputs)
+            duration_log = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
+            duration_loss = self.mse_log(duration_log, masked_duration_outputs)
             mel_loss = self.mse(mel, masked_mel_outputs)
             loss = duration_loss + mel_loss
 
@@ -172,7 +173,8 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             duration_gts=duration,
             training=True
         )
-        duration_loss = self.mae(duration, masked_duration_outputs)
+        duration_log = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
+        duration_loss = self.mae(duration_log, masked_duration_outputs)
         mel_loss = self.mse(mel, masked_mel_outputs)
 
         # accumulate loss into metrics
@@ -201,7 +203,7 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             attention_mask=tf.math.not_equal(charactor, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
             duration_gts=duration,
-            training=True
+            training=False
         )
         return masked_mel_outputs
 
@@ -244,10 +246,13 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
 
-    def fit(self, train_data_loader, valid_data_loader, saved_path):
+    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
         self.set_train_data_loader(train_data_loader)
         self.set_eval_data_loader(valid_data_loader)
         self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
+        if resume is not None:
+            self.load_checkpoint(resume)
+            logging.info(f"Successfully resumed from {resume}.")
         self.run()
 
 
@@ -406,16 +411,12 @@ def main():
     trainer.compile(model=fastspeech,
                     optimizer=optimizer)
 
-    # load pretrained
-    if len(args.resume) != 0:
-        trainer.load_checkpoint(args.resume)
-        logging.info(f"Successfully resumed from {args.resume}.")
-
     # start training
     try:
         trainer.fit(train_dataset,
                     valid_dataset,
-                    saved_path=config["outdir"] + '/checkpoints/')
+                    saved_path=config["outdir"] + '/checkpoints/',
+                    resume=args.resume)
     except KeyboardInterrupt:
         trainer.save_checkpoint()
         logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")

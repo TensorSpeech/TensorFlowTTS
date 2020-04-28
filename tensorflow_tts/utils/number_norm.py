@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+
+# This code is modified from https://github.com/keithito/tacotron.
+#  MIT License (https://opensource.org/licenses/MIT)
+
+
+"""Number norm module."""
+
+
 import re
 import inflect
 
