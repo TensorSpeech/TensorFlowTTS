@@ -22,6 +22,7 @@ class AudioMelSCPDataset(tf.data.Dataset):
                 segments=None,
                 audio_length_threshold=None,
                 mel_length_threshold=None,
+                is_shuffle=False,
                 return_utt_id=False,
                 return_sampling_rate=False,
                 allow_cache=False,
@@ -102,12 +103,21 @@ class AudioMelSCPDataset(tf.data.Dataset):
                   return_utt_id)
         )
 
+        if allow_cache:
+            audio_mel_datasets = audio_mel_datasets.cache()
+
+        if is_shuffle:
+            audio_mel_datasets = audio_mel_datasets.shuffle(
+                len(audio_keys), reshuffle_each_iteration=True
+            )
+
+        if batch_size > 1 and map_fn is None:
+            raise ValueError("map function must define when batch_size > 1.")
+
         if map_fn is not None:
             audio_mel_datasets = audio_mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
 
         audio_mel_datasets = audio_mel_datasets.batch(batch_size)
-        if allow_cache:
-            audio_mel_datasets = audio_mel_datasets.cache()
         audio_mel_datasets = audio_mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return audio_mel_datasets
@@ -125,6 +135,7 @@ class AudioSCPDataset(tf.data.Dataset):
                 audio_length_threshold=None,
                 return_utt_id=False,
                 return_sampling_rate=False,
+                is_shuffle=False,
                 allow_cache=False,
                 batch_size=1,
                 map_fn=None):
@@ -185,12 +196,21 @@ class AudioSCPDataset(tf.data.Dataset):
                   return_utt_id,)
         )
 
+        if allow_cache:
+            audio_datasets = audio_datasets.cache()
+
+        if is_shuffle:
+            audio_datasets = audio_datasets.shuffle(
+                len(audio_keys), reshuffle_each_iteration=True
+            )
+
+        if batch_size > 1 and map_fn is None:
+            raise ValueError("map function must define when batch_size > 1.")
+
         if map_fn is not None:
             audio_datasets = audio_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
 
         audio_datasets = audio_datasets.batch(batch_size)
-        if allow_cache:
-            audio_datasets = audio_datasets.cache()
         audio_datasets = audio_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return audio_datasets
@@ -206,6 +226,7 @@ class MelSCPDataset(tf.data.Dataset):
                 feats_scp,
                 mel_length_threshold=None,
                 return_utt_id=False,
+                is_shuffle=False,
                 allow_cache=False,
                 batch_size=1,
                 map_fn=None):
@@ -248,12 +269,21 @@ class MelSCPDataset(tf.data.Dataset):
             args=(return_utt_id)
         )
 
+        if allow_cache:
+            mel_datasets = mel_datasets.cache()
+
+        if is_shuffle:
+            mel_datasets = mel_datasets.shuffle(
+                len(mel_keys), reshuffle_each_iteration=True
+            )
+
+        if batch_size > 1 and map_fn is None:
+            raise ValueError("map function must define when batch_size > 1.")
+
         if map_fn is not None:
             mel_datasets = mel_datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
 
         mel_datasets = mel_datasets.batch(batch_size)
-        if allow_cache:
-            mel_datasets = mel_datasets.cache()
         mel_datasets = mel_datasets.prefetch(tf.data.experimental.AUTOTUNE)
 
         return mel_datasets

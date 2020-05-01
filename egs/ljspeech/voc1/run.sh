@@ -23,8 +23,8 @@ dumpdir=dump           # directory to dump features
 tag=""     # tag for directory to save model
 resume=""  # checkpoint path to resume training
            # (e.g. <path>/<to>/checkpoint-10000steps.pkl)
-generator_mixed_precision=false  # use mixed precision for generator or not.
-discriminator_mixed_precision=true  # use mixed precision for discriminator or not.
+generator_mixed_precision=0  # use mixed precision for generator or not.
+discriminator_mixed_precision=0  # use mixed precision for discriminator or not.
 
 # decoding related setting
 checkpoint="" # checkpoint path to be used for decoding
