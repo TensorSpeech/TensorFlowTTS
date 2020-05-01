@@ -17,23 +17,24 @@ class Tacotron2Config(object):
             embedding_dropout_prob=0.1,
             n_speakers=5,
             n_conv_encoder=3,
-            encoder_conv_filters=128,
-            encoder_conv_kernel_sizes=3,
-            encoder_activation='swish',
+            encoder_conv_filters=512,
+            encoder_conv_kernel_sizes=5,
+            encoder_conv_activation='relu',
+            encoder_conv_dropout_rate=0.5,
             encoder_lstm_units=256,
             n_prenet_layers=2,
-            prenet_units=128,
+            prenet_units=256,
             prenet_activation='relu',
-            prenet_dropout_rate=0.1,
-            n_lstm_decoder=2,
-            decoder_lstm_units=512,
-            attention_dim=256,
-            memory_units=256,
-            attention_filters=256,
-            attention_kernel=3,
+            prenet_dropout_rate=0.5,
+            n_lstm_decoder=1,
+            decoder_lstm_units=1024,
+            attention_dim=128,
+            memory_units=256,  # not neccessary
+            attention_filters=32,
+            attention_kernel=31,
             n_mels=80,
             n_conv_postnet=5,
-            postnet_conv_filters=256,
+            postnet_conv_filters=512,
             postnet_conv_kernel_sizes=5,
             postnet_dropout_rate=0.1):
         """Init parameters for Tacotron-2 model."""
@@ -46,7 +47,8 @@ class Tacotron2Config(object):
         self.n_conv_encoder = n_conv_encoder
         self.encoder_conv_filters = encoder_conv_filters
         self.encoder_conv_kernel_sizes = encoder_conv_kernel_sizes
-        self.encoder_activation = encoder_activation
+        self.encoder_conv_activation = encoder_conv_activation
+        self.encoder_conv_dropout_rate = encoder_conv_dropout_rate
         self.encoder_lstm_units = encoder_lstm_units
 
         # decoder param

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 Minh Nguyen (@dathudeptrai)
+# Copyright 2020 Minh Nguyen (@dathudeptrai) - Eren Gölge (@erogol)
 #  MIT License (https://opensource.org/licenses/MIT)
 
 """Tacotron-2 Modules."""
@@ -22,12 +22,14 @@ class TFTacotron2(tf.keras.Model):
     def __init__(self, config, training, **kwargs):
         """Initalize tacotron-2 layers."""
         super().__init__(self, **kwargs)
+        self.n_mels = config.n_mels
         self.encoder = TFTacotronEncoder(config, name='encoder')
         self.decoder_cell = TFTacotronDecoderCell(config, training=training, name='decoder_cell')
         self.postnet = TFTacotronPostnet(config, name='post_net')
         self.post_projection = tf.keras.layers.Dense(units=config.n_mels,
                                                      name='residual_projection')
 
+    # @tf.function
     def call(self,
              input_ids,
              speaker_ids,
@@ -44,26 +46,33 @@ class TFTacotron2(tf.keras.Model):
         batch_size, max_length_encoder = tf.keras.backend.int_shape(encoder_hidden_states)[0:2]
 
         # decoder
-        max_decoder_steps = max(mel_lengths)
+        max_decoder_steps = tf.reduce_max(mel_lengths)
+
+        # insert the initial zero frame for decoding
+        zero_frame = tf.zeros([batch_size, 1, self.n_mels])
+        mel_outputs = tf.concat([zero_frame, mel_outputs], axis=1)
         time_first_mels_outputs = tf.transpose(mel_outputs, perm=[1, 0, 2])  # [max_len, batch_size, dim]
 
-        frame_predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
-        stop_predictions = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
+        frame_predictions = tf.TensorArray(tf.float32, size=max_decoder_steps)
+        stop_predictions = tf.TensorArray(tf.float32, size=max_decoder_steps)
         state = self.decoder_cell.get_initial_state(
             batch_size=batch_size,
             alignment_size=max_length_encoder
         )
-
-        for i in range(max_decoder_steps):
+        
+        self.decoder_cell.attention_layer.setup_memory(encoder_hidden_states)
+        num_step = tf.constant(0, dtype=tf.int32)
+        for _ in tf.range(max_decoder_steps):
             decoder_inputs = TFTacotronDecoderInput(
-                time_first_mels_outputs[i],
+                time_first_mels_outputs[num_step],
                 encoder_hidden_states,
                 input_mask
             )
             outputs, state = self.decoder_cell(decoder_inputs, state)
             frame_pred, stop_pred = outputs
-            frame_predictions = frame_predictions.write(i, frame_pred)
-            stop_predictions = stop_predictions.write(i, stop_pred)
+            frame_predictions = frame_predictions.write(num_step, frame_pred)
+            stop_predictions = stop_predictions.write(num_step, stop_pred)
+            num_step += 1
 
         mel_outputs = tf.transpose(frame_predictions.stack(), [1, 0, 2])
         stop_outputs = tf.transpose(stop_predictions.stack(), [1, 0, 2])

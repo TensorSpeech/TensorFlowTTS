@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 MINH ANH (@dathudeptrai)
+# Copyright 2020 MINH ANH (@dathudeptrai) - Eren Gölge (@erogol)
 #  MIT License (https://opensource.org/licenses/MIT)
 
 """Tensorflow Layer modules for Tacotron-2."""
@@ -42,6 +42,8 @@ def swish(x):
 
 
 ACT2FN = {
+    "identity": tf.keras.layers.Activation('linear'),
+    "tanh": tf.keras.layers.Activation('tanh'),
     "gelu": tf.keras.layers.Activation(gelu),
     "relu": tf.keras.activations.relu,
     "swish": tf.keras.layers.Activation(swish),
@@ -49,8 +51,25 @@ ACT2FN = {
 }
 
 
+class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
+    """Tacotron-2 Convolutional Batchnorm module."""
+    def __init__(self, filters, kernel_size, dropout_rate, activation=None, name_idx=None):
+        super(TFTacotronConvBatchNorm, self).__init__()
+        self.conv1d = tf.keras.layers.Conv1D(filters, kernel_size, padding='same', name='conv_._'.format(name_idx))
+        self.norm = tf.keras.layers.BatchNormalization(axis=2, momentum=0.99, epsilon=1e-3, name='batch_norm_._{}'.format(name_idx))
+        self.dropout = tf.keras.layers.Dropout(rate=dropout_rate, name='dropout_._'.format(name_idx))
+        self.act = ACT2FN[activation]
+
+    def call(self, x):
+        o = self.conv1d(x)
+        o = self.norm(o)
+        o = self.act(o)
+        o = self.dropout(o)
+        return o
+
+    
 class TFTacotronEmbeddings(tf.keras.layers.Layer):
-    """Construct charactor/phoneme/positional/speaker embeddings."""
+    """Construct character/phoneme/positional/speaker embeddings."""
 
     def __init__(self, config, **kwargs):
         """Init variables."""
@@ -69,9 +88,9 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(config.embedding_dropout_prob)
 
     def build(self, input_shape):
-        """Build shared charactor/phoneme embedding layers."""
-        with tf.name_scope("charactor_embeddings"):
-            self.charactor_embeddings = self.add_weight(
+        """Build shared character/phoneme embedding layers."""
+        with tf.name_scope("character_embeddings"):
+            self.character_embeddings = self.add_weight(
                 "weight",
                 shape=[self.vocab_size, self.embedding_hidden_size],
                 initializer=get_initializer(self.initializer_range),
@@ -79,10 +98,10 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, inputs, training=False):
-        """Get charactor embeddings of inputs.
+        """Get character embeddings of inputs.
 
         Args:
-            1. charactor, Tensor (int32) shape [batch_size, length].
+            1. character, Tensor (int32) shape [batch_size, length].
             2. speaker_id, Tensor (int32) shape [batch_size]
         Returns:
             Tensor (float32) shape [batch_size, length, embedding_size].
@@ -95,7 +114,7 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         input_ids, speaker_ids = inputs
 
         # create embeddings
-        inputs_embeds = tf.gather(self.charactor_embeddings, input_ids)
+        inputs_embeds = tf.gather(self.character_embeddings, input_ids)
         speaker_embeddings = self.speaker_embeddings(speaker_ids)
 
         # extended speaker embeddings
@@ -108,31 +127,27 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         return embeddings
 
 
-class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
-    """Tacotron-2 Convolutional Batchnorm module."""
+class TFTacotronEncoderConvs(tf.keras.layers.Layer):
+    """Tacotron-2 Encoder Convolutional Batchnorm module."""
 
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
         self.conv_batch_norm = []
         for i in range(config.n_conv_encoder):
-            conv = tf.keras.layers.Conv1D(
+            conv = TFTacotronConvBatchNorm(
                 filters=config.encoder_conv_filters,
                 kernel_size=config.encoder_conv_kernel_sizes,
-                padding='same',
-                name='conv_._{}'.format(i)
-            )
-            batch_norm = tf.keras.layers.BatchNormalization(name='batch_norm_._{}'.format(i))
-            self.conv_batch_norm.append((conv, batch_norm))
-        self.activation = ACT2FN[config.encoder_activation]
+                activation=config.encoder_conv_activation,
+                dropout_rate=config.encoder_conv_dropout_rate,
+                name_idx=i)
+            self.conv_batch_norm.append(conv)
 
     def call(self, inputs, training=False):
         """Call logic."""
         outputs, mask = inputs
-        for conv, bn in self.conv_batch_norm:
+        for conv in self.conv_batch_norm:
             outputs = conv(outputs)
-            outputs = bn(outputs)
-            outputs = self.activation(outputs)
         return outputs * mask
 
 
@@ -143,7 +158,7 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
         """Init variables."""
         super().__init__(**kwargs)
         self.embeddings = TFTacotronEmbeddings(config, name='embeddings')
-        self.convbn = TFTacotronConvBatchNorm(config, name='conv_batch_norm')
+        self.convbn = TFTacotronEncoderConvs(config, name='conv_batch_norm')
         self.bilstm = tf.keras.layers.Bidirectional(
             tf.keras.layers.LSTM(units=config.encoder_lstm_units, return_sequences=True),
             name='bilstm'
@@ -154,7 +169,7 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
         input_ids, speaker_ids, input_mask = inputs
 
         # create embedding and mask them since we sum
-        # speaker embedding to all charactor embedding.
+        # speaker embedding to all character embedding.
         extended_input_mask = tf.expand_dims(input_mask, -1)
         input_embeddings = self.embeddings([input_ids, speaker_ids], training=training)
         mask_embeddings = input_embeddings * extended_input_mask
@@ -178,7 +193,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         self.query_layer = tf.keras.layers.Dense(units=config.attention_dim,
                                                  use_bias=False,
                                                  name='query_layer')
-        self.memory_layer = tf.keras.layers.Dense(units=config.memory_units,
+        self.memory_layer = tf.keras.layers.Dense(units=config.attention_dim,
                                                   use_bias=False,
                                                   name='memory_layer')
         self.location_convolution = tf.keras.layers.Conv1D(
@@ -206,13 +221,17 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
                 initializer="zeros",
             )
         super().build(input_shape)
+    
+    def setup_memory(self, memory):
+        self.values = self.memory_layer(memory)
 
     def call(self, inputs, training=False):
         """Call logic."""
         query, memory, prev_alignments, input_mask = inputs
         processed_query = self.query_layer(query)
         extended_preprocessed_query = tf.expand_dims(processed_query, 1)  # [batch_size, 1, attention_dim]
-        values = self.memory_layer(memory)  # [batch_size, max_len, attention_dim]
+        # TODO: (@erogol) compute values if not precomputed
+        # values = self.memory_layer(memory)  # [batch_size, max_len, attention_dim]
         extended_alignments = tf.expand_dims(prev_alignments, axis=2)  # [batch_size, max_len, 1]
         f_alignments = self.location_convolution(extended_alignments)
         processed_location_features = self.location_layer(f_alignments)  # [batch_size, max_len, attention_dim]
@@ -220,7 +239,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         # calculate attention scores
         energy = self._location_sensitive_score(extended_preprocessed_query,
                                                 processed_location_features,
-                                                values)  # [batch_size, max_len]
+                                                self.values)  # [batch_size, max_len]
         # masking energy
         mask_energy = (1.0 - tf.cast(input_mask, tf.float32)) * -10000.0
         energy = energy + mask_energy  # [batch_size, max_len]
@@ -230,12 +249,12 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
 
         # compute attention vector (aka context vector)
         extended_alignments = tf.expand_dims(alignments, axis=2)
-        attention = tf.reduce_sum(extended_alignments * values, axis=1)  # [batch_size, attention_dim]
+        context = tf.reduce_sum(extended_alignments * memory, axis=1)  # [batch_size, attention_dim]
 
         # cumulative alignments
         cum_alignments = alignments + prev_alignments
 
-        return attention, alignments, cum_alignments
+        return context, alignments, cum_alignments
 
     def _location_sensitive_score(self, w_query, w_fil, w_keys):
         """Calculate location sensitive score."""
@@ -246,9 +265,9 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         """Get initial alignments."""
         return tf.zeros(shape=[batch_size, max_time], dtype=tf.float32)
 
-    def get_initial_attention(self, batch_size):
+    def get_initial_context(self, batch_size):
         """Get initial attention."""
-        return tf.zeros(shape=[batch_size, self.config.attention_dim], dtype=tf.float32)
+        return tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
 
 
 class TFTacotronPrenet(tf.keras.layers.Layer):
@@ -282,31 +301,27 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.conv_batch_norm = []
         for i in range(config.n_conv_postnet):
-            conv = tf.keras.layers.Conv1D(
+            conv = TFTacotronConvBatchNorm(
                 filters=config.postnet_conv_filters,
                 kernel_size=config.postnet_conv_kernel_sizes,
-                padding='same',
-                name='conv_._{}'.format(i)
+                dropout_rate=config.postnet_dropout_rate,
+                activation='identity' if i+1 == config.n_conv_postnet else 'tanh', 
+                name_idx=i
             )
-            batch_norm = tf.keras.layers.BatchNormalization(name='batch_norm_._{}'.format(i))
-            self.conv_batch_norm.append((conv, batch_norm))
-        self.dropout = tf.keras.layers.Dropout(rate=config.postnet_dropout_rate, name='dropout')
-        self.activation = [tf.nn.tanh] * (config.n_conv_postnet - 1) + [tf.identity]
+            self.conv_batch_norm.append(conv)
 
     def call(self, inputs, training=False):
         """Call logic."""
         outputs, mask = inputs
         extended_mask = tf.expand_dims(mask, axis=2)
-        for i, (conv, bn) in enumerate(self.conv_batch_norm):
+        for i, conv in enumerate(self.conv_batch_norm):
             outputs = conv(outputs)
-            outputs = bn(outputs)
-            outputs = self.activation[i](outputs)
         return outputs * extended_mask
 
 
 TFTacotronDecoderCellState = collections.namedtuple(
     'TFTacotronDecoderCellState',
-    ['cell_state', 'attention', 'time', 'alignments', 'alignment_history'])
+    ['attention_lstm_state', 'decoder_lstms_state', 'context', 'time', 'alignments', 'alignment_history'])
 
 
 TFTacotronDecoderInput = collections.namedtuple(
@@ -324,13 +339,15 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
 
         # define lstm cell on decoder.
         # TODO(@dathudeptrai) switch to zone-out lstm.
+        self.attention_lstm = tf.keras.layers.LSTMCell(units=config.decoder_lstm_units,
+                                                 name='attention_lstm_cell')
         lstm_cells = []
         for i in range(config.n_lstm_decoder):
             lstm_cell = tf.keras.layers.LSTMCell(units=config.decoder_lstm_units,
                                                  name='lstm_cell_._{}'.format(i))
             lstm_cells.append(lstm_cell)
-        self.stacked_lstm = tf.keras.layers.StackedRNNCells(lstm_cells,
-                                                            name='stacked_lstm')
+        self.decoder_lstms = tf.keras.layers.StackedRNNCells(lstm_cells,
+                                                            name='decoder_lstms')
 
         # attention layer.
         self.attention_layer = TFTacotronLocationSensitiveAttention(config, name='location_sensitive_attention')
@@ -355,7 +372,8 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
     def state_size(self):
         """Return hidden state size."""
         return TFTacotronDecoderCellState(
-            cell_state=self.stacked_lstm.state_size,
+            attention_lstm_state=self.attention_lstm_state.state_size,
+            decoder_lstms_state=self.decoder_lstms.state_size,
             time=tf.TensorShape([]),
             attention=self.config.attention_dim,
             alignments=self.alignment_size,
@@ -364,17 +382,19 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
 
     def get_initial_state(self, batch_size, alignment_size):
         """Get initial states."""
-        initial_lstm_cell_statess = self.stacked_lstm.get_initial_state(None, batch_size, dtype=tf.float32)
-        initial_attention = self.attention_layer.get_initial_attention(batch_size)
+        initial_attention_lstm_cell_states = self.attention_lstm.get_initial_state(None, batch_size, dtype=tf.float32)
+        initial_decoder_lstms_cell_states = self.decoder_lstms.get_initial_state(None, batch_size, dtype=tf.float32)
+        initial_context = self.attention_layer.get_initial_context(batch_size)
         initial_alignments = self.attention_layer.get_initial_alignments(
             batch_size, alignment_size)
         initial_alignment_history = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         return TFTacotronDecoderCellState(
-            cell_state=initial_lstm_cell_statess,
+            attention_lstm_state=initial_attention_lstm_cell_states,
+            decoder_lstms_state=initial_decoder_lstms_cell_states,
             time=tf.zeros([], dtype=tf.int32),
-            attention=initial_attention,
+            context=initial_context,
             alignments=initial_alignments,
-            alignment_history=initial_alignment_history
+            alignment_history=initial_alignment_history 
         )
 
     def call(self, inputs, states):
@@ -384,24 +404,28 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         # 1. apply prenet for decoder_input.
         prenet_out = self.prenet(decoder_input, training=self.training)  # [batch_size, dim]
 
-        # 2. concat prenet_out and prev attention vector
-        # then use it as input of stacked lstm layer.
-        stacked_lstm_input = tf.concat([prenet_out, states.attention], axis=-1)
-        stacked_lstm_output, next_cell_state = self.stacked_lstm(stacked_lstm_input, states.cell_state)
+        # 2. concat prenet_out and prev context vector
+        # then use it as input of attention lstm layer.
+        attention_lstm_input = tf.concat([prenet_out, states.context], axis=-1)
+        attention_lstm_output, next_attention_lstm_state = self.attention_lstm(attention_lstm_input, states.attention_lstm_state)
 
-        # 3. compute attention, alignment and cumulative alignment.
+        # 3. compute context, alignment and cumulative alignment.
         prev_alignments = states.alignments
         prev_alignment_history = states.alignment_history
-        attention, alignments, cum_alignments = self.attention_layer(
-            [stacked_lstm_output,
+        context, alignments, cum_alignments = self.attention_layer(
+            [attention_lstm_output,
              encoder_output,
              prev_alignments,
              encoder_mask],
             training=self.training
         )
 
+        # 4. run decoder lstm(s)
+        decoder_lstms_input = tf.concat([attention_lstm_output, context], axis=-1)
+        decoder_lstms_output, next_decoder_lstms_state = self.decoder_lstms(decoder_lstms_input, states.decoder_lstms_state)
+
         # 4. compute frame feature and stop token.
-        projection_inputs = tf.concat([stacked_lstm_output, attention], axis=-1)
+        projection_inputs = tf.concat([decoder_lstms_output, context], axis=-1)
         decoder_outputs = self.frame_projection(projection_inputs)
         stop_tokens = self.stop_projection(projection_inputs)
 
@@ -410,9 +434,10 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
 
         # 6. return new states.
         new_states = TFTacotronDecoderCellState(
-            cell_state=next_cell_state,
+            attention_lstm_state=next_attention_lstm_state,
+            decoder_lstms_state=next_decoder_lstms_state,
             time=states.time + 1,
-            attention=attention,
+            context=context,
             alignments=cum_alignments,
             alignment_history=alignment_history
         )
