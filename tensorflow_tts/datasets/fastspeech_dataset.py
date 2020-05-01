@@ -18,7 +18,6 @@ import operator
 import numpy as np
 
 import tensorflow as tf
-# tf.get_logger().setLevel(logging.ERROR)
 
 
 class CharactorDurationMelDataset(AbstractDataset):
@@ -115,7 +114,7 @@ class CharactorDurationMelDataset(AbstractDataset):
         return [self.utt_ids]
 
     def generator(self, utt_ids):
-        for i, utt_id in enumerate(utt_ids[:4]):
+        for i, utt_id in enumerate(utt_ids):
             mel_file = self.mel_files[i]
             charactor_file = self.charactor_files[i]
             duration_file = self.duration_files[i]
@@ -165,54 +164,3 @@ class CharactorDurationMelDataset(AbstractDataset):
 
     def __name__(self):
         return "CharactorDurationMelDataset"
-
-
-# if __name__ == "__main__":
-#     from tensorflow_tts.models import TFFastSpeech
-#     from tensorflow_tts.configs import FastSpeechConfig
-#     # def call(
-#     #         self,
-#     #         input_ids,
-#     #         attention_mask,
-#     #         speaker_ids,
-#     #         duration_gts,
-#     #         training=False):
-#     fastspeech = TFFastSpeech(config=FastSpeechConfig(), name='fastspeech')
-#     optimizer = tf.keras.optimizers.Adam(lr=0.001)
-
-#     datasets = CharactorDurationMelDataset(
-#         root_dir="./egs/ljspeech/dump/train/",
-#         return_utt_id=False,
-#         mel_length_threshold=32,
-#     ).create(allow_cache=False, is_shuffle=False, batch_size=4)
-
-#     mel_plot = None
-
-#     @tf.function(experimental_relax_shapes=True)
-#     def run_train(data):
-#         with tf.GradientTape() as tape:
-#             masked_mel_outputs, masked_duration_outputs = fastspeech(
-#                 data[0],
-#                 attention_mask=tf.math.not_equal(data[0], 0),
-#                 speaker_ids=tf.constant([0] * 4),
-#                 duration_gts=data[1],
-#                 training=True
-#             )
-#             duration_loss = tf.keras.losses.MeanSquaredError()(
-#                 data[1], masked_duration_outputs)
-#             mel_loss = tf.keras.losses.MeanSquaredError()(data[2], masked_mel_outputs)
-#             loss = duration_loss + mel_loss
-
-#         gradients = tape.gradient(loss, fastspeech.trainable_variables)
-#         optimizer.apply_gradients(zip(gradients, fastspeech.trainable_variables))
-
-#         tf.print(duration_loss)
-#         # tf.print(masked_duration_outputs)
-
-#         return masked_mel_outputs
-
-#     for _ in range(1000):
-#         for data in datasets:
-#             pred = run_train(data)
-
-#     fastspeech.summary()
