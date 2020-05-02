@@ -4,13 +4,14 @@
 #  MIT License (https://opensource.org/licenses/MIT)
 """Tacotron-2 Config object."""
 
+from tensorflow_tts.processor.ljspeech import symbols
 
 class Tacotron2Config(object):
     """Initialize Tacotron-2 Config."""
 
     def __init__(
             self,
-            vocab_size=250,
+            vocab_size=len(symbols) + 1,
             embedding_hidden_size=512,
             initializer_range=0.02,
             layer_norm_eps=1e-6,

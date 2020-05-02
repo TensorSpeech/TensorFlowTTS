@@ -55,19 +55,18 @@ class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
     """Tacotron-2 Convolutional Batchnorm module."""
 
     def __init__(self, filters, kernel_size, dropout_rate, activation=None, name_idx=None):
-        super(TFTacotronConvBatchNorm, self).__init__()
-        self.conv1d = tf.keras.layers.Conv1D(filters, kernel_size, padding='same', name='conv_._'.format(name_idx))
-        self.norm = tf.keras.layers.BatchNormalization(
-            axis=2, momentum=0.99, epsilon=1e-3, name='batch_norm_._{}'.format(name_idx))
-        self.dropout = tf.keras.layers.Dropout(rate=dropout_rate, name='dropout_._'.format(name_idx))
+        super().__init__()
+        self.conv1d = tf.keras.layers.Conv1D(filters, kernel_size, padding='same', name='conv_._{}'.format(name_idx))
+        self.norm = tf.keras.layers.BatchNormalization(axis=-1, name='batch_norm_._{}'.format(name_idx))
+        self.dropout = tf.keras.layers.Dropout(rate=dropout_rate, name='dropout_._{}'.format(name_idx))
         self.act = ACT2FN[activation]
 
-    def call(self, x):
-        o = self.conv1d(x)
-        o = self.norm(o)
-        o = self.act(o)
-        o = self.dropout(o)
-        return o
+    def call(self, inputs, training=False):
+        outputs = self.conv1d(inputs)
+        outputs = self.norm(outputs)
+        outputs = self.act(outputs)
+        outputs = self.dropout(outputs, training=training)
+        return outputs
 
 
 class TFTacotronEmbeddings(tf.keras.layers.Layer):
@@ -79,15 +78,15 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         self.vocab_size = config.vocab_size
         self.embedding_hidden_size = config.embedding_hidden_size
         self.initializer_range = config.initializer_range
+        self.config = config
 
-        self.speaker_embeddings = tf.keras.layers.Embedding(
-            config.n_speakers,
-            config.embedding_hidden_size,
-            embeddings_initializer=get_initializer(self.initializer_range),
-            name="speaker_embeddings"
-        )
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
-        self.dropout = tf.keras.layers.Dropout(config.embedding_dropout_prob)
+        if config.n_speakers > 1:
+            self.speaker_embeddings = tf.keras.layers.Embedding(
+                config.n_speakers,
+                config.embedding_hidden_size,
+                embeddings_initializer=get_initializer(self.initializer_range),
+                name="speaker_embeddings"
+            )
 
     def build(self, input_shape):
         """Build shared character/phoneme embedding layers."""
@@ -113,20 +112,17 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
 
     def _embedding(self, inputs, training=False):
         """Applies embedding based on inputs tensor."""
-        input_ids, speaker_ids = inputs
+        input_ids, speaker_ids, extended_input_mask = inputs
 
         # create embeddings
         inputs_embeds = tf.gather(self.character_embeddings, input_ids)
-        speaker_embeddings = self.speaker_embeddings(speaker_ids)
 
-        # extended speaker embeddings
-        extended_speaker_embeddings = speaker_embeddings[:, tf.newaxis, :]
-
-        # sum all embedding
-        embeddings = inputs_embeds + extended_speaker_embeddings
-        embeddings = self.LayerNorm(embeddings)
-        embeddings = self.dropout(embeddings, training=training)
-        return embeddings
+        if self.config.n_speakers > 1:
+            speaker_embeddings = self.speaker_embeddings(speaker_ids)
+            extended_speaker_embeddings = speaker_embeddings[:, tf.newaxis, :]
+            # sum all embedding
+            embeddings = inputs_embeds + extended_speaker_embeddings
+        return embeddings * extended_input_mask
 
 
 class TFTacotronEncoderConvs(tf.keras.layers.Layer):
@@ -147,10 +143,10 @@ class TFTacotronEncoderConvs(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         """Call logic."""
-        outputs, mask = inputs
+        outputs, extended_input_mask = inputs
         for conv in self.conv_batch_norm:
             outputs = conv(outputs)
-        return outputs * mask
+        return outputs * extended_input_mask
 
 
 class TFTacotronEncoder(tf.keras.layers.Layer):
@@ -172,12 +168,11 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
 
         # create embedding and mask them since we sum
         # speaker embedding to all character embedding.
-        extended_input_mask = tf.expand_dims(input_mask, -1)
-        input_embeddings = self.embeddings([input_ids, speaker_ids], training=training)
-        mask_embeddings = input_embeddings * extended_input_mask
+        extended_input_mask = tf.expand_dims(input_mask, 2)
+        input_embeddings = self.embeddings([input_ids, speaker_ids, extended_input_mask], training=training)
 
         # pass embeddings to convolution batch norm
-        conv_outputs = self.convbn([mask_embeddings, extended_input_mask], training=training)
+        conv_outputs = self.convbn([input_embeddings, extended_input_mask], training=training)
 
         # bi-lstm.
         outputs = self.bilstm(conv_outputs)
@@ -232,7 +227,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
         query, memory, prev_alignments, input_mask = inputs
         processed_query = self.query_layer(query)
         extended_preprocessed_query = tf.expand_dims(processed_query, 1)  # [batch_size, 1, attention_dim]
-        # TODO: (@erogol) compute values if not precomputed
+        # TODO(@erogol) compute values if not precomputed
         # values = self.memory_layer(memory)  # [batch_size, max_len, attention_dim]
         extended_alignments = tf.expand_dims(prev_alignments, axis=2)  # [batch_size, max_len, 1]
         f_alignments = self.location_convolution(extended_alignments)
@@ -243,7 +238,7 @@ class TFTacotronLocationSensitiveAttention(tf.keras.layers.Layer):
                                                 processed_location_features,
                                                 self.values)  # [batch_size, max_len]
         # masking energy
-        mask_energy = (1.0 - tf.cast(input_mask, tf.float32)) * -10000.0
+        mask_energy = (1.0 - tf.cast(input_mask, tf.float32)) * -1e9
         energy = energy + mask_energy  # [batch_size, max_len]
 
         # calculate attention scores (aka alignments)
@@ -296,7 +291,7 @@ class TFTacotronPrenet(tf.keras.layers.Layer):
 
 
 class TFTacotronPostnet(tf.keras.layers.Layer):
-    """Tacotron-2 prenet."""
+    """Tacotron-2 postnet."""
 
     def __init__(self, config, **kwargs):
         """Init variables."""
@@ -314,11 +309,10 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         """Call logic."""
-        outputs, mask = inputs
-        extended_mask = tf.expand_dims(mask, axis=2)
-        for i, conv in enumerate(self.conv_batch_norm):
+        outputs, input_mask = inputs
+        for _, conv in enumerate(self.conv_batch_norm):
             outputs = conv(outputs)
-        return outputs * extended_mask
+        return outputs * tf.cast(tf.expand_dims(input_mask, 2), dtype=tf.float32)
 
 
 TFTacotronDecoderCellState = collections.namedtuple(
@@ -401,7 +395,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
 
     def call(self, inputs, states):
         """Call logic."""
-        decoder_input, encoder_output, encoder_mask = tf.nest.flatten(inputs)
+        decoder_input, encoder_output, encoder_mask = inputs
 
         # 1. apply prenet for decoder_input.
         prenet_out = self.prenet(decoder_input, training=self.training)  # [batch_size, dim]
@@ -462,7 +456,6 @@ class TFTacotron2(tf.keras.Model):
         self.post_projection = tf.keras.layers.Dense(units=config.n_mels,
                                                      name='residual_projection')
 
-    # @tf.function
     def call(self,
              input_ids,
              speaker_ids,
