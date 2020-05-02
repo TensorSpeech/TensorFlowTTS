@@ -15,8 +15,6 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.datasets import MelDataset
-from tensorflow_tts.utils import read_hdf5
-from tensorflow_tts.utils import write_hdf5
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -25,15 +23,13 @@ def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
         description="Compute mean and variance of dumped raw features "
-                    "(See detail in parallel_wavegan/bin/compute_statistics.py).")
+                    "(See detail in tensorflow_tts/bin/compute_statistics.py).")
     parser.add_argument("--rootdir", type=str, required=True,
-                        help="directory including feature files. "
-                             "you need to specify either feats-scp or rootdir.")
+                        help="directory including feature files. ")
     parser.add_argument("--config", type=str, required=True,
                         help="yaml format configuration file.")
     parser.add_argument("--outdir", default=None, type=str, required=True,
-                        help="directory to save statistics. if not provided, "
-                             "stats will be saved in the above root directory. (default=None)")
+                        help="directory to save statistics.")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
     args = parser.parse_args()

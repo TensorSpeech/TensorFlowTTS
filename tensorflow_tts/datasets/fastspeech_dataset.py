@@ -5,19 +5,17 @@
 
 """Dataset modules."""
 
-from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
-from tensorflow_tts.utils import read_hdf5
-from tensorflow_tts.utils import find_files
-
 import logging
 import os
 import random
 import itertools
-import operator
-
 import numpy as np
 
 import tensorflow as tf
+
+from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
+
+from tensorflow_tts.utils import find_files
 
 
 class CharactorDurationMelDataset(AbstractDataset):
@@ -40,8 +38,10 @@ class CharactorDurationMelDataset(AbstractDataset):
             root_dir (str): Root directory including dumped files.
             charactor_query (str): Query to find charactor files in root_dir.
             mel_query (str): Query to find feature files in root_dir.
+            duration_query (str): Query to find duration files in root_dir.
             charactor_load_fn (func): Function to load charactor file.
             mel_load_fn (func): Function to load feature file.
+            duration_load_fn (func): Function to load duration file.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
 
@@ -182,7 +182,9 @@ class CharactorDurationDataset(AbstractDataset):
         Args:
             root_dir (str): Root directory including dumped files.
             charactor_query (str): Query to find charactor files in root_dir.
+            duration_query (str): Query to find duration files in root_dir.
             charactor_load_fn (func): Function to load charactor file.
+            duration_load_fn (func): Function to load duration file.
             return_utt_id (bool): Whether to return the utterance id with arrays.
 
         """

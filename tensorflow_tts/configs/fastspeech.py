@@ -2,6 +2,7 @@
 
 # Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
+
 """FastSpeech Config object."""
 
 from tensorflow_tts.processor.ljspeech import symbols

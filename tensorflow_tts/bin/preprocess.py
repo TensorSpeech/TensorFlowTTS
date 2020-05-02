@@ -3,13 +3,12 @@
 # Copyright 2020 Minh Nguyen (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
 
-"""Perform preprocessing and raw feature extraction."""
+"""Perform preprocessing, raw feature extraction and train/valid split."""
 
 import argparse
 import logging
 import os
 
-import multiprocessing
 from pathos.multiprocessing import ProcessingPool as Pool
 
 import librosa
@@ -19,7 +18,6 @@ import yaml
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-from tensorflow_tts.utils import write_hdf5
 from tensorflow_tts.processor import LJSpeechProcessor
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -67,14 +65,16 @@ def logmelfilterbank(audio,
 def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
-        description="Preprocess audio and then extract features (See detail in parallel_wavegan/bin/preprocess.py).")
-    parser.add_argument("--rootdir", default=None, type=str,
+        description="Preprocess audio and then extract features (See detail in tensorflow_tts/bin/preprocess.py).")
+    parser.add_argument("--rootdir", default=None, type=str, required=True,
                         help="root path.")
-    parser.add_argument("--outdir", default=None, type=str,
+    parser.add_argument("--outdir", default=None, type=str, required=True,
                         help="output dir.")
     parser.add_argument("--config", type=str, required=True,
                         help="yaml format configuration file.")
     parser.add_argument("--n_cpus", type=int, default=4, required=False,
+                        help="yaml format configuration file.")
+    parser.add_argument("--test_size", type=float, default=0.05, required=False,
                         help="yaml format configuration file.")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
@@ -117,7 +117,8 @@ def main():
         os.makedirs(os.path.join(args.outdir, 'train', 'durations'), exist_ok=True)
 
     # train test split
-    idx_train, idx_valid = train_test_split(range(len(processor.items)), shuffle=True, test_size=0.05, random_state=42)
+    idx_train, idx_valid = train_test_split(
+        range(len(processor.items)), shuffle=True, test_size=args.test_size, random_state=42)
 
     # train/valid utt_ids
     train_utt_ids = []

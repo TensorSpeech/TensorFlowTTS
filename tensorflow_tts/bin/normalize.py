@@ -14,10 +14,7 @@ import yaml
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.datasets import AudioMelDataset
 from tensorflow_tts.datasets import MelDataset
-from tensorflow_tts.utils import read_hdf5
-from tensorflow_tts.utils import write_hdf5
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -26,9 +23,8 @@ def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
         description="Normalize dumped raw features (See detail in tensorflow_tts/bin/normalize.py).")
-    parser.add_argument("--rootdir", default=None, type=str,
-                        help="directory including feature files to be normalized. "
-                             "you need to specify either *-scp or rootdir.")
+    parser.add_argument("--rootdir", default=None, type=str, required=True,
+                        help="directory including feature files to be normalized. ")
     parser.add_argument("--outdir", type=str, required=True,
                         help="directory to dump normalized feature files.")
     parser.add_argument("--stats", type=str, required=True,

@@ -7,13 +7,11 @@
 
 import logging
 import os
-
-from multiprocessing import Manager
+import numpy as np
 
 import tensorflow as tf
 
 from tensorflow_tts.utils import find_files
-from tensorflow_tts.utils import read_hdf5
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 
@@ -23,10 +21,10 @@ class AudioMelDataset(AbstractDataset):
 
     def __init__(self,
                  root_dir,
-                 audio_query="*.h5",
-                 mel_query="*.h5",
-                 audio_load_fn=lambda x: read_hdf5(x, "wave"),
-                 mel_load_fn=lambda x: read_hdf5(x, "feats"),
+                 audio_query="*-wave.npy",
+                 mel_query="*-raw-feats.npy",
+                 audio_load_fn=np.load,
+                 mel_load_fn=np.load,
                  audio_length_threshold=None,
                  mel_length_threshold=None,
                  return_utt_id=False
@@ -117,8 +115,8 @@ class AudioDataset(AbstractDataset):
 
     def __init__(self,
                  root_dir,
-                 audio_query="*.h5",
-                 audio_load_fn=lambda x: read_hdf5(x, "wave"),
+                 audio_query="*-wave.h5",
+                 audio_load_fn=np.load,
                  audio_length_threshold=None,
                  return_utt_id=False,
                  ):
@@ -188,8 +186,8 @@ class MelDataset(AbstractDataset):
 
     def __init__(self,
                  root_dir,
-                 mel_query="*.h5",
-                 mel_load_fn=lambda x: read_hdf5(x, "feats"),
+                 mel_query="*-raw-feats.h5",
+                 mel_load_fn=np.load,
                  mel_length_threshold=None,
                  return_utt_id=False
                  ):

@@ -21,9 +21,9 @@ from tqdm import tqdm
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
 from tensorflow_tts.datasets import CharactorDurationMelDataset
 
-from tensorflow_tts.models import TFFastSpeech
-
 import tensorflow_tts.configs.fastspeech as FASTSPEECH_CONFIG
+
+from tensorflow_tts.models import TFFastSpeech
 
 from tensorflow_tts.optimizers import WarmUp
 from tensorflow_tts.optimizers import AdamWeightDecay
@@ -271,14 +271,11 @@ def main():
         description="Train FastSpeech (See detail in tensorflow_tts/bin/train-fastspeech.py)"
     )
     parser.add_argument("--train-dir", default=None, type=str,
-                        help="directory including training data. "
-                             "you need to specify either train-*-scp or train-dumpdir.")
+                        help="directory including training data. ")
     parser.add_argument("--dev-dir", default=None, type=str,
-                        help="directory including development data. "
-                             "you need to specify either dev-*-scp or dev-dumpdir.")
-    parser.add_argument("--use-norm", default=False, type=bool,
-                        help="directory including development data. "
-                             "you need to specify either dev-*-scp or dev-dumpdir.")
+                        help="directory including development data. ")
+    parser.add_argument("--use-norm", default=1, type=int,
+                        help="usr norm-mels for train or raw.")
     parser.add_argument("--outdir", type=str, required=True,
                         help="directory to save checkpoints.")
     parser.add_argument("--config", type=str, required=True,
@@ -296,6 +293,7 @@ def main():
         tf.config.optimizer.set_experimental_options({"auto_mixed_precision": True})
 
     args.mixed_precision = bool(args.mixed_precision)
+    args.use_norm = bool(args.use_norm)
 
     # set logger
     if args.verbose > 1:
@@ -320,7 +318,7 @@ def main():
     if args.train_dir is None:
         raise ValueError("Please specify --train-dir")
     if args.dev_dir is None:
-        raise ValueError("Please specify either --valid-dir")
+        raise ValueError("Please specify --valid-dir")
 
     # load and save config
     with open(args.config) as f:

@@ -20,8 +20,7 @@ import tensorflow_tts
 from tqdm import tqdm
 
 from tensorflow_tts.trainers import GanBasedTrainer
-from tensorflow_tts.utils import read_hdf5
-from tensorflow_tts.utils import find_files
+
 from tensorflow_tts.datasets import AudioMelDataset
 
 from tensorflow_tts.models import TFMelGANGenerator
@@ -46,7 +45,9 @@ class MelganTrainer(GanBasedTrainer):
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
             config (dict): Config dict loaded from yaml format configuration file.
-            is_mixed_precision (bool): Use mixed precision or not.
+            is_generator_mixed_precision (bool): Use mixed precision for generator or not.
+            is_discriminator_mixed_precision (bool): Use mixed precision for discriminator or not.
+
 
         """
         super(MelganTrainer, self).__init__(steps,
@@ -376,26 +377,19 @@ def main():
         description="Train MelGAN (See detail in tensorflow_tts/bin/train-melgan.py)"
     )
     parser.add_argument("--train-dir", default=None, type=str,
-                        help="directory including training data. "
-                             "you need to specify either train-*-scp or train-dumpdir.")
+                        help="directory including training data. ")
     parser.add_argument("--dev-dir", default=None, type=str,
-                        help="directory including development data. "
-                             "you need to specify either dev-*-scp or dev-dumpdir.")
-    parser.add_argument("--use-norm", default=False, type=bool,
-                        help="directory including development data. "
-                             "you need to specify either dev-*-scp or dev-dumpdir.")
+                        help="directory including development data. ")
+    parser.add_argument("--use-norm", default=1, type=int,
+                        help="use norm mels for training or raw.")
     parser.add_argument("--outdir", type=str, required=True,
                         help="directory to save checkpoints.")
     parser.add_argument("--config", type=str, required=True,
                         help="yaml format configuration file.")
-    parser.add_argument("--pretrain", default="", type=str, nargs="?",
-                        help="checkpoint file path to load pretrained params. (default=\"\")")
     parser.add_argument("--resume", default="", type=str, nargs="?",
                         help="checkpoint file path to resume training. (default=\"\")")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
-    parser.add_argument("--rank", "--local_rank", default=0, type=int,
-                        help="rank for distributed training. no need to explictly specify.")
     parser.add_argument("--generator_mixed_precision", default=0, type=int,
                         help="using mixed precision for generator or not.")
     parser.add_argument("--discriminator_mixed_precision", default=0, type=int,
@@ -408,6 +402,8 @@ def main():
 
     args.generator_mixed_precision = bool(args.generator_mixed_precision)
     args.discriminator_mixed_precision = bool(args.discriminator_mixed_precision)
+
+    args.use_norm = bool(args.use_norm)
 
     # set logger
     if args.verbose > 1:
@@ -495,7 +491,7 @@ def main():
     discriminator = TFMelGANMultiScaleDiscriminator(
         MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["discriminator_params"]), name='melgan_discriminator')
 
-    # dummy input to build input shape
+    # dummy input to build model.
     fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
     y_hat = generator(fake_mels)
     discriminator(y_hat)
