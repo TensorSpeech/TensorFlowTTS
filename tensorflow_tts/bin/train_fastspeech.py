@@ -11,7 +11,6 @@ import os
 import sys
 
 import numpy as np
-import soundfile as sf
 import tensorflow as tf
 import yaml
 
@@ -378,57 +377,47 @@ def main():
     fastspeech = TFFastSpeech(config=FASTSPEECH_CONFIG.FastSpeechConfig(**config["fastspeech_params"]))
     fastspeech.summary()
 
-    def calculate_real_len_mel(mel):
-        real_len = np.sum(mel, -1)  # [len]
-        return np.sum(np.not_equal(real_len, 0))
+    # define trainer
+    trainer = FastSpeechTrainer(config=config,
+                                steps=0,
+                                epochs=0,
+                                is_mixed_precision=False)
 
-    for data in train_dataset:
-        charactor, duration, mel = data
-        assert len(charactor[0]) == len(duration[0]), "wrong-1"
-        assert np.sum(duration[0]) == calculate_real_len_mel(
-            mel[0].numpy()), "{} vs {}".format(np.sum(duration[0]), len(mel[0]))
+    # AdamW for fastspeech
+    learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
+        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+        decay_steps=config["optimizer_params"]["decay_steps"],
+        end_learning_rate=config["optimizer_params"]["end_learning_rate"]
+    )
 
-    # # define trainer
-    # trainer = FastSpeechTrainer(config=config,
-    #                             steps=0,
-    #                             epochs=0,
-    #                             is_mixed_precision=False)
+    learning_rate_fn = WarmUp(
+        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+        decay_schedule_fn=learning_rate_fn,
+        warmup_steps=int(config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"])
+    )
 
-    # # AdamW for fastspeech
-    # learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
-    #     initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
-    #     decay_steps=config["optimizer_params"]["decay_steps"],
-    #     end_learning_rate=config["optimizer_params"]["end_learning_rate"]
-    # )
+    optimizer = AdamWeightDecay(
+        learning_rate=learning_rate_fn,
+        weight_decay_rate=config["optimizer_params"]["weight_decay"],
+        beta_1=0.9,
+        beta_2=0.98,
+        epsilon=1e-6,
+        exclude_from_weight_decay=['LayerNorm', 'layer_norm', 'bias']
+    )
 
-    # learning_rate_fn = WarmUp(
-    #     initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
-    #     decay_schedule_fn=learning_rate_fn,
-    #     warmup_steps=int(config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"])
-    # )
+    # compile trainer
+    trainer.compile(model=fastspeech,
+                    optimizer=optimizer)
 
-    # optimizer = AdamWeightDecay(
-    #     learning_rate=learning_rate_fn,
-    #     weight_decay_rate=config["optimizer_params"]["weight_decay"],
-    #     beta_1=0.9,
-    #     beta_2=0.98,
-    #     epsilon=1e-6,
-    #     exclude_from_weight_decay=['LayerNorm', 'layer_norm', 'bias']
-    # )
-
-    # # compile trainer
-    # trainer.compile(model=fastspeech,
-    #                 optimizer=optimizer)
-
-    # # start training
-    # try:
-    #     trainer.fit(train_dataset,
-    #                 valid_dataset,
-    #                 saved_path=config["outdir"] + '/checkpoints/',
-    #                 resume=None)
-    # except KeyboardInterrupt:
-    #     trainer.save_checkpoint()
-    #     logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")
+    # start training
+    try:
+        trainer.fit(train_dataset,
+                    valid_dataset,
+                    saved_path=config["outdir"] + '/checkpoints/',
+                    resume=None)
+    except KeyboardInterrupt:
+        trainer.save_checkpoint()
+        logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")
 
 
 if __name__ == "__main__":
