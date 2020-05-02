@@ -64,7 +64,7 @@ class LJSpeechProcessor(object):
     def get_one_sample(self, idx):
         text, wav_file, speaker_name = self.items[idx]
 
-        # normalize audio signal to be [-1, 1], soundfine already norm.
+        # normalize audio signal to be [-1, 1], soundfile already norm.
         audio, rate = sf.read(wav_file)
         audio = audio.astype(np.float32)
 

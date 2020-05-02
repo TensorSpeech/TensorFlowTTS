@@ -5,6 +5,7 @@
 
 """Tensorflow Model modules for FastSpeech."""
 
+import numpy as np
 import tensorflow as tf
 
 from tensorflow_tts.layers import TFFastSpeechEmbeddings
@@ -81,6 +82,7 @@ class TFFastSpeech(tf.keras.Model):
                   attention_mask,
                   speaker_ids,
                   duration_gts=None,
+                  speed_ratios=None,
                   training=False):
         """Call logic."""
         embedding_output = self.embeddings([input_ids, speaker_ids], training=training)
@@ -91,7 +93,11 @@ class TFFastSpeech(tf.keras.Model):
         # rather than just use last_hidden_states of encoder for duration_predictor.
         duration_outputs = self.duration_predictor([last_encoder_hidden_states, attention_mask])  # [batch_size, length]
         duration_outputs = tf.math.exp(duration_outputs) - 1
-        duration_outputs = tf.cast(tf.math.round(duration_outputs), tf.int32)
+
+        if speed_ratios is None:
+            speed_ratios = tf.convert_to_tensor(np.array([1.0]))
+
+        duration_outputs = tf.cast(tf.math.round(duration_outputs * speed_ratios), tf.int32)
 
         if duration_gts is not None:
             duration_outputs = duration_gts
@@ -113,80 +119,3 @@ class TFFastSpeech(tf.keras.Model):
 
         outputs = (mel_before, mel_after, duration_outputs)
         return outputs
-
-# if __name__ == "__main__":
-#     from tensorflow_tts.configs.fastspeech import FastSpeechConfig
-#     config = FastSpeechConfig()
-#     fastspeech = TFFastSpeech(config=config)
-#     fastspeech._build()
-
-#     fastspeech.load_weights('./model-130000.h5')
-
-#     # inference
-#     import numpy as np
-#     ids = np.load('LJ001-0001-ids.npy')
-#     ids = np.expand_dims(ids, 0)
-
-#     duration_gts = np.load('LJ001-0001-durations.npy')
-#     duration_gts = np.expand_dims(duration_gts, 0)
-
-#     mel_before, mel_after, duration = fastspeech.inference(ids, tf.math.not_equal(ids, 0),
-#                 speaker_ids=np.array([0]), duration_gts=duration_gts, training=False)
-#     mel = mel_before[0].numpy()
-
-#     # plot
-#     mel_gt = tf.reshape(np.load("LJ001-0001-norm-feats.npy"), (-1, 80)).numpy()  # [length, 80]
-#     mel_pred = tf.reshape(mel, (-1, 80)).numpy()  # [length, 80]
-
-#     # plit figure and save it
-#     import matplotlib.pyplot as plt
-#     figname = './test.png'
-#     fig = plt.figure(figsize=(10, 8))
-#     ax1 = fig.add_subplot(311)
-#     ax2 = fig.add_subplot(312)
-#     im = ax1.imshow(np.rot90(mel_gt), aspect='auto', interpolation='none')
-#     ax1.set_title('Target Mel-Spectrogram')
-#     fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax1)
-#     ax2.set_title('Predicted Mel-Spectrogram')
-#     im = ax2.imshow(np.rot90(mel_pred), aspect='auto', interpolation='none')
-#     fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax2)
-#     plt.tight_layout()
-#     plt.savefig(figname)
-#     plt.close()
-#     # melgan generator
-#     from tensorflow_tts.models import TFMelGANGenerator
-#     from tensorflow_tts.configs import MelGANGeneratorConfig
-#     import soundfile as sf
-
-#     config = MelGANGeneratorConfig(filters=512)
-#     melgan = TFMelGANGenerator(config=config, name='melgan_generator')
-
-#     audio = melgan(np.expand_dims(np.load("LJ050-0233-feats.npy"), 0))
-#     melgan.load_weights('generator-2160000.h5')
-
-#     # from sklearn.preprocessing import StandardScaler
-#     # scaler = StandardScaler()
-#     # scaler.mean_ = np.load("stats.npy")[0]
-#     # scaler.scale_ = np.load("stats.npy")[1]
-#     # mel = scaler.transform(mel_inverse)
-
-#     #norm_mel = scaler.transform(mel)
-#     mel = 0.5 * mel + 0.5 * np.load("LJ001-0001-norm-feats.npy")
-#     audio_pred = melgan(np.expand_dims(mel, 0))[0, :, 0]
-#     sf.write('./test.wav', audio_pred,
-#                 22050, "PCM_16")
-
-#     # decoder_model.load_weights('./test.h5')
-
-#     # fastspeech = TFFastSpeech(config=config, name='fastspeech')
-
-#     # input_ids = tf.convert_to_tensor([[1, 2, 3, 4, 5, 6, 7, 0, 0, 0],
-#     #                                   [1, 2, 3, 4, 5, 6, 7, 1, 1, 0]], tf.int32)
-#     # attention_mask = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-#     #                                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0]], tf.int32)
-#     # speaker_ids = tf.convert_to_tensor([0, 0], tf.int32)
-#     # duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-#     #                                      [1, 1, 1, 1, 1, 1, 1, 5, 2, 0]], tf.int32)
-#     # outputs = fastspeech(input_ids, attention_mask, speaker_ids, duration_gts)
-
-#     # fastspeech.summary()

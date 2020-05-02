@@ -54,7 +54,8 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         # define metrics to aggregates data and use tf.summary logs them
         self.list_metrics_name = [
             "duration_loss",
-            "mel_loss"
+            "mel_loss_before",
+            "mel_loss_after"
         ]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
@@ -115,8 +116,8 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             )
             log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
             duration_loss = self.mse(log_duration, masked_duration_outputs)
-            mel_loss_after = self.mae(mel, masked_mel_before)
-            mel_loss_before = self.mae(mel, masked_mel_after)
+            mel_loss_before = self.mae(mel, masked_mel_before)
+            mel_loss_after = self.mae(mel, masked_mel_after)
             loss = duration_loss + mel_loss_before + mel_loss_after
 
             if self.is_mixed_precision:
@@ -127,11 +128,12 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
         else:
             gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables), 5.0)
 
         # accumulate loss into metrics
-        self.train_metrics["duration_loss"].update_state(self.mae(duration, masked_duration_outputs))
-        self.train_metrics["mel_loss"].update_state(loss)
+        self.train_metrics["duration_loss"].update_state(duration_loss)
+        self.train_metrics["mel_loss_before"].update_state(mel_loss_before)
+        self.train_metrics["mel_loss_after"].update_state(mel_loss_after)
 
     def _eval_epoch(self):
         """Evaluate model one epoch."""
@@ -175,13 +177,13 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         )
         log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
         duration_loss = self.mse(log_duration, masked_duration_outputs)
-        mel_loss_after = self.mae(mel, masked_mel_before)
-        mel_loss_before = self.mae(mel, masked_mel_after)
-        loss = duration_loss + mel_loss_before + mel_loss_after
+        mel_loss_before = self.mae(mel, masked_mel_before)
+        mel_loss_after = self.mae(mel, masked_mel_after)
 
         # accumulate loss into metrics
         self.eval_metrics["duration_loss"].update_state(duration_loss)
-        self.eval_metrics["mel_loss"].update_state(loss)
+        self.eval_metrics["mel_loss_before"].update_state(mel_loss_before)
+        self.eval_metrics["mel_loss_after"].update_state(mel_loss_after)
 
     def _check_log_interval(self):
         """Log to tensorboard."""
@@ -207,7 +209,7 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             duration_gts=duration,
             training=False
         )
-        return masked_mel_after
+        return masked_mel_before, masked_mel_after
 
     def generate_and_save_intermediate_result(self, batch, idx):
         """Generate and save intermediate result."""
@@ -217,28 +219,33 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         charactor, duration, mel = batch
 
         # predict with tf.function.
-        mel_predict = self.predict(charactor, duration, mel)
+        masked_mel_before, masked_mel_after = self.predict(charactor, duration, mel)
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for _, (mel_gt, mel_pred) in enumerate(zip(mel, mel_predict), 1):
+        for _, (mel_gt, mel_pred_before, mel_pred_after) in enumerate(zip(mel, masked_mel_before, masked_mel_after), 1):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
-            mel_pred = tf.reshape(mel_pred, (-1, 80)).numpy()  # [length, 80]
+            mel_pred_before = tf.reshape(mel_pred_before, (-1, 80)).numpy()  # [length, 80]
+            mel_pred_after = tf.reshape(mel_pred_after, (-1, 80)).numpy()  # [length, 80]
 
             # plit figure and save it
             figname = os.path.join(dirname, f"{idx}.png")
             fig = plt.figure(figsize=(10, 8))
             ax1 = fig.add_subplot(311)
             ax2 = fig.add_subplot(312)
+            ax3 = fig.add_subplot(313)
             im = ax1.imshow(np.rot90(mel_gt), aspect='auto', interpolation='none')
             ax1.set_title('Target Mel-Spectrogram')
             fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax1)
-            ax2.set_title('Predicted Mel-Spectrogram')
-            im = ax2.imshow(np.rot90(mel_pred), aspect='auto', interpolation='none')
+            ax2.set_title('Predicted Mel-before-Spectrogram')
+            im = ax2.imshow(np.rot90(mel_pred_before), aspect='auto', interpolation='none')
             fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax2)
+            ax3.set_title('Predicted Mel-after-Spectrogram')
+            im = ax3.imshow(np.rot90(mel_pred_after), aspect='auto', interpolation='none')
+            fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax3)
             plt.tight_layout()
             plt.savefig(figname)
             plt.close()

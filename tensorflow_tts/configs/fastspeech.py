@@ -28,7 +28,7 @@ class FastSpeechConfig(object):
             duration_predictor_filters=256,
             duration_predictor_kernel_sizes=3,
             num_mels=80,
-            hidden_act="relu",
+            hidden_act="gelu_new",
             hidden_dropout_prob=0.1,
             attention_probs_dropout_prob=0.1,
             duration_predictor_dropout_probs=0.1,

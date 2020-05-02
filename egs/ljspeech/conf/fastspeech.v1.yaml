@@ -25,7 +25,7 @@ fastspeech_params:
     duration_predictor_filters: 256
     duration_predictor_kernel_sizes: 3
     num_mels: 80
-    hidden_act: "gelu"
+    hidden_act: "gelu_new"
     hidden_dropout_prob: 0.1
     attention_probs_dropout_prob: 0.1
     duration_predictor_dropout_probs: 0.1
@@ -46,10 +46,10 @@ mel_length_threshold: 32
 #             OPTIMIZER & SCHEDULER SETTING               #
 ###########################################################
 optimizer_params:
-    initial_learning_rate: 0.002
-    end_learning_rate: 0.0001
-    decay_steps: 100000          # < train_max_steps is recommend.
-    warmup_proportion: 0.05
+    initial_learning_rate: 0.001
+    end_learning_rate: 0.00005
+    decay_steps: 150000          # < train_max_steps is recommend.
+    warmup_proportion: 0.02
     weight_decay: 0.002
     
     
@@ -64,4 +64,4 @@ log_interval_steps: 200                # Interval steps to record the training l
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
-num_save_intermediate_results: 8  # Number of results to be saved as intermediate results.
+num_save_intermediate_results: 16  # Number of results to be saved as intermediate results.
