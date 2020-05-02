@@ -164,3 +164,97 @@ class CharactorDurationMelDataset(AbstractDataset):
 
     def __name__(self):
         return "CharactorDurationMelDataset"
+
+
+class CharactorDurationDataset(AbstractDataset):
+    """Tensorflow Charactor dataset."""
+
+    def __init__(self,
+                 root_dir,
+                 charactor_query="*-ids.npy",
+                 duration_query="*-durations.npy",
+                 charactor_load_fn=np.load,
+                 duration_load_fn=np.load,
+                 return_utt_id=False
+                 ):
+        """Initialize dataset.
+
+        Args:
+            root_dir (str): Root directory including dumped files.
+            charactor_query (str): Query to find charactor files in root_dir.
+            charactor_load_fn (func): Function to load charactor file.
+            return_utt_id (bool): Whether to return the utterance id with arrays.
+
+        """
+        # find all of charactor and mel files.
+        charactor_files = sorted(find_files(root_dir, charactor_query))
+        duration_files = sorted(find_files(root_dir, duration_query))
+
+        # assert the number of files
+        assert len(charactor_files) != 0 or len(duration_files) != 0, \
+            f"Not found any char or duration files in ${root_dir}."
+
+        assert len(charactor_files) == len(duration_files), f"number of charactor and duration files are different."
+
+        if ".npy" in charactor_query:
+            utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
+
+        # set global params
+        self.utt_ids = utt_ids
+        self.charactor_files = charactor_files
+        self.duration_files = duration_files
+        self.charactor_load_fn = charactor_load_fn
+        self.duration_load_fn = duration_load_fn
+        self.return_utt_id = return_utt_id
+
+    def get_args(self):
+        return [self.utt_ids]
+
+    def generator(self, utt_ids):
+        for i, utt_id in enumerate(utt_ids):
+            charactor_file = self.charactor_files[i]
+            duration_file = self.duration_files[i]
+            charactor = self.charactor_load_fn(charactor_file)
+            duration = self.duration_load_fn(duration_file)
+            if self.return_utt_id:
+                items = utt_id, charactor, duration
+            else:
+                items = charactor, duration
+            yield items
+
+    def create(self,
+               allow_cache=False,
+               batch_size=1,
+               is_shuffle=False,
+               map_fn=None,
+               reshuffle_each_iteration=True
+               ):
+        """Create tf.dataset function."""
+        output_types = self.get_output_dtypes()
+        datasets = tf.data.Dataset.from_generator(
+            self.generator,
+            output_types=output_types,
+            args=(self.get_args())
+        )
+
+        if allow_cache:
+            datasets = datasets.cache()
+
+        if is_shuffle:
+            datasets = datasets.shuffle(
+                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+
+        datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
+        return datasets
+
+    def get_output_dtypes(self):
+        output_types = (tf.int32, tf.int32)
+        if self.return_utt_id:
+            output_types = (tf.dtypes.string, *output_types)
+        return output_types
+
+    def get_len_dataset(self):
+        return len(self.utt_ids)
+
+    def __name__(self):
+        return "CharactorDurationDataset"

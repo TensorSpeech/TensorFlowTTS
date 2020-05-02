@@ -56,7 +56,8 @@ entry_points = {
         "tensorflow-tts-compute-statistics=tensorflow_tts.bin.compute_statistics:main",
         "tensorflow-tts-normalize=tensorflow_tts.bin.normalize:main",
         "tensorflow-tts-train-melgan=tensorflow_tts.bin.train_melgan:main",
-        "tensorflow-tts-train-fastspeech=tensorflow_tts.bin.train_fastspeech:main"
+        "tensorflow-tts-train-fastspeech=tensorflow_tts.bin.train_fastspeech:main",
+        "tensorflow-tts-decode-fastspeech=tensorflow_tts.bin.decode_fastspeech:main",
     ]
 }
 

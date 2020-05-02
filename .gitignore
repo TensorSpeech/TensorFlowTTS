@@ -29,3 +29,4 @@ egs/*/exp
 *.npy
 *.png
 *.wav
+*.yml
