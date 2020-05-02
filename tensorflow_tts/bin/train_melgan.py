@@ -330,7 +330,7 @@ class MelganTrainer(GanBasedTrainer):
         self.set_train_data_loader(train_data_loader)
         self.set_eval_data_loader(valid_data_loader)
         self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
-        if resume is not None:
+        if len(resume) > 1:
             self.load_checkpoint(resume)
             logging.info(f"Successfully resumed from {resume}.")
         self.run()

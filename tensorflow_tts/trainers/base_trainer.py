@@ -85,10 +85,9 @@ class BasedTrainer(metaclass=abc.ABCMeta):
             self._train_step(batch)
 
             # check interval
-            if self.config["rank"] == 0:
-                self._check_log_interval()
-                self._check_eval_interval()
-                self._check_save_interval()
+            self._check_log_interval()
+            self._check_eval_interval()
+            self._check_save_interval()
 
             # check wheter training is finished
             if self.finish_train:
