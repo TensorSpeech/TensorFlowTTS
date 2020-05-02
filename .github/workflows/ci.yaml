@@ -38,6 +38,7 @@ jobs:
           pip install -q tensorflow-gpu==${{ matrix.tensorflow-version }}
           pip install -q -e .
           pip install -q -e .[test]
+          sudo apt-get install libsndfile1-dev
       - name: Flake8
         run: |
           flake8 tensorflow_tts --ignore F401,H102,W504,H238,D104,H306,H405,D205,E371,E731,D105,D102,D402,D401,E306,F811,W503,E704,D107,D103

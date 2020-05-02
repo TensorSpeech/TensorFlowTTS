@@ -14,28 +14,22 @@ import yaml
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.datasets import MelSCPDataset
 from tensorflow_tts.datasets import MelDataset
-from tensorflow_tts.utils import read_hdf5
-from tensorflow_tts.utils import write_hdf5
+
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
         description="Compute mean and variance of dumped raw features "
-                    "(See detail in parallel_wavegan/bin/compute_statistics.py).")
-    parser.add_argument("--feats-scp", "--scp", default=None, type=str,
-                        help="kaldi-style feats.scp file. "
-                             "you need to specify either feats-scp or rootdir.")
+                    "(See detail in tensorflow_tts/bin/compute_statistics.py).")
     parser.add_argument("--rootdir", type=str, required=True,
-                        help="directory including feature files. "
-                             "you need to specify either feats-scp or rootdir.")
+                        help="directory including feature files. ")
     parser.add_argument("--config", type=str, required=True,
                         help="yaml format configuration file.")
-    parser.add_argument("--dumpdir", default=None, type=str,
-                        help="directory to save statistics. if not provided, "
-                             "stats will be saved in the above root directory. (default=None)")
+    parser.add_argument("--outdir", default=None, type=str, required=True,
+                        help="directory to save statistics.")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
     args = parser.parse_args()
@@ -57,38 +51,24 @@ def main():
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
 
-    # check arguments
-    if (args.feats_scp is not None and args.rootdir is not None) or \
-            (args.feats_scp is None and args.rootdir is None):
-        raise ValueError("Please specify either --rootdir or --feats-scp.")
-
     # check directory existence
-    if args.dumpdir is None:
-        args.dumpdir = os.path.dirname(args.rootdir)
-    if not os.path.exists(args.dumpdir):
-        os.makedirs(args.dumpdir)
+    if args.outdir is None:
+        args.outdir = os.path.dirname(args.rootdir)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
 
     # get dataset
-    if args.feats_scp is None:
-        if config["format"] == "hdf5":
-            mel_query = "*.h5"
-            mel_load_fn = lambda x: read_hdf5(x, "feats")
-        elif config["format"] == "npy":
-            mel_query = "*-feats.npy"
-            mel_load_fn = np.load
-        else:
-            raise ValueError("Support only hdf5 or npy format.")
-
-        # TODO(@dathudeptrai), use tf.data rather than tf.keras.utils.Sequence
-        # and Support batch_size != 1
-        dataset = MelDataset(
-            args.rootdir,
-            batch_size=1,
-            mel_query=mel_query,
-            mel_load_fn=mel_load_fn
-        )
+    if config["format"] == "npy":
+        mel_query = "*-raw-feats.npy"
+        mel_load_fn = np.load
     else:
-        dataset = MelSCPDataset(args.feats_scp)
+        raise ValueError("Support only npy format.")
+
+    dataset = MelDataset(
+        args.rootdir,
+        mel_query=mel_query,
+        mel_load_fn=mel_load_fn
+    ).create(batch_size=1)
 
     # calculate statistics
     scaler = StandardScaler()
@@ -96,12 +76,9 @@ def main():
         mel = mel[0].numpy()
         scaler.partial_fit(mel)
 
-    if config["format"] == "hdf5":
-        write_hdf5(os.path.join(args.dumpdir, "stats.h5"), "mean", scaler.mean_.astype(np.float32))
-        write_hdf5(os.path.join(args.dumpdir, "stats.h5"), "scale", scaler.scale_.astype(np.float32))
-    else:
-        stats = np.stack([scaler.mean_, scaler.scale_], axis=0)
-        np.save(os.path.join(args.dumpdir, "stats.npy"), stats.astype(np.float32), allow_pickle=False)
+    # save to file
+    stats = np.stack([scaler.mean_, scaler.scale_], axis=0)
+    np.save(os.path.join(args.outdir, "stats.npy"), stats.astype(np.float32), allow_pickle=False)
 
 
 if __name__ == "__main__":

@@ -3,20 +3,24 @@
 # Copyright 2020 Minh Nguyen (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
 
-"""Perform preprocessing and raw feature extraction."""
+"""Perform preprocessing, raw feature extraction and train/valid split."""
 
 import argparse
 import logging
 import os
+
+from pathos.multiprocessing import ProcessingPool as Pool
 
 import librosa
 import numpy as np
 import yaml
 
 from tqdm import tqdm
+from sklearn.model_selection import train_test_split
 
-from tensorflow_tts.datasets import AudioSCPDataset
-from tensorflow_tts.utils import write_hdf5
+from tensorflow_tts.processor import LJSpeechProcessor
+
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 def logmelfilterbank(audio,
@@ -61,14 +65,16 @@ def logmelfilterbank(audio,
 def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
-        description="Preprocess audio and then extract features (See detail in parallel_wavegan/bin/preprocess.py).")
-    parser.add_argument("--wav-scp", "--scp", default=None, type=str,
-                        help="kaldi-style wav.scp file. you need to specify either scp or rootdir.")
-    parser.add_argument("--segments", default=None, type=str,
-                        help="kaldi-style segments file. if use, you must to specify both scp and segments.")
-    parser.add_argument("--dumpdir", type=str, required=True,
-                        help="directory to dump feature files.")
+        description="Preprocess audio and then extract features (See detail in tensorflow_tts/bin/preprocess.py).")
+    parser.add_argument("--rootdir", default=None, type=str, required=True,
+                        help="root path.")
+    parser.add_argument("--outdir", default=None, type=str, required=True,
+                        help="output dir.")
     parser.add_argument("--config", type=str, required=True,
+                        help="yaml format configuration file.")
+    parser.add_argument("--n_cpus", type=int, default=4, required=False,
+                        help="yaml format configuration file.")
+    parser.add_argument("--test_size", type=float, default=0.05, required=False,
                         help="yaml format configuration file.")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
@@ -91,35 +97,74 @@ def main():
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
 
-    # check arguments
-    if args.wav_scp is None:
-        raise ValueError("Please specify --wav-scp.")
-
-    dataset = AudioSCPDataset(
-        wav_scp=args.wav_scp,
-        segments=args.segments,
-        audio_length_threshold=None,
-        return_utt_id=True,
-        return_sampling_rate=True,
-        batch_size=1
+    processor = LJSpeechProcessor(
+        root_path=args.rootdir,
+        cleaner_names="english_cleaners"
     )
 
     # check directly existence
-    if not os.path.exists(args.dumpdir):
-        os.makedirs(args.dumpdir, exist_ok=True)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir, exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid', 'raw-feats'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid', 'wavs'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid', 'ids'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid', 'durations'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train', 'raw-feats'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train', 'wavs'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train', 'ids'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train', 'durations'), exist_ok=True)
+
+    # train test split
+    idx_train, idx_valid = train_test_split(
+        range(len(processor.items)), shuffle=True, test_size=args.test_size, random_state=42)
+
+    # train/valid utt_ids
+    train_utt_ids = []
+    valid_utt_ids = []
+
+    for idx in range(len(processor.items)):
+        utt_ids = processor.get_one_sample(idx)["utt_id"]
+        if idx in idx_train:
+            train_utt_ids.append(utt_ids)
+        elif idx in idx_valid:
+            valid_utt_ids.append(utt_ids)
+
+    # save train and valid utt_ids to track later.
+    np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
+    np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
+
+    pbar = tqdm(initial=0,
+                total=len(processor.items),
+                desc="[Preprocessing]")
 
     # process each data
-    for utt_id, audio, fs in tqdm(dataset):
-        utt_id = utt_id.numpy()[0].decode('utf-8')
-        audio = audio.numpy()[0]
-        fs = fs.numpy()[0]
+    def save_to_file(idx):
+        sample = processor.get_one_sample(idx)
+
+        # get info from sample.
+        audio = sample["audio"]
+        text_ids = sample["text_ids"]
+        utt_id = sample["utt_id"]
+        rate = sample["rate"]
+
+        # read pre-compute alignment from teacher model if it exist
+        duration_exist = os.path.exists(os.path.join(args.rootdir, "alignments"))
+        if duration_exist:
+            duration = np.load(os.path.join(args.rootdir, "alignments", f"{idx}.npy"))
+
         # check
         assert len(audio.shape) == 1, \
             f"{utt_id} seems to be multi-channel signal."
         assert np.abs(audio).max() <= 1.0, \
             f"{utt_id} seems to be different from 16 bit PCM."
-        assert fs == config["sampling_rate"], \
+        assert rate == config["sampling_rate"], \
             f"{utt_id} seems to have a different sampling rate."
+
+        if duration_exist:
+            assert len(duration) == len(text_ids), \
+                f"{utt_id} seems to have a different len between text_ids and duration."
 
         # trim silence
         if config["trim_silence"]:
@@ -136,11 +181,11 @@ def main():
             # NOTE: this procedure enables to train the model with different
             #   sampling rate for feature and audio, e.g., training with mel extracted
             #   using 16 kHz audio and 24 kHz audio as a target waveform
-            x = librosa.resample(audio, fs, config["sampling_rate_for_feats"])
+            x = librosa.resample(audio, rate, config["sampling_rate_for_feats"])
             sampling_rate = config["sampling_rate_for_feats"]
-            assert config["hop_size"] * config["sampling_rate_for_feats"] % fs == 0, \
+            assert config["hop_size"] * config["sampling_rate_for_feats"] % rate == 0, \
                 "hop_size must be int value. please check sampling_rate_for_feats is correct."
-            hop_size = config["hop_size"] * config["sampling_rate_for_feats"] // fs
+            hop_size = config["hop_size"] * config["sampling_rate_for_feats"] // rate
 
         # extract feature
         mel = logmelfilterbank(x,
@@ -153,10 +198,13 @@ def main():
                                fmin=config["fmin"],
                                fmax=config["fmax"])
 
-        # make sure the audio length and feature length are matched
+        # make sure the audio length and feature length and sum duration are matched
         audio = np.pad(audio, (0, config["fft_size"]), mode='edge')
         audio = audio[:len(mel) * config["hop_size"]]
         assert len(mel) * config["hop_size"] == len(audio)
+        if duration_exist:
+            assert np.sum(duration) == len(mel), \
+                f"{utt_id} seems to have a different len between mel and sum duration."
 
         # apply global gain
         if config["global_gain_scale"] > 0.0:
@@ -164,19 +212,32 @@ def main():
         if np.abs(audio).max() >= 1.0:
             logging.warn(f"{utt_id} causes clipping. "
                          f"it is better to re-consider global gain scale.")
-            continue
 
         # save
-        if config["format"] == "hdf5":
-            write_hdf5(os.path.join(args.dumpdir, f"{utt_id}.h5"), "wave", audio.astype(np.float32))
-            write_hdf5(os.path.join(args.dumpdir, f"{utt_id}.h5"), "feats", mel.astype(np.float32))
-        elif config["format"] == "npy":
-            np.save(os.path.join(args.dumpdir, f"{utt_id}-wave.npy"),
+        if config["format"] == "npy":
+            if idx in idx_train:
+                subdir = 'train'
+            elif idx in idx_valid:
+                subdir = 'valid'
+
+            np.save(os.path.join(args.outdir, subdir, "wavs", f"{utt_id}-wave.npy"),
                     audio.astype(np.float32), allow_pickle=False)
-            np.save(os.path.join(args.dumpdir, f"{utt_id}-feats.npy"),
+            np.save(os.path.join(args.outdir, subdir, "raw-feats", f"{utt_id}-raw-feats.npy"),
                     mel.astype(np.float32), allow_pickle=False)
+            np.save(os.path.join(args.outdir, subdir, "ids", f"{utt_id}-ids.npy"),
+                    text_ids.astype(np.int32), allow_pickle=False)
+            if duration_exist:
+                np.save(os.path.join(args.outdir, subdir, "durations", f"{utt_id}-durations.npy"),
+                        duration.astype(np.int32), allow_pickle=False)
         else:
-            raise ValueError("support only hdf5 or npy format.")
+            raise ValueError("support only npy format.")
+
+        pbar.update(1)
+
+    # apply multi-processing Pool
+    p = Pool(nodes=args.n_cpus)
+    p.map(save_to_file, range(len(processor.items)))
+    pbar.close()
 
 
 if __name__ == "__main__":

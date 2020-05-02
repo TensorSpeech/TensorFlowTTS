@@ -11,10 +11,13 @@ import tensorflow as tf
 
 def get_initializer(initializer_range=0.02):
     """Creates a `tf.initializers.truncated_normal` with the given range.
+
     Args:
         initializer_range: float, initializer range for stddev.
+
     Returns:
         TruncatedNormal initializer with stddev = `initializer_range`.
+
     """
     return tf.keras.initializers.TruncatedNormal(stddev=initializer_range)
 
@@ -83,11 +86,13 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         """Get charactor embeddings of inputs.
+        
         Args:
             1. charactor, Tensor (int32) shape [batch_size, length].
             2. speaker_id, Tensor (int32) shape [batch_size]
         Returns:
             Tensor (float32) shape [batch_size, length, embedding_size].
+
         """
         return self._embedding(inputs, training=training)
 
@@ -479,6 +484,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         """Call logic.
+        
         Args:
             1. encoder_hidden_states, Tensor (float32) shape [batch_size, length, hidden_size]
             2. durations_gt, Tensor (float32/int32) shape [batch_size, length]

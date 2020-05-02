@@ -28,6 +28,7 @@ class TFReflectionPad1d(tf.keras.layers.Layer):
 
     def __init__(self, padding_size, padding_type="REFLECT", **kwargs):
         """Initialize TFReflectionPad1d module.
+
         Args:
             padding_size (int)
             padding_type (str) ("CONSTANT", "REFLECT", or "SYMMETRIC". Default is "REFLECT")

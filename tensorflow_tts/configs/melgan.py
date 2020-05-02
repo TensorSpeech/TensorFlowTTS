@@ -2,6 +2,7 @@
 
 # Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
 #  MIT License (https://opensource.org/licenses/MIT)
+
 """MelGAN Config object."""
 
 

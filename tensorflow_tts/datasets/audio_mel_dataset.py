@@ -7,13 +7,11 @@
 
 import logging
 import os
-
-from multiprocessing import Manager
+import numpy as np
 
 import tensorflow as tf
 
 from tensorflow_tts.utils import find_files
-from tensorflow_tts.utils import read_hdf5
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 
@@ -23,10 +21,10 @@ class AudioMelDataset(AbstractDataset):
 
     def __init__(self,
                  root_dir,
-                 audio_query="*.h5",
-                 mel_query="*.h5",
-                 audio_load_fn=lambda x: read_hdf5(x, "wave"),
-                 mel_load_fn=lambda x: read_hdf5(x, "feats"),
+                 audio_query="*-wave.npy",
+                 mel_query="*-raw-feats.npy",
+                 audio_load_fn=np.load,
+                 mel_load_fn=np.load,
                  audio_length_threshold=None,
                  mel_length_threshold=None,
                  return_utt_id=False
@@ -117,8 +115,8 @@ class AudioDataset(AbstractDataset):
 
     def __init__(self,
                  root_dir,
-                 audio_query="*.h5",
-                 audio_load_fn=lambda x: read_hdf5(x, "wave"),
+                 audio_query="*-wave.h5",
+                 audio_load_fn=np.load,
                  audio_length_threshold=None,
                  return_utt_id=False,
                  ):
@@ -148,9 +146,8 @@ class AudioDataset(AbstractDataset):
         assert len(audio_files) != 0, f"Not found any audio files in ${root_dir}."
 
         if ".npy" in audio_query:
-            utt_ids = [os.path.basename(f).replace("-wave.npy", "") for f in audio_files]
-        else:
-            utt_ids = [os.path.splitext(os.path.basename(f))[0] for f in audio_files]
+            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]])
+                       for f in audio_files]
 
         # set global params
         self.utt_ids = utt_ids
@@ -172,10 +169,13 @@ class AudioDataset(AbstractDataset):
             yield items
 
     def get_output_dtypes(self):
-        output_types = (tf.float32)
+        output_types = tf.float32
         if self.return_utt_id:
-            output_types = (tf.dtypes.string, *output_types)
+            output_types = (tf.dtypes.string, output_types)
         return output_types
+
+    def get_len_dataset(self):
+        return len(self.utt_ids)
 
     def __name__(self):
         return "AudioDataset"
@@ -186,8 +186,8 @@ class MelDataset(AbstractDataset):
 
     def __init__(self,
                  root_dir,
-                 mel_query="*.h5",
-                 mel_load_fn=lambda x: read_hdf5(x, "feats"),
+                 mel_query="*-raw-feats.h5",
+                 mel_load_fn=np.load,
                  mel_length_threshold=None,
                  return_utt_id=False
                  ):
@@ -217,9 +217,8 @@ class MelDataset(AbstractDataset):
         assert len(mel_files) != 0, f"Not found any mel files in ${root_dir}."
 
         if ".npy" in mel_query:
-            utt_ids = [os.path.basename(f).replace("-feats.npy", "") for f in mel_files]
-        else:
-            utt_ids = [os.path.splitext(os.path.basename(f))[0] for f in mel_files]
+            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]])
+                       for f in mel_files]
 
         # set global params
         self.utt_ids = utt_ids
@@ -241,10 +240,13 @@ class MelDataset(AbstractDataset):
             yield items
 
     def get_output_dtypes(self):
-        output_types = (tf.float32)
+        output_types = tf.float32
         if self.return_utt_id:
-            output_types = (tf.dtypes.string, *output_types)
+            output_types = (tf.dtypes.string, output_types)
         return output_types
+
+    def get_len_dataset(self):
+        return len(self.utt_ids)
 
     def __name__(self):
         return "MelDataset"
