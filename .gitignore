@@ -1,3 +1,4 @@
+ 
 # general
 *~
 *.pyc
@@ -23,11 +24,10 @@ coverage.xml*
 
 # recipe related
 egs/*/datasets
-egs/*/downloads
 egs/*/dump
 egs/*/exp
-egs/*/conf/tuning
 *.h5
 *.npy
 *.png
 *.wav
+*.yml
