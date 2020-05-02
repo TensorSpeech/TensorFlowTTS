@@ -34,10 +34,10 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
     @tf.function
     def one_step_training():
         with tf.GradientTape() as tape:
-            mel_outputs, duration_outputs = fastspeech(
+            mel_outputs_before, _, duration_outputs = fastspeech(
                 input_ids, attention_mask, speaker_ids, duration_gts, training=True)
             duration_loss = tf.keras.losses.MeanSquaredError()(duration_gts, duration_outputs)
-            mel_loss = tf.keras.losses.MeanSquaredError()(mel_gts, mel_outputs)
+            mel_loss = tf.keras.losses.MeanSquaredError()(mel_gts, mel_outputs_before)
             loss = duration_loss + mel_loss
         gradients = tape.gradient(loss, fastspeech.trainable_variables)
         optimizer.apply_gradients(zip(gradients, fastspeech.trainable_variables))

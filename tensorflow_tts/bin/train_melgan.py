@@ -23,7 +23,6 @@ from tensorflow_tts.trainers import GanBasedTrainer
 from tensorflow_tts.utils import read_hdf5
 from tensorflow_tts.utils import find_files
 from tensorflow_tts.datasets import AudioMelDataset
-from tensorflow_tts.datasets import AudioMelSCPDataset
 
 from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
@@ -55,10 +54,6 @@ class MelganTrainer(GanBasedTrainer):
                                             config,
                                             is_generator_mixed_precision,
                                             is_discriminator_mixed_precision)
-        # define loss
-        self.mse_loss = tf.keras.losses.MeanSquaredError()
-        self.mae_loss = tf.keras.losses.MeanAbsoluteError()
-
         # define metrics to aggregates data and use tf.summary logs them
         self.list_metrics_name = [
             "adversarial_loss",
@@ -73,6 +68,12 @@ class MelganTrainer(GanBasedTrainer):
         self.reset_states_eval()
 
         self.config = config
+
+    def compile(self, gen_model, dis_model, gen_optimizer, dis_optimizer):
+        super().compile(gen_model, dis_model, gen_optimizer, dis_optimizer)
+        # define loss
+        self.mse_loss = tf.keras.losses.MeanSquaredError()
+        self.mae_loss = tf.keras.losses.MeanAbsoluteError()
 
     def init_train_eval_metrics(self, list_metrics_name):
         """Init train and eval metrics to save it to tensorboard."""
@@ -220,7 +221,7 @@ class MelganTrainer(GanBasedTrainer):
                  input_signature=[(tf.TensorSpec([None, None]),
                                    tf.TensorSpec([None, None, 80]))])
     def _eval_step(self, batch):
-        """Evaluate model on step."""
+        """Evaluate model one step."""
         y, mels = batch  # [B, T], [B, T, 80]
 
         # Generator
@@ -271,7 +272,7 @@ class MelganTrainer(GanBasedTrainer):
             for metric_name in self.list_metrics_name:
                 logging.info(
                     f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}.")
-            self._write_to_tensorboard(self.train_metrics)
+            self._write_to_tensorboard(self.train_metrics, stage="train")
 
             # reset
             self.reset_states_train()
@@ -324,6 +325,15 @@ class MelganTrainer(GanBasedTrainer):
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
 
+    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
+        self.set_train_data_loader(train_data_loader)
+        self.set_eval_data_loader(valid_data_loader)
+        self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
+        if resume is not None:
+            self.load_checkpoint(resume)
+            logging.info(f"Successfully resumed from {resume}.")
+        self.run()
+
 
 def collater(audio, mel,
              batch_max_steps=tf.constant(8192, dtype=tf.int32),
@@ -363,28 +373,15 @@ def collater(audio, mel,
 def main():
     """Run training process."""
     parser = argparse.ArgumentParser(
-        description="Train MelGAN (See detail in tensorflow_tts/bin/train.py)"
+        description="Train MelGAN (See detail in tensorflow_tts/bin/train-melgan.py)"
     )
-    parser.add_argument("--train-wav-scp", default=None, type=str,
-                        help="kaldi-style wav.scp file for training. "
-                             "you need to specify either train-*-scp or train-dumpdir.")
-    parser.add_argument("--train-feats-scp", default=None, type=str,
-                        help="kaldi-style feats.scp file for training. "
-                             "you need to specify either train-*-scp or train-dumpdir.")
-    parser.add_argument("--train-segments", default=None, type=str,
-                        help="kaldi-style segments file for training.")
-    parser.add_argument("--train-dumpdir", default=None, type=str,
+    parser.add_argument("--train-dir", default=None, type=str,
                         help="directory including training data. "
                              "you need to specify either train-*-scp or train-dumpdir.")
-    parser.add_argument("--dev-wav-scp", default=None, type=str,
-                        help="kaldi-style wav.scp file for validation. "
+    parser.add_argument("--dev-dir", default=None, type=str,
+                        help="directory including development data. "
                              "you need to specify either dev-*-scp or dev-dumpdir.")
-    parser.add_argument("--dev-feats-scp", default=None, type=str,
-                        help="kaldi-style feats.scp file for vaidation. "
-                             "you need to specify either dev-*-scp or dev-dumpdir.")
-    parser.add_argument("--dev-segments", default=None, type=str,
-                        help="kaldi-style segments file for validation.")
-    parser.add_argument("--dev-dumpdir", default=None, type=str,
+    parser.add_argument("--use-norm", default=False, type=bool,
                         help="directory including development data. "
                              "you need to specify either dev-*-scp or dev-dumpdir.")
     parser.add_argument("--outdir", type=str, required=True,
@@ -432,12 +429,10 @@ def main():
         os.makedirs(args.outdir)
 
     # check arguments
-    if (args.train_feats_scp is not None and args.train_dumpdir is not None) or \
-            (args.train_feats_scp is None and args.train_dumpdir is None):
-        raise ValueError("Please specify either --train-dumpdir or --train-*-scp.")
-    if (args.dev_feats_scp is not None and args.dev_dumpdir is not None) or \
-            (args.dev_feats_scp is None and args.dev_dumpdir is None):
-        raise ValueError("Please specify either --dev-dumpdir or --dev-*-scp.")
+    if args.train_dir is None:
+        raise ValueError("Please specify --train-dir")
+    if args.dev_dir is None:
+        raise ValueError("Please specify either --valid-dir")
 
     # load and save config
     with open(args.config) as f:
@@ -456,68 +451,42 @@ def main():
     else:
         mel_length_threshold = None
 
-    if args.train_wav_scp is None or args.dev_wav_scp is None:
-        if config["format"] == "hdf5":
-            audio_query, mel_query = "*.h5", "*.h5"
-            def audio_load_fn(x): return read_hdf5(x, "wave")
-            def mel_load_fn(x): return read_hdf5(x, "feats")
-        elif config["format"] == "npy":
-            audio_query, mel_query = "*-wave.npy", "*-feats.npy"
-            audio_load_fn = np.load
-            mel_load_fn = np.load
-        else:
-            raise ValueError("Only hdf5 and npy are supported.")
+    if config["format"] == "npy":
+        audio_query = "*-wave.npy"
+        mel_query = "*-raw-feats.npy" if args.use_norm is False else "*-norm-feats.npy"
+        audio_load_fn = np.load
+        mel_load_fn = np.load
+    else:
+        raise ValueError("Only npy are supported.")
 
-    if args.train_dumpdir is not None:
-        train_dataset = AudioMelDataset(
-            root_dir=args.train_dumpdir,
-            audio_query=audio_query,
-            mel_query=mel_query,
-            audio_load_fn=audio_load_fn,
-            mel_load_fn=mel_load_fn,
-            mel_length_threshold=mel_length_threshold,
-        ).create(
-            is_shuffle=True,
-            map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
-            allow_cache=config["allow_cache"],
-            batch_size=config["batch_size"]
-        )
-    else:
-        train_dataset = AudioMelSCPDataset(
-            wav_scp=args.train_wav_scp,
-            feats_scp=args.train_feats_scp,
-            segments=args.train_segments,
-            mel_length_threshold=mel_length_threshold,
-            is_shuffle=True,
-            map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
-            allow_cache=config["allow_cache"],
-            batch_size=config["batch_size"]
-        )
-    if args.dev_dumpdir is not None:
-        dev_dataset = AudioMelDataset(
-            root_dir=args.dev_dumpdir,
-            audio_query=audio_query,
-            mel_query=mel_query,
-            audio_load_fn=audio_load_fn,
-            mel_load_fn=mel_load_fn,
-            mel_length_threshold=mel_length_threshold,
-        ).create(
-            is_shuffle=True,
-            map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
-            allow_cache=config["allow_cache"],
-            batch_size=1
-        )
-    else:
-        dev_dataset = AudioMelSCPDataset(
-            wav_scp=args.dev_wav_scp,
-            feats_scp=args.dev_feats_scp,
-            segments=args.dev_segments,
-            mel_length_threshold=mel_length_threshold,
-            is_shuffle=True,
-            map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
-            allow_cache=True,
-            batch_size=1
-        )
+    # define train/valid dataset
+    train_dataset = AudioMelDataset(
+        root_dir=args.train_dir,
+        audio_query=audio_query,
+        mel_query=mel_query,
+        audio_load_fn=audio_load_fn,
+        mel_load_fn=mel_load_fn,
+        mel_length_threshold=mel_length_threshold,
+    ).create(
+        is_shuffle=True,
+        map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
+        allow_cache=config["allow_cache"],
+        batch_size=config["batch_size"]
+    )
+
+    valid_dataset = AudioMelDataset(
+        root_dir=args.dev_dir,
+        audio_query=audio_query,
+        mel_query=mel_query,
+        audio_load_fn=audio_load_fn,
+        mel_load_fn=mel_load_fn,
+        mel_length_threshold=mel_length_threshold,
+    ).create(
+        is_shuffle=True,
+        map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
+        allow_cache=config["allow_cache"],
+        batch_size=1
+    )
 
     # define generator and discriminator
     generator = TFMelGANGenerator(
@@ -535,34 +504,23 @@ def main():
     discriminator.summary()
 
     # define trainer
-    trainer = MelganTrainer(config=config,
+    trainer = MelganTrainer(steps=0,
+                            epochs=0,
+                            config=config,
                             is_generator_mixed_precision=args.generator_mixed_precision,
                             is_discriminator_mixed_precision=args.discriminator_mixed_precision)
 
-    # set data loader
-    trainer.set_train_data_loader(train_dataset)
-    trainer.set_eval_data_loader(dev_dataset)
-
-    # set generator and discriminator models
-    trainer.set_gen_model(generator)
-    trainer.set_dis_model(discriminator)
-
-    # set generator and discriminator optimizers
-    trainer.set_gen_optimizer(tf.keras.optimizers.Adam(**config["generator_optimizer_params"]))
-    trainer.set_dis_optimizer(tf.keras.optimizers.Adam(**config["discriminator_optimizer_params"]))
-
-    # create checkpoint manager
-    trainer.create_checkpoint_manager(saved_path=config["outdir"] + '/checkpoints/',
-                                      max_to_keep=10000000)
-
-    # load pretrained
-    if len(args.resume) != 0:
-        trainer.load_checkpoint(args.resume)
-        logging.info(f"Successfully resumed from {args.resume}.")
+    trainer.compile(gen_model=generator,
+                    dis_model=discriminator,
+                    gen_optimizer=tf.keras.optimizers.Adam(**config["generator_optimizer_params"]),
+                    dis_optimizer=tf.keras.optimizers.Adam(**config["discriminator_optimizer_params"]))
 
     # start training
     try:
-        trainer.run()
+        trainer.fit(train_dataset,
+                    valid_dataset,
+                    saved_path=config["outdir"] + '/checkpoints/',
+                    resume=args.resume)
     except KeyboardInterrupt:
         trainer.save_checkpoint()
         logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")
