@@ -72,8 +72,6 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
                 embeddings_initializer=get_initializer(self.initializer_range),
                 name="speaker_embeddings"
             )
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
-        self.dropout = tf.keras.layers.Dropout(config.hidden_dropout_prob)
 
     def build(self, input_shape):
         """Build shared charactor/phoneme embedding layers."""
@@ -118,13 +116,11 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
             extended_speaker_embeddings = speaker_embeddings[:, tf.newaxis, :]
             embeddings += extended_speaker_embeddings
 
-        embeddings = self.LayerNorm(embeddings)
-        embeddings = self.dropout(embeddings, training=training)
         return embeddings
 
     def _sincos_embedding(self):
         position_enc = np.array([
-            [pos / np.power(10000, 2.0 * i / self.hidden_size) for i in range(self.hidden_size)]
+            [pos / np.power(10000, 2.0 * (i // 2) / self.hidden_size) for i in range(self.hidden_size)]
             for pos in range(self.config.max_position_embeddings + 1)
         ])
 
@@ -135,47 +131,6 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         position_enc[0] = 0.0
 
         return position_enc
-
-
-class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
-    """Tacotron-2 Convolutional Batchnorm module."""
-    def __init__(self, epsilon, filters, kernel_size, dropout_rate, activation=None, name_idx=None):
-        super(TFTacotronConvBatchNorm, self).__init__()
-        self.conv1d = tf.keras.layers.Conv1D(filters, kernel_size, padding='same', name='conv_._'.format(name_idx))
-        self.norm = tf.keras.layers.LayerNormalization(epsilon=epsilon, name='LayerNorm._{}'.format(name_idx))
-        self.dropout = tf.keras.layers.Dropout(rate=dropout_rate, name='dropout_._'.format(name_idx))
-        self.act = ACT2FN[activation]
-
-    def call(self, x, training=False):
-        o = self.conv1d(x)
-        o = self.norm(o)
-        o = self.act(o)
-        o = self.dropout(o, training=training)
-        return o
-
-class TFTacotronEncoderConvs(tf.keras.layers.Layer):
-    """Tacotron-2 Encoder Convolutional Batchnorm module."""
-
-    def __init__(self, config, **kwargs):
-        """Init variables."""
-        super().__init__(**kwargs)
-        self.conv_batch_norm = []
-        for i in range(config.n_conv_encoder):
-            conv = TFTacotronConvBatchNorm(
-                epsilon=config.layer_norm_eps, 
-                filters=config.encoder_conv_filters,
-                kernel_size=config.encoder_conv_kernel_sizes,
-                activation=config.encoder_conv_activation,
-                dropout_rate=config.encoder_conv_dropout_rate,
-                name_idx=i)
-            self.conv_batch_norm.append(conv)
-
-    def call(self, inputs, training=False):
-        """Call logic."""
-        outputs, mask = inputs
-        for conv in self.conv_batch_norm:
-            outputs = conv(outputs, training=training)
-        return outputs * tf.cast(tf.expand_dims(mask, -1), tf.float32)
 
 
 class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
@@ -431,7 +386,7 @@ class TFFastSpeechDecoder(TFFastSpeechEncoder):
 
     def _sincos_embedding(self):
         position_enc = np.array([
-            [pos / np.power(10000, 2.0 * i / self.config.hidden_size) for i in range(self.config.hidden_size)]
+            [pos / np.power(10000, 2.0 * (i // 2) / self.config.hidden_size) for i in range(self.config.hidden_size)]
             for pos in range(self.config.max_position_embeddings + 1)
         ])
 
@@ -442,6 +397,37 @@ class TFFastSpeechDecoder(TFFastSpeechEncoder):
         position_enc[0] = 0.0
 
         return position_enc
+
+
+class TFTacotronPostnet(tf.keras.layers.Layer):
+    """Tacotron-2 postnet."""
+
+    def __init__(self, config, **kwargs):
+        """Init variables."""
+        super().__init__(**kwargs)
+        self.conv_batch_norm = []
+        for i in range(config.n_conv_postnet):
+            conv = tf.keras.layers.Conv1D(
+                filters=config.postnet_conv_filters if i < config.n_conv_postnet - 1 else config.num_mels,
+                kernel_size=config.postnet_conv_kernel_sizes,
+                padding='same',
+                name='conv_._{}'.format(i)
+            )
+            batch_norm = tf.keras.layers.BatchNormalization(name='batch_norm_._{}'.format(i))
+            self.conv_batch_norm.append((conv, batch_norm))
+        self.dropout = tf.keras.layers.Dropout(rate=config.postnet_dropout_rate, name='dropout')
+        self.activation = [tf.nn.tanh] * (config.n_conv_postnet - 1) + [tf.identity]
+
+    def call(self, inputs, training=False):
+        """Call logic."""
+        outputs, mask = inputs
+        extended_mask = tf.cast(tf.expand_dims(mask, axis=2), tf.float32)
+        for i, (conv, bn) in enumerate(self.conv_batch_norm):
+            outputs = conv(outputs)
+            outputs = bn(outputs)
+            outputs = self.activation[i](outputs)
+            outputs = self.dropout(outputs, training=training)
+        return outputs * extended_mask
 
 
 class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):

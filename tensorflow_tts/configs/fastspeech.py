@@ -36,7 +36,11 @@ class FastSpeechConfig(object):
             initializer_range=0.02,
             layer_norm_eps=1e-5,
             output_attentions=True,
-            output_hidden_states=False):
+            output_hidden_states=False,
+            n_conv_postnet=5,
+            postnet_conv_filters=512,
+            postnet_conv_kernel_sizes=5,
+            postnet_dropout_rate=0.1):
         """Init parameters for Fastspeech model."""
         # taco-encode
         self.n_conv_encoder = n_conv_encoder
@@ -66,3 +70,9 @@ class FastSpeechConfig(object):
         self.duration_predictor_filters = duration_predictor_filters
         self.duration_predictor_kernel_sizes = duration_predictor_kernel_sizes
         self.num_mels = num_mels
+
+        # postnet
+        self.n_conv_postnet = n_conv_postnet
+        self.postnet_conv_filters = postnet_conv_filters
+        self.postnet_conv_kernel_sizes = postnet_conv_kernel_sizes
+        self.postnet_dropout_rate = postnet_dropout_rate

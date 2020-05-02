@@ -10,6 +10,7 @@ import tensorflow as tf
 from tensorflow_tts.layers import TFFastSpeechEmbeddings
 from tensorflow_tts.layers import TFFastSpeechEncoder
 from tensorflow_tts.layers import TFFastSpeechDecoder
+from tensorflow_tts.layers import TFTacotronPostnet
 from tensorflow_tts.layers import TFFastSpeechDurationPredictor
 from tensorflow_tts.layers import TFFastSpeechLengthRegulator
 
@@ -27,8 +28,8 @@ class TFFastSpeech(tf.keras.Model):
         self.duration_predictor = TFFastSpeechDurationPredictor(config, name='duration_predictor')
         self.length_regulator = TFFastSpeechLengthRegulator(config, name='length_regulator')
         self.decoder = TFFastSpeechDecoder(config, name='decoder')
-        #self.mels_dense = tf.keras.layers.Dense(units=config.num_mels)
-        self.mels_dense = tf.keras.layers.Conv1D(filters=config.num_mels, kernel_size=3, padding='same')
+        self.mel_dense = tf.keras.layers.Dense(units=config.num_mels, name='mel_before')
+        self.postnet = TFTacotronPostnet(config=config, name='postnet')
 
         # build model.
         self._build()
@@ -40,7 +41,7 @@ class TFFastSpeech(tf.keras.Model):
         attention_mask = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32)
         speaker_ids = tf.convert_to_tensor([0], tf.int32)
         duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32)
-        self(input_ids, attention_mask, speaker_ids, duration_gts, training=True)
+        self(input_ids, attention_mask, speaker_ids, duration_gts)
 
     def call(self,
              input_ids,
@@ -69,9 +70,10 @@ class TFFastSpeech(tf.keras.Model):
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.
-        mel_outputs = self.mels_dense(last_decoder_hidden_states)
+        mel_before = self.mel_dense(last_decoder_hidden_states)
+        mel_after = self.postnet([mel_before, encoder_masks], training=training) + mel_before
 
-        outputs = (mel_outputs, duration_outputs)
+        outputs = (mel_before, mel_after, duration_outputs)
         return outputs
 
     def inference(self,
@@ -106,9 +108,10 @@ class TFFastSpeech(tf.keras.Model):
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.
-        mel_outputs = self.mels_dense(last_decoder_hidden_states)
+        mel_before = self.mel_dense(last_decoder_hidden_states)
+        mel_after = self.postnet([mel_before, encoder_masks], training=training) + mel_before
 
-        outputs = (mel_outputs, duration_outputs)
+        outputs = (mel_before, mel_after, duration_outputs)
         return outputs
 
 # if __name__ == "__main__":
@@ -117,31 +120,23 @@ class TFFastSpeech(tf.keras.Model):
 #     fastspeech = TFFastSpeech(config=config)
 #     fastspeech._build()
 
-#     fastspeech.load_weights('./model-70000.h5')
+#     fastspeech.load_weights('./model-130000.h5')
 
 #     # inference
 #     import numpy as np
-#     ids = np.load('LJ001-0009-ids.npy')
+#     ids = np.load('LJ001-0001-ids.npy')
 #     ids = np.expand_dims(ids, 0)
 
-#     duration_gts = np.load('LJ001-0009-durations.npy')
+#     duration_gts = np.load('LJ001-0001-durations.npy')
 #     duration_gts = np.expand_dims(duration_gts, 0)
 
-#     mel, duration = fastspeech.inference(ids, tf.math.not_equal(ids, 0),
+#     mel_before, mel_after, duration = fastspeech.inference(ids, tf.math.not_equal(ids, 0),
 #                 speaker_ids=np.array([0]), duration_gts=duration_gts, training=False)
-#     mel = mel[0].numpy()
+#     mel = mel_before[0].numpy()
 
-#     # scaler mel
-#     from sklearn.preprocessing import StandardScaler
-#     scaler = StandardScaler()
-#     scaler.mean_ = np.load("stats_new.npy")[0]
-#     scaler.scale_ = np.load("stats_new.npy")[1]
-#     mel_inverse = scaler.inverse_transform(mel)
-
-#     mel_inverse = mel_inverse.astype(np.float32)
 #     # plot
-#     mel_gt = tf.reshape(np.load("LJ001-0009-raw-feats.npy"), (-1, 80)).numpy()  # [length, 80]
-#     mel_pred = tf.reshape(mel_inverse, (-1, 80)).numpy()  # [length, 80]
+#     mel_gt = tf.reshape(np.load("LJ001-0001-norm-feats.npy"), (-1, 80)).numpy()  # [length, 80]
+#     mel_pred = tf.reshape(mel, (-1, 80)).numpy()  # [length, 80]
 
 #     # plit figure and save it
 #     import matplotlib.pyplot as plt
@@ -169,28 +164,29 @@ class TFFastSpeech(tf.keras.Model):
 #     audio = melgan(np.expand_dims(np.load("LJ050-0233-feats.npy"), 0))
 #     melgan.load_weights('generator-2160000.h5')
 
-#     from sklearn.preprocessing import StandardScaler
-#     scaler = StandardScaler()
-#     scaler.mean_ = np.load("stats.npy")[0]
-#     scaler.scale_ = np.load("stats.npy")[1]
-#     mel = scaler.transform(mel_inverse)
+#     # from sklearn.preprocessing import StandardScaler
+#     # scaler = StandardScaler()
+#     # scaler.mean_ = np.load("stats.npy")[0]
+#     # scaler.scale_ = np.load("stats.npy")[1]
+#     # mel = scaler.transform(mel_inverse)
 
 #     #norm_mel = scaler.transform(mel)
+#     mel = 0.5 * mel + 0.5 * np.load("LJ001-0001-norm-feats.npy")
 #     audio_pred = melgan(np.expand_dims(mel, 0))[0, :, 0]
 #     sf.write('./test.wav', audio_pred,
 #                 22050, "PCM_16")
 
-    # decoder_model.load_weights('./test.h5')
+#     # decoder_model.load_weights('./test.h5')
 
-    # fastspeech = TFFastSpeech(config=config, name='fastspeech')
+#     # fastspeech = TFFastSpeech(config=config, name='fastspeech')
 
-    # input_ids = tf.convert_to_tensor([[1, 2, 3, 4, 5, 6, 7, 0, 0, 0],
-    #                                   [1, 2, 3, 4, 5, 6, 7, 1, 1, 0]], tf.int32)
-    # attention_mask = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-    #                                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0]], tf.int32)
-    # speaker_ids = tf.convert_to_tensor([0, 0], tf.int32)
-    # duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-    #                                      [1, 1, 1, 1, 1, 1, 1, 5, 2, 0]], tf.int32)
-    # outputs = fastspeech(input_ids, attention_mask, speaker_ids, duration_gts)
+#     # input_ids = tf.convert_to_tensor([[1, 2, 3, 4, 5, 6, 7, 0, 0, 0],
+#     #                                   [1, 2, 3, 4, 5, 6, 7, 1, 1, 0]], tf.int32)
+#     # attention_mask = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+#     #                                        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0]], tf.int32)
+#     # speaker_ids = tf.convert_to_tensor([0, 0], tf.int32)
+#     # duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+#     #                                      [1, 1, 1, 1, 1, 1, 1, 5, 2, 0]], tf.int32)
+#     # outputs = fastspeech(input_ids, attention_mask, speaker_ids, duration_gts)
 
-    # fastspeech.summary()
+#     # fastspeech.summary()

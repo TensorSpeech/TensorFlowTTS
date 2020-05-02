@@ -107,17 +107,18 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
     def _one_step_fastspeech(self, charactor, duration, mel):
         with tf.GradientTape() as tape:
-            masked_mel_outputs, masked_duration_outputs = self.model(
+            masked_mel_before, masked_mel_after, masked_duration_outputs = self.model(
                 charactor,
                 attention_mask=tf.math.not_equal(charactor, 0),
                 speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
                 duration_gts=duration,
                 training=True
             )
-            duration_log = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
-            duration_loss = self.mse_log(duration_log, masked_duration_outputs)
-            mel_loss = self.mse(mel, masked_mel_outputs)
-            loss = duration_loss + mel_loss
+            log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
+            duration_loss = self.mse(log_duration, masked_duration_outputs)
+            mel_loss_after = self.mae(mel, masked_mel_before)
+            mel_loss_before = self.mae(mel, masked_mel_after)
+            loss = duration_loss + mel_loss_before + mel_loss_after
 
             if self.is_mixed_precision:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
@@ -131,7 +132,7 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
 
         # accumulate loss into metrics
         self.train_metrics["duration_loss"].update_state(self.mae(duration, masked_duration_outputs))
-        self.train_metrics["mel_loss"].update_state(mel_loss)
+        self.train_metrics["mel_loss"].update_state(loss)
 
     def _eval_epoch(self):
         """Evaluate model one epoch."""
@@ -166,20 +167,22 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
     def _eval_step(self, charactor, duration, mel):
         """Evaluate model one step."""
-        masked_mel_outputs, masked_duration_outputs = self.model(
+        masked_mel_before, masked_mel_after, masked_duration_outputs = self.model(
             charactor,
             attention_mask=tf.math.not_equal(charactor, 0),
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
+            speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
             duration_gts=duration,
             training=False
         )
-        duration_log = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
-        duration_loss = self.mae(duration_log, masked_duration_outputs)
-        mel_loss = self.mse(mel, masked_mel_outputs)
+        log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
+        duration_loss = self.mse(log_duration, masked_duration_outputs)
+        mel_loss_after = self.mae(mel, masked_mel_before)
+        mel_loss_before = self.mae(mel, masked_mel_after)
+        loss = duration_loss + mel_loss_before + mel_loss_after
 
         # accumulate loss into metrics
         self.eval_metrics["duration_loss"].update_state(duration_loss)
-        self.eval_metrics["mel_loss"].update_state(mel_loss)
+        self.eval_metrics["mel_loss"].update_state(loss)
 
     def _check_log_interval(self):
         """Log to tensorboard."""
@@ -198,14 +201,14 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
     def predict(self, charactor, duration, mel):
         """Predict."""
-        masked_mel_outputs, _ = self.model(
+        masked_mel_before, masked_mel_after, _ = self.model(
             charactor,
             attention_mask=tf.math.not_equal(charactor, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
             duration_gts=duration,
             training=False
         )
-        return masked_mel_outputs
+        return masked_mel_after
 
     def generate_and_save_intermediate_result(self, batch, idx):
         """Generate and save intermediate result."""
@@ -274,14 +277,10 @@ def main():
                         help="directory to save checkpoints.")
     parser.add_argument("--config", type=str, required=True,
                         help="yaml format configuration file.")
-    parser.add_argument("--pretrain", default="", type=str, nargs="?",
-                        help="checkpoint file path to load pretrained params. (default=\"\")")
     parser.add_argument("--resume", default="", type=str, nargs="?",
                         help="checkpoint file path to resume training. (default=\"\")")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
-    parser.add_argument("--rank", "--local_rank", default=0, type=int,
-                        help="rank for distributed training. no need to explictly specify.")
     parser.add_argument("--mixed_precision", default=0, type=int,
                         help="using mixed precision for generator or not.")
     args = parser.parse_args()
@@ -380,13 +379,14 @@ def main():
     fastspeech.summary()
 
     def calculate_real_len_mel(mel):
-        real_len = np.sum(mel, -1) # [len]
+        real_len = np.sum(mel, -1)  # [len]
         return np.sum(np.not_equal(real_len, 0))
 
     for data in train_dataset:
         charactor, duration, mel = data
         assert len(charactor[0]) == len(duration[0]), "wrong-1"
-        assert np.sum(duration[0]) == calculate_real_len_mel(mel[0].numpy()), "{} vs {}".format(np.sum(duration[0]), len(mel[0]))
+        assert np.sum(duration[0]) == calculate_real_len_mel(
+            mel[0].numpy()), "{} vs {}".format(np.sum(duration[0]), len(mel[0]))
 
     # # define trainer
     # trainer = FastSpeechTrainer(config=config,
