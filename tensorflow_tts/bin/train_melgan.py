@@ -109,9 +109,7 @@ class MelganTrainer(GanBasedTrainer):
         self.tqdm.update(1)
         self._check_train_finish()
 
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[tf.TensorSpec([None, None]),
-                                  tf.TensorSpec([None, None, 80])])
+    @tf.function(experimental_relax_shapes=True)
     def _one_step_generator(self, y, mels):
         """One step generator training."""
         with tf.GradientTape() as g_tape:
@@ -155,9 +153,7 @@ class MelganTrainer(GanBasedTrainer):
         y_hat = self.generator(mels)
         return y, y_hat
 
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[tf.TensorSpec([None, None]),
-                                  tf.TensorSpec([None, None, 1])])
+    @tf.function(experimental_relax_shapes=True)
     def _one_step_discriminator(self, y, y_hat):
         """One step discriminator training."""
         with tf.GradientTape() as d_tape:
@@ -218,9 +214,7 @@ class MelganTrainer(GanBasedTrainer):
         # reset
         self.reset_states_eval()
 
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[(tf.TensorSpec([None, None]),
-                                   tf.TensorSpec([None, None, 80]))])
+    @tf.function(experimental_relax_shapes=True)
     def _eval_step(self, batch):
         """Evaluate model one step."""
         y, mels = batch  # [B, T], [B, T, 80]
@@ -479,7 +473,8 @@ def main():
         mel_length_threshold=mel_length_threshold,
     ).create(
         is_shuffle=True,
-        map_fn=lambda a, b: collater(a, b, batch_max_steps=None),
+        map_fn=lambda a, b: collater(a, b,
+                                     batch_max_steps=tf.constant(config["batch_max_steps_valid"], dtype=tf.int32)),
         allow_cache=config["allow_cache"],
         batch_size=1
     )
