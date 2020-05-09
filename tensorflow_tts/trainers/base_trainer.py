@@ -85,10 +85,9 @@ class BasedTrainer(metaclass=abc.ABCMeta):
             self._train_step(batch)
 
             # check interval
-            if self.config["rank"] == 0:
-                self._check_log_interval()
-                self._check_eval_interval()
-                self._check_save_interval()
+            self._check_log_interval()
+            self._check_eval_interval()
+            self._check_save_interval()
 
             # check wheter training is finished
             if self.finish_train:
@@ -298,7 +297,8 @@ class Seq2SeqBasedTrainer(BasedTrainer):
         """Create checkpoint management."""
         if saved_path is None:
             saved_path = self.config["outdir"] + '/checkpoints/'
-            os.makedirs(saved_path, exist_ok=True)
+
+        os.makedirs(saved_path, exist_ok=True)
 
         self.saved_path = saved_path
         self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),

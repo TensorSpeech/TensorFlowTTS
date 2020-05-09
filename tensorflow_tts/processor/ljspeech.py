@@ -24,6 +24,7 @@ valid_symbols = [
 ]
 
 _pad = '_'
+_eos = '~'
 _punctuation = '!\'(),.:;? '
 _special = '-'
 _letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -33,7 +34,7 @@ _arpabet = ['@' + s for s in valid_symbols]
 
 # Export all symbols:
 symbols = [_pad] + list(_special) + list(_punctuation) + \
-    list(_letters) + _arpabet
+    list(_letters) + _arpabet + [_eos]
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}

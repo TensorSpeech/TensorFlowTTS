@@ -9,32 +9,33 @@ import pytest
 import numpy as np
 import tensorflow as tf
 
+import time
+
 from tensorflow_tts.models import TFTacotron2
 from tensorflow_tts.configs import Tacotron2Config
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    level=logging.WARNING, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
 
 
 @pytest.mark.parametrize(
     "n_speakers, n_chars, max_input_length, max_mel_length, batch_size", [
-        (2, 64, 25, 150, 32),
+        (2, 15, 25, 50, 2),
     ]
 )
 def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_length, batch_size):
     config = Tacotron2Config(n_speakers=n_speakers)
     model = TFTacotron2(config, training=True)
+    model._build()
 
     # fake input
     input_ids = tf.random.uniform([batch_size, max_input_length], maxval=n_chars, dtype=tf.int32)
-    input_lengths = np.random.randint(0, high=max_input_length+1, size=[batch_size])
-    input_lengths[-1] = max_input_length
-    input_lengths = tf.convert_to_tensor(input_lengths, dtype=tf.int32)
     speaker_ids = tf.convert_to_tensor([0] * batch_size, tf.int32)
     mel_outputs = tf.random.uniform(shape=[batch_size, max_mel_length, 80])
-    mel_lengths =  np.random.randint(0, high=max_mel_length+1, size=[batch_size])
+    mel_lengths = np.random.randint(max_mel_length, high=max_mel_length + 1, size=[batch_size])
     mel_lengths[-1] = max_mel_length
     mel_lengths = tf.convert_to_tensor(mel_lengths, dtype=tf.int32)
 
@@ -43,34 +44,45 @@ def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_leng
 
     optimizer = tf.keras.optimizers.Adam(lr=0.001)
 
-    # @tf.function
-    # def one_step_training(model, optimizer, input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, stop_tokens):
-    #     with tf.GradientTape() as tape:
-    #         mel_preds, \
-    #             post_mel_preds, \
-    #             stop_preds, \
-    #             alignment_history = model(input_ids,
-    #                                         speaker_ids,
-    #                                         mel_outputs,
-    #                                         input_lengths,
-    #                                         mel_lengths, training=True)
-    #         loss_before = tf.keras.losses.MeanSquaredError()(mel_outputs, mel_preds)
-    #         loss_after = tf.keras.losses.MeanSquaredError()(mel_outputs, post_mel_preds)
-    #         loss_stop_tokens = tf.keras.losses.BinaryCrossentropy(from_logits=True)(stop_tokens, stop_preds)
-    #         loss = loss_before + loss_after + loss_stop_tokens
-    #     gradients = tape.gradient(loss, model.trainable_variables)
-    #     optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-    #     return loss
+    binary_crossentropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
-    # import time
-    # for i in range(10):
-    #     if i == 1:
-    #         start = time.time()
-    #     loss = one_step_training(model, optimizer, input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, stop_tokens)
-    #     print(f" > loss: {loss}")
-    # total_runtime = time.time() - start
-    # print(f" > Total run-time: {total_runtime}")
-    # print(f" > Avg run-time: {total_runtime/10}")
+    @tf.function(experimental_relax_shapes=True)
+    def one_step_training(input_ids, speaker_ids, mel_outputs, mel_lengths):
+        print('vao day khong.')
+        with tf.GradientTape() as tape:
+            mel_preds, \
+                post_mel_preds, \
+                stop_preds, \
+                alignment_history = model(input_ids,
+                                          tf.reduce_sum(
+                                              tf.cast(
+                                                  tf.math.not_equal(input_ids, 0), tf.float32), -1),
+                                          speaker_ids,
+                                          mel_outputs,
+                                          max_mel_length,
+                                          mel_lengths)
+            loss_before = tf.keras.losses.MeanSquaredError()(mel_outputs, mel_preds)
+            loss_after = tf.keras.losses.MeanSquaredError()(mel_outputs, post_mel_preds)
 
-# if __name__ == "__main__":
-#     test_tacotron2_trainable(2, 64, 25, 150, 2)
+            stop_gts = tf.expand_dims(tf.range(tf.reduce_max(mel_lengths), dtype=tf.int32), 0)  # [1, max_len]
+            stop_gts = tf.tile(stop_gts, [tf.shape(mel_lengths)[0], 1])  # [B, max_len]
+            stop_gts = tf.cast(tf.math.equal(stop_gts, tf.expand_dims(mel_lengths, 1) - 1), tf.float32)
+
+            # calculate stop_token loss
+            stop_token_loss = binary_crossentropy(stop_gts, stop_preds)
+
+            loss = stop_token_loss + loss_before + loss_after
+
+        gradients = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+        return loss, alignment_history
+
+    for i in range(2):
+        if i == 1:
+            start = time.time()
+        loss, alignment_history = one_step_training(input_ids,
+                                                    speaker_ids, mel_outputs, mel_lengths)
+        print(f" > loss: {loss}")
+    total_runtime = time.time() - start
+    print(f" > Total run-time: {total_runtime}")
+    print(f" > Avg run-time: {total_runtime/10}")

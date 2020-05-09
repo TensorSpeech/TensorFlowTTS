@@ -50,7 +50,7 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
         tf.print(loss)
 
     import time
-    for i in range(100):
+    for i in range(2):
         if i == 1:
             start = time.time()
         one_step_training()

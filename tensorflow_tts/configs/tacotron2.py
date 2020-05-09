@@ -6,12 +6,13 @@
 
 from tensorflow_tts.processor.ljspeech import symbols
 
+
 class Tacotron2Config(object):
     """Initialize Tacotron-2 Config."""
 
     def __init__(
             self,
-            vocab_size=len(symbols) + 1,
+            vocab_size=len(symbols),
             embedding_hidden_size=512,
             initializer_range=0.02,
             layer_norm_eps=1e-6,
@@ -20,17 +21,18 @@ class Tacotron2Config(object):
             n_conv_encoder=3,
             encoder_conv_filters=512,
             encoder_conv_kernel_sizes=5,
-            encoder_conv_activation='relu',
+            encoder_conv_activation='mish',
             encoder_conv_dropout_rate=0.5,
             encoder_lstm_units=256,
+            reduction_factor=5,
             n_prenet_layers=2,
             prenet_units=256,
-            prenet_activation='relu',
+            prenet_activation='mish',
             prenet_dropout_rate=0.5,
             n_lstm_decoder=1,
             decoder_lstm_units=1024,
+            attention_type='lsa',
             attention_dim=128,
-            memory_units=256,  # not neccessary
             attention_filters=32,
             attention_kernel=31,
             n_mels=80,
@@ -53,14 +55,15 @@ class Tacotron2Config(object):
         self.encoder_lstm_units = encoder_lstm_units
 
         # decoder param
+        self.reduction_factor = reduction_factor
         self.n_prenet_layers = n_prenet_layers
         self.prenet_units = prenet_units
         self.prenet_activation = prenet_activation
         self.prenet_dropout_rate = prenet_dropout_rate
         self.n_lstm_decoder = n_lstm_decoder
         self.decoder_lstm_units = decoder_lstm_units
+        self.attention_type = attention_type
         self.attention_dim = attention_dim
-        self.memory_units = memory_units
         self.attention_filters = attention_filters
         self.attention_kernel = attention_kernel
         self.n_mels = n_mels
