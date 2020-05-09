@@ -48,25 +48,21 @@ def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_leng
 
     @tf.function(experimental_relax_shapes=True)
     def one_step_training(input_ids, speaker_ids, mel_outputs, mel_lengths):
-        print('vao day khong.')
         with tf.GradientTape() as tape:
             mel_preds, \
                 post_mel_preds, \
                 stop_preds, \
                 alignment_history = model(input_ids,
-                                          tf.reduce_sum(
-                                              tf.cast(
-                                                  tf.math.not_equal(input_ids, 0), tf.float32), -1),
+                                          tf.constant([max_mel_length, max_mel_length]),
                                           speaker_ids,
                                           mel_outputs,
-                                          max_mel_length,
                                           mel_lengths)
             loss_before = tf.keras.losses.MeanSquaredError()(mel_outputs, mel_preds)
             loss_after = tf.keras.losses.MeanSquaredError()(mel_outputs, post_mel_preds)
 
             stop_gts = tf.expand_dims(tf.range(tf.reduce_max(mel_lengths), dtype=tf.int32), 0)  # [1, max_len]
             stop_gts = tf.tile(stop_gts, [tf.shape(mel_lengths)[0], 1])  # [B, max_len]
-            stop_gts = tf.cast(tf.math.equal(stop_gts, tf.expand_dims(mel_lengths, 1) - 1), tf.float32)
+            stop_gts = tf.cast(tf.math.greater_equal(stop_gts, tf.expand_dims(mel_lengths, 1) - 1), tf.float32)
 
             # calculate stop_token loss
             stop_token_loss = binary_crossentropy(stop_gts, stop_preds)
