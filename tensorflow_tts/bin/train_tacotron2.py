@@ -164,7 +164,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
 
             if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
                 # save intermedia
-                self.generate_and_save_intermediate_result(batch, eval_steps_per_epoch)
+                self.generate_and_save_intermediate_result(batch)
 
         logging.info(f"(Steps: {self.steps}) Finished evaluation "
                      f"({eval_steps_per_epoch} steps per epoch).")
@@ -240,7 +240,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         )
         return mel_outputs, post_mel_outputs, alignment
 
-    def generate_and_save_intermediate_result(self, batch, idx):
+    def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
@@ -256,7 +256,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for _, (mel_gt, mel_pred_before, mel_pred_after, alignment) in enumerate(
+        for idx, (mel_gt, mel_pred_before, mel_pred_after, alignment) in enumerate(
                 zip(mel, masked_mel_before, masked_mel_after, alignments), 1):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_pred_before = tf.reshape(mel_pred_before, (-1, 80)).numpy()  # [length, 80]
