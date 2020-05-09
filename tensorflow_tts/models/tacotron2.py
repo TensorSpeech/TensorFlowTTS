@@ -242,7 +242,7 @@ class TrainingSampler(Sampler):
         return self.config.reduction_factor
 
     def initialize(self):
-        """Return (Finished, next_inputs)"""
+        """Return (Finished, next_inputs)."""
         return (tf.tile([False], [self._batch_size]),
                 tf.tile([[0.0]], [self._batch_size, self.config.n_mels]))
 

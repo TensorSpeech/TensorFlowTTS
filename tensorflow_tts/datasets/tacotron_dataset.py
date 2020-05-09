@@ -21,7 +21,7 @@ from tensorflow_tts.processor.ljspeech import symbols
 
 
 def guided_attention(char_len, mel_len, g=0.2):
-    '''Guided attention. Refer to page 3 on the paper.'''
+    """Guided attention. Refer to page 3 on the paper."""
     ga = np.zeros((char_len, mel_len), dtype=np.float32)
     for n_pos in range(char_len):
         for t_pos in range(mel_len):
