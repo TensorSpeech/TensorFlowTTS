@@ -39,11 +39,18 @@ def swish(x):
     return x * tf.sigmoid(x)
 
 
+def mish(x):
+    return x * tf.math.tanh(tf.math.softplus(x))
+
+
 ACT2FN = {
+    "identity": tf.keras.layers.Activation('linear'),
+    "tanh": tf.keras.layers.Activation('tanh'),
     "gelu": tf.keras.layers.Activation(gelu),
     "relu": tf.keras.activations.relu,
     "swish": tf.keras.layers.Activation(swish),
     "gelu_new": tf.keras.layers.Activation(gelu_new),
+    "mish": tf.keras.layers.Activation(mish)
 }
 
 
@@ -635,10 +642,10 @@ class TFFastSpeech(tf.keras.Model):
         # duration predictor, here use last_encoder_hidden_states, u can use more hidden_states layers
         # rather than just use last_hidden_states of encoder for duration_predictor.
         duration_outputs = self.duration_predictor([last_encoder_hidden_states, attention_mask])  # [batch_size, length]
-        duration_outputs = tf.math.exp(duration_outputs) - 1
+        duration_outputs = tf.math.exp(duration_outputs) - 1.0
 
         if speed_ratios is None:
-            speed_ratios = tf.convert_to_tensor(np.array([1.0]))
+            speed_ratios = tf.convert_to_tensor(np.array([1.0]), dtype=tf.float32)
 
         duration_outputs = tf.cast(tf.math.round(duration_outputs * speed_ratios), tf.int32)
 

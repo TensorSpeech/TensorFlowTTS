@@ -92,6 +92,15 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         self.mse = tf.keras.losses.MeanSquaredError()
         self.mae = tf.keras.losses.MeanAbsoluteError()
 
+        # create scheduler for teacher forcing.
+        self.teacher_forcing_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
+            initial_learning_rate=self.config["start_ratio_value"],
+            decay_steps=self.config["schedule_decay_steps"],
+            end_learning_rate=self.config["end_ratio_value"],
+            cycle=True,
+            name="teacher_forcing_scheduler"
+        )
+
     def _train_step(self, batch):
         """Train model one step."""
         charactor, char_length, mel, mel_length, guided_attention = batch
@@ -101,6 +110,15 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         self.steps += 1
         self.tqdm.update(1)
         self._check_train_finish()
+        self._apply_schedule_teacher_forcing()
+
+    def _apply_schedule_teacher_forcing(self):
+        if self.steps >= self.config["start_schedule_teacher_forcing"]:
+            # change _ratio on sampler.
+            self.model.decoder.sampler._ratio = self.teacher_forcing_scheduler(
+                self.steps - self.config["start_schedule_teacher_forcing"])
+            if self.steps == self.config["start_schedule_teacher_forcing"]:
+                logging.info(f"(Steps: {self.steps}) Start apply schedule teacher forcing.")
 
     @tf.function(experimental_relax_shapes=True)
     def _one_step_tacotron2(self, charactor, char_length, mel, mel_length, guided_attention):
@@ -304,9 +322,9 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
 
-    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
-        self.set_train_data_loader(train_data_loader)
-        self.set_eval_data_loader(valid_data_loader)
+    def fit(self, train_dataset, valid_dataset, saved_path, resume=None):
+        self.set_train_data_loader(train_dataset)
+        self.set_eval_data_loader(valid_dataset)
         self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
         if len(resume) > 2:
             self.load_checkpoint(resume)

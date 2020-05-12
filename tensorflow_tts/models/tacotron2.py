@@ -217,12 +217,13 @@ class TrainingSampler(Sampler):
         # the input of a next decoder cell is calculated by formular:
         # next_inputs = ratio * prev_groundtruth_outputs + (1.0 - ratio) * prev_predicted_outputs.
         self._ratio = tf.constant(1.0)
+        self._reduction_factor = self.config.reduction_factor
 
     def setup_target(self, targets, mel_lengths):
         """Setup ground-truth mel outputs for decoder."""
         self.mel_lengths = mel_lengths
         self._batch_size = tf.shape(targets)[0]
-        self.targets = targets[:, self.config.reduction_factor - 1::self.config.reduction_factor, :]
+        self.targets = targets[:, self._reduction_factor - 1::self._reduction_factor, :]
         self.max_lengths = tf.tile([tf.shape(self.targets)[1]], [self._batch_size])
 
     @property
@@ -239,7 +240,7 @@ class TrainingSampler(Sampler):
 
     @property
     def reduction_factor(self):
-        return self.config.reduction_factor
+        return self._reduction_factor
 
     def initialize(self):
         """Return (Finished, next_inputs)."""
@@ -255,6 +256,27 @@ class TrainingSampler(Sampler):
             (1.0 - self._ratio) * outputs[:, -self.config.n_mels:]
         next_state = state
         return (finished, next_inputs, next_state)
+
+
+class TestingSampler(TrainingSampler):
+    """Testing sampler for Seq2Seq training."""
+
+    def __init__(self,
+                 config,
+                 ):
+        super().__init__(config)
+
+    def next_inputs(self, time, outputs, state, sample_ids, **kwargs):
+        stop_token_prediction = kwargs.get("stop_token_prediction")
+        stop_token_prediction = tf.nn.sigmoid(stop_token_prediction)
+        finished = tf.cast(tf.round(stop_token_prediction), tf.bool)
+        finished = tf.reduce_all(finished)
+        next_inputs = outputs[:, -self.config.n_mels:]
+        next_state = state
+        return (finished, next_inputs, next_state)
+
+    def set_batch_size(self, batch_size):
+        self._batch_size = batch_size
 
 
 class GmmAttention(AttentionMechanism):
@@ -384,8 +406,28 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         self.config = config
         self.is_cumulate = is_cumulate
 
+    def setup_window(self, win_front=2, win_back=4):
+        self.win_front = tf.constant(win_front, tf.int32)
+        self.win_back = tf.constant(win_back, tf.int32)
+
+        self._indices = tf.expand_dims(tf.range(tf.shape(self.keys)[1]), 0)
+        self._indices = tf.tile(self._indices, [tf.shape(self.keys)[0], 1])  # [batch_size, max_time]
+
+    def _compute_window_mask(self, max_alignments):
+        """
+        Args:
+            max_alignments (int): [batch_size]
+        """
+        expanded_max_alignments = tf.expand_dims(max_alignments, 1)  # [batch_size, 1]
+        low = expanded_max_alignments - self.win_front
+        high = expanded_max_alignments + self.win_back
+        mlow = tf.cast((self._indices < low), tf.float32)
+        mhigh = tf.cast((self._indices > high), tf.float32)
+        mask = mlow + mhigh
+        return mask  # [batch_size, max_length]
+
     def __call__(self, inputs, training=False):
-        query, state = inputs
+        query, state, prev_max_alignments = inputs
 
         processed_query = self.query_layer(query) if self.query_layer else query
         processed_query = tf.expand_dims(processed_query, 1)
@@ -397,6 +439,11 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         energy = self._location_sensitive_score(processed_query,
                                                 processed_location_features,
                                                 self.keys)
+
+        # mask energy on inference steps.
+        if training is False:
+            window_mask = self._compute_window_mask(prev_max_alignments)
+            energy = energy + window_mask * -1e20
 
         alignments = self.probability_fn(energy, state)
 
@@ -473,7 +520,13 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
 
 TFTacotronDecoderCellState = collections.namedtuple(
     'TFTacotronDecoderCellState',
-    ['attention_lstm_state', 'decoder_lstms_state', 'context', 'time', 'state', 'alignment_history'])
+    ['attention_lstm_state',
+     'decoder_lstms_state',
+     'context',
+     'time',
+     'state',
+     'alignment_history',
+     'max_alignments'])
 
 TFDecoderOutput = collections.namedtuple(
     "TFDecoderOutput", ("mel_output", "token_output", "sample_id"))
@@ -544,6 +597,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
             attention=self.config.attention_dim,
             state=self.alignment_size,
             alignment_history=(),
+            max_alignments=tf.TensorShape([1]),
         )
 
     def get_initial_state(self, batch_size):
@@ -559,7 +613,8 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
             time=tf.zeros([], dtype=tf.int32),
             context=initial_context,
             state=initial_state,
-            alignment_history=initial_alignment_history
+            alignment_history=initial_alignment_history,
+            max_alignments=tf.zeros([batch_size], dtype=tf.int32),
         )
 
     def call(self, inputs, states):
@@ -578,9 +633,11 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         # 3. compute context, alignment and cumulative alignment.
         prev_state = states.state
         prev_alignment_history = states.alignment_history
+        prev_max_alignments = states.max_alignments
         context, alignments, state = self.attention_layer(
             [attention_lstm_output,
-             prev_state],
+             prev_state,
+             prev_max_alignments],
             training=self.training
         )
 
@@ -608,7 +665,8 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
             time=states.time + 1,
             context=context,
             state=state,
-            alignment_history=alignment_history
+            alignment_history=alignment_history,
+            max_alignments=tf.argmax(alignments, -1, output_type=tf.int32)
         )
 
         return (decoder_outputs, stop_tokens), new_states
@@ -732,6 +790,56 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
+
+        # run decode step.
+        (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
+            self.decoder
+        )
+
+        decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
+        stop_token_prediction = tf.reshape(stop_token_prediction, [batch_size, -1])
+
+        residual = self.postnet(decoder_output, training=training)
+        residual_projection = self.post_projection(residual)
+
+        mel_outputs = decoder_output + residual_projection
+
+        alignment_history = tf.transpose(final_decoder_state.alignment_history.stack(), [1, 2, 0])
+
+        return decoder_output, mel_outputs, stop_token_prediction, alignment_history
+
+    def inference(self,
+                  input_ids,
+                  input_lengths,
+                  speaker_ids,
+                  training=False):
+        """Call logic."""
+        # create input-mask based on input_lengths
+        input_mask = tf.sequence_mask(input_lengths,
+                                      maxlen=tf.reduce_max(input_lengths),
+                                      name='input_sequence_masks')
+
+        # Encoder Step.
+        encoder_hidden_states = self.encoder([input_ids, speaker_ids, input_mask], training=training)
+
+        batch_size = tf.shape(encoder_hidden_states)[0]
+        alignment_size = tf.shape(encoder_hidden_states)[1]
+
+        # Setup some initial placeholders for decoder step. Include:
+        # 1. mel_outputs, mel_lengths for teacher forcing mode.
+        # 2. alignment_size for attention size.
+        # 3. initial state for decoder cell.
+        # 4. memory (encoder hidden state) for attention mechanism.
+        # 5. window front/back to solve long sentence synthesize problems. (call after setup memory.)
+        self.decoder.cell.set_alignment_size(alignment_size)
+        self.decoder.setup_decoder_init_state(
+            self.decoder.cell.get_initial_state(batch_size)
+        )
+        self.decoder.cell.attention_layer.setup_memory(
+            memory=encoder_hidden_states,
+            memory_sequence_length=input_lengths  # use for mask attention.
+        )
+        self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
