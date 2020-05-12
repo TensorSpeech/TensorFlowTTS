@@ -414,7 +414,7 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         self._indices = tf.tile(self._indices, [tf.shape(self.keys)[0], 1])  # [batch_size, max_time]
 
     def _compute_window_mask(self, max_alignments):
-        """ Compute window mask for inference.
+        """Compute window mask for inference.
 
         Args:
             max_alignments (int): [batch_size]
