@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+
+# Copyright 2020 Minh Nguyen Quan Anh
+#  MIT License (https://opensource.org/licenses/MIT)
+
 import logging
 import os
 import pytest
@@ -45,7 +50,7 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
         tf.print(loss)
 
     import time
-    for i in range(100):
+    for i in range(2):
         if i == 1:
             start = time.time()
         one_step_training()

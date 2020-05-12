@@ -297,7 +297,8 @@ class Seq2SeqBasedTrainer(BasedTrainer):
         """Create checkpoint management."""
         if saved_path is None:
             saved_path = self.config["outdir"] + '/checkpoints/'
-            os.makedirs(saved_path, exist_ok=True)
+
+        os.makedirs(saved_path, exist_ok=True)
 
         self.saved_path = saved_path
         self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),

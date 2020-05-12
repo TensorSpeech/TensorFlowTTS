@@ -15,13 +15,10 @@ from tensorflow_tts.utils import GroupConv1D
 
 def get_initializer(initializer_range=0.02):
     """Creates a `tf.initializers.truncated_normal` with the given range.
-
     Args:
         initializer_range: float, initializer range for stddev.
-
     Returns:
         TruncatedNormal initializer with stddev = `initializer_range`.
-
     """
     return tf.keras.initializers.TruncatedNormal(stddev=initializer_range)
 
@@ -171,7 +168,6 @@ class TFMelGANGenerator(tf.keras.Model):
 
     def __init__(self, config, **kwargs):
         """Initialize TFMelGANGenerator module.
-
         Args:
             config: config object of Melgan generator.
         """
@@ -244,13 +240,10 @@ class TFMelGANGenerator(tf.keras.Model):
 
     def call(self, c):
         """Calculate forward propagation.
-
         Args:
             c (Tensor): Input tensor (B, T, channels)
-
         Returns:
             Tensor: Output tensor (B, T ** prod(upsample_scales), out_channels)
-
         """
         return self.melgan(c)
 
@@ -368,12 +361,10 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
 
     def call(self, x):
         """Calculate forward propagation.
-
         Args:
             x (Tensor): Input noise signal (B, T, 1).
         Returns:
             List: List of output tensors of each layer.
-
         """
         outs = []
         for f in self.disciminator:
@@ -397,7 +388,6 @@ class TFMelGANMultiScaleDiscriminator(tf.keras.Model):
 
     def __init__(self, config, **kwargs):
         """Initilize MelGAN multi-scale discriminator module.
-
         Args:
             config: config object for melgan discriminator
         """
@@ -426,12 +416,10 @@ class TFMelGANMultiScaleDiscriminator(tf.keras.Model):
 
     def call(self, x):
         """Calculate forward propagation.
-
         Args:
             x (Tensor): Input noise signal (B, T, 1).
         Returns:
             List: List of list of each discriminator outputs, which consists of each layer output tensors.
-
         """
         outs = []
         for f in self.discriminator:

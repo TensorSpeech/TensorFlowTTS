@@ -24,6 +24,7 @@ valid_symbols = [
 ]
 
 _pad = '_'
+_eos = '~'
 _punctuation = '!\'(),.:;? '
 _special = '-'
 _letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -33,7 +34,7 @@ _arpabet = ['@' + s for s in valid_symbols]
 
 # Export all symbols:
 symbols = [_pad] + list(_special) + list(_punctuation) + \
-    list(_letters) + _arpabet
+    list(_letters) + _arpabet + [_eos]
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
@@ -52,14 +53,15 @@ class LJSpeechProcessor(object):
 
         items = []
         self.speaker_name = "ljspeech"
-        with open(os.path.join(root_path, 'metadata.csv'), encoding='utf-8') as ttf:
-            for line in ttf:
-                parts = line.strip().split('|')
-                wav_path = os.path.join(root_path, 'wavs', '%s.wav' % parts[0])
-                text = parts[2]
-                items.append([text, wav_path, self.speaker_name])
+        if root_path is not None:
+            with open(os.path.join(root_path, 'metadata.csv'), encoding='utf-8') as ttf:
+                for line in ttf:
+                    parts = line.strip().split('|')
+                    wav_path = os.path.join(root_path, 'wavs', '%s.wav' % parts[0])
+                    text = parts[2]
+                    items.append([text, wav_path, self.speaker_name])
 
-        self.items = items
+            self.items = items
 
     def get_one_sample(self, idx):
         text, wav_file, speaker_name = self.items[idx]
