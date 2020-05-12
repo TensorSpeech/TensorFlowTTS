@@ -6,12 +6,7 @@
 """Utility functions."""
 
 import fnmatch
-import logging
 import os
-import sys
-
-import h5py
-import numpy as np
 
 
 def find_files(root_dir, query="*.wav", include_root_dir=True):

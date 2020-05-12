@@ -196,7 +196,7 @@ class CharactorDurationDataset(AbstractDataset):
         assert len(charactor_files) != 0 or len(duration_files) != 0, \
             f"Not found any char or duration files in ${root_dir}."
 
-        assert len(charactor_files) == len(duration_files), f"number of charactor and duration files are different."
+        assert len(charactor_files) == len(duration_files), "number of charactor and duration files are different."
 
         if ".npy" in charactor_query:
             utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
