@@ -27,9 +27,9 @@ logging.basicConfig(
     ]
 )
 def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_length, batch_size):
-    config = Tacotron2Config(n_speakers=n_speakers)
+    config = Tacotron2Config(n_speakers=n_speakers, reduction_factor=1)
     model = TFTacotron2(config, training=True)
-    model._build()
+    # model._build()
 
     # fake input
     input_ids = tf.random.uniform([batch_size, max_input_length], maxval=n_chars, dtype=tf.int32)
@@ -53,10 +53,11 @@ def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_leng
                 post_mel_preds, \
                 stop_preds, \
                 alignment_history = model(input_ids,
-                                          tf.constant([max_mel_length, max_mel_length]),
+                                          tf.constant([max_input_length, max_input_length]),
                                           speaker_ids,
                                           mel_outputs,
-                                          mel_lengths)
+                                          mel_lengths,
+                                          training=True)
             loss_before = tf.keras.losses.MeanSquaredError()(mel_outputs, mel_preds)
             loss_after = tf.keras.losses.MeanSquaredError()(mel_outputs, post_mel_preds)
 

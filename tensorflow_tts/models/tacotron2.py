@@ -21,13 +21,10 @@ from tensorflow_addons.seq2seq import attention_wrapper
 
 def get_initializer(initializer_range=0.02):
     """Creates a `tf.initializers.truncated_normal` with the given range.
-
     Args:
         initializer_range: float, initializer range for stddev.
-
     Returns:
         TruncatedNormal initializer with stddev = `initializer_range`.
-
     """
     return tf.keras.initializers.TruncatedNormal(stddev=initializer_range)
 
@@ -104,6 +101,7 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
                 embeddings_initializer=get_initializer(self.initializer_range),
                 name="speaker_embeddings"
             )
+            self.speaker_fc = tf.keras.layers.Dense(units=config.embedding_hidden_size, name='speaker_fc')
 
         self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
         self.dropout = tf.keras.layers.Dropout(config.embedding_dropout_prob)
@@ -120,13 +118,11 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
 
     def call(self, inputs, training=False):
         """Get character embeddings of inputs.
-
         Args:
             1. character, Tensor (int32) shape [batch_size, length].
             2. speaker_id, Tensor (int32) shape [batch_size]
         Returns:
             Tensor (float32) shape [batch_size, length, embedding_size].
-
         """
         return self._embedding(inputs, training=training)
 
@@ -140,9 +136,11 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
 
         if self.config.n_speakers > 1:
             speaker_embeddings = self.speaker_embeddings(speaker_ids)
-            extended_speaker_embeddings = speaker_embeddings[:, tf.newaxis, :]
+            speaker_features = tf.math.softplus(self.speaker_fc(speaker_embeddings))
+            # extended speaker embeddings
+            extended_speaker_features = speaker_features[:, tf.newaxis, :]
             # sum all embedding
-            embeddings += extended_speaker_embeddings
+            embeddings += extended_speaker_features
 
         # apply layer-norm and dropout for embeddings.
         embeddings = self.LayerNorm(embeddings)
@@ -415,7 +413,6 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
 
     def _compute_window_mask(self, max_alignments):
         """Compute window mask for inference.
-
         Args:
             max_alignments (int): [batch_size]
         """
@@ -490,7 +487,7 @@ class TFTacotronPrenet(tf.keras.layers.Layer):
         outputs = inputs
         for layer in self.prenet_dense:
             outputs = layer(outputs)
-            outputs = self.dropout(outputs, training=training)
+            outputs = self.dropout(outputs, training=True)
         return outputs
 
 
@@ -515,7 +512,7 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
         """Call logic."""
         outputs = inputs
         for _, conv in enumerate(self.conv_batch_norm):
-            outputs = conv(outputs)
+            outputs = conv(outputs, training=training)
         return outputs
 
 
@@ -649,17 +646,17 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
             states.decoder_lstms_state
         )
 
-        # 4. compute frame feature and stop token.
+        # 5. compute frame feature and stop token.
         projection_inputs = tf.concat([decoder_lstms_output, context], axis=-1)
         decoder_outputs = self.frame_projection(projection_inputs)
 
         stop_inputs = tf.concat([decoder_lstms_output, decoder_outputs], axis=-1)
         stop_tokens = self.stop_projection(stop_inputs)
 
-        # 5. save alignment history to visualize.
+        # 6. save alignment history to visualize.
         alignment_history = prev_alignment_history.write(states.time, alignments)
 
-        # 6. return new states.
+        # 7. return new states.
         new_states = TFTacotronDecoderCellState(
             attention_lstm_state=next_attention_lstm_state,
             decoder_lstms_state=next_decoder_lstms_state,
@@ -741,7 +738,7 @@ class TFTacotron2(tf.keras.Model):
         self.decoder_cell = TFTacotronDecoderCell(config, training=training, name='decoder_cell')
         self.decoder = TFTacotronDecoder(
             self.decoder_cell,
-            TrainingSampler(config)
+            TrainingSampler(config) if training is True else TestingSampler(config)
         )
         self.postnet = TFTacotronPostnet(config, name='post_net')
         self.post_projection = tf.keras.layers.Dense(units=config.n_mels,
@@ -763,7 +760,6 @@ class TFTacotron2(tf.keras.Model):
              speaker_ids,
              mel_outputs,
              mel_lengths,
-             real_lengths=None,
              training=False):
         """Call logic."""
         # create input-mask based on input_lengths
@@ -791,6 +787,7 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
+        self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
@@ -812,8 +809,7 @@ class TFTacotron2(tf.keras.Model):
     def inference(self,
                   input_ids,
                   input_lengths,
-                  speaker_ids,
-                  training=False):
+                  speaker_ids):
         """Call logic."""
         # create input-mask based on input_lengths
         input_mask = tf.sequence_mask(input_lengths,
@@ -821,7 +817,7 @@ class TFTacotron2(tf.keras.Model):
                                       name='input_sequence_masks')
 
         # Encoder Step.
-        encoder_hidden_states = self.encoder([input_ids, speaker_ids, input_mask], training=training)
+        encoder_hidden_states = self.encoder([input_ids, speaker_ids, input_mask], training=False)
 
         batch_size = tf.shape(encoder_hidden_states)[0]
         alignment_size = tf.shape(encoder_hidden_states)[1]
@@ -840,7 +836,8 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
-        self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
+        if self.config.attention_type == "lsa":
+            self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
@@ -850,7 +847,7 @@ class TFTacotron2(tf.keras.Model):
         decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
         stop_token_prediction = tf.reshape(stop_token_prediction, [batch_size, -1])
 
-        residual = self.postnet(decoder_output, training=training)
+        residual = self.postnet(decoder_output, training=False)
         residual_projection = self.post_projection(residual)
 
         mel_outputs = decoder_output + residual_projection

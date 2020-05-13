@@ -13,11 +13,6 @@ class FastSpeechConfig(object):
 
     def __init__(
             self,
-            n_conv_encoder=3,
-            encoder_conv_filters=512,
-            encoder_conv_kernel_sizes=5,
-            encoder_conv_activation='relu',
-            encoder_conv_dropout_rate=0.5,
             vocab_size=len(symbols),
             n_speakers=1,
             hidden_size=384,
@@ -29,7 +24,7 @@ class FastSpeechConfig(object):
             duration_predictor_filters=256,
             duration_predictor_kernel_sizes=3,
             num_mels=80,
-            hidden_act="gelu_new",
+            hidden_act="mish",
             hidden_dropout_prob=0.1,
             attention_probs_dropout_prob=0.1,
             duration_predictor_dropout_probs=0.1,
@@ -37,19 +32,12 @@ class FastSpeechConfig(object):
             initializer_range=0.02,
             layer_norm_eps=1e-5,
             output_attentions=True,
-            output_hidden_states=False,
+            output_hidden_states=True,
             n_conv_postnet=5,
             postnet_conv_filters=512,
             postnet_conv_kernel_sizes=5,
             postnet_dropout_rate=0.1):
         """Init parameters for Fastspeech model."""
-        # taco-encode
-        self.n_conv_encoder = n_conv_encoder
-        self.encoder_conv_filters = encoder_conv_filters
-        self.encoder_conv_kernel_sizes = encoder_conv_kernel_sizes
-        self.encoder_conv_activation = encoder_conv_activation
-        self.encoder_conv_dropout_rate = encoder_conv_dropout_rate
-
         # fastspeech
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size

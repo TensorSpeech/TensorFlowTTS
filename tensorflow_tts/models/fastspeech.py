@@ -74,12 +74,13 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         )
 
         if config.n_speakers > 1:
-            self.speaker_embeddings = tf.keras.layers.Embedding(
+            self.encoder_speaker_embeddings = tf.keras.layers.Embedding(
                 config.n_speakers,
                 config.hidden_size,
                 embeddings_initializer=get_initializer(self.initializer_range),
                 name="speaker_embeddings"
             )
+            self.speaker_fc = tf.keras.layers.Dense(units=config.hidden_size, name='speaker_fc')
 
     def build(self, input_shape):
         """Build shared charactor/phoneme embedding layers."""
@@ -119,10 +120,11 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         # sum embedding
         embeddings = inputs_embeds + position_embeddings
         if self.config.n_speakers > 1:
-            speaker_embeddings = self.speaker_embeddings(speaker_ids)
+            speaker_embeddings = self.encoder_speaker_embeddings(speaker_ids)
+            speaker_features = tf.math.softplus(self.speaker_fc(speaker_embeddings))
             # extended speaker embeddings
-            extended_speaker_embeddings = speaker_embeddings[:, tf.newaxis, :]
-            embeddings += extended_speaker_embeddings
+            extended_speaker_features = speaker_features[:, tf.newaxis, :]
+            embeddings += extended_speaker_features
 
         return embeddings
 
@@ -385,12 +387,29 @@ class TFFastSpeechDecoder(TFFastSpeechEncoder):
             trainable=False
         )
 
+        if config.n_speakers > 1:
+            self.decoder_speaker_embeddings = tf.keras.layers.Embedding(
+                config.n_speakers,
+                config.hidden_size,
+                embeddings_initializer=get_initializer(config.initializer_range),
+                name="speaker_embeddings"
+            )
+            self.speaker_fc = tf.keras.layers.Dense(units=config.hidden_size, name='speaker_fc')
+
     def call(self, inputs, training=False):
-        hidden_states, decoder_mask, decoder_pos = inputs
+        hidden_states, speaker_ids, encoder_mask, decoder_pos = inputs
 
         # calculate new hidden states.
         hidden_states = hidden_states + self.decoder_positional_embeddings(decoder_pos)
-        return super().call([hidden_states, decoder_mask], training=training)
+
+        if self.config.n_speakers > 1:
+            speaker_embeddings = self.decoder_speaker_embeddings(speaker_ids)
+            speaker_features = tf.math.softplus(self.speaker_fc(speaker_embeddings))
+            # extended speaker embeddings
+            extended_speaker_features = speaker_features[:, tf.newaxis, :]
+            hidden_states += extended_speaker_features
+
+        return super().call([hidden_states, encoder_mask], training=training)
 
     def _sincos_embedding(self):
         position_enc = np.array([
@@ -617,7 +636,7 @@ class TFFastSpeech(tf.keras.Model):
         masked_decoder_pos = tf.expand_dims(decoder_pos, 0) * encoder_masks
 
         decoder_output = self.decoder(
-            [length_regulator_outputs, encoder_masks, masked_decoder_pos], training=training)
+            [length_regulator_outputs, speaker_ids, encoder_masks, masked_decoder_pos], training=training)
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.
@@ -632,11 +651,10 @@ class TFFastSpeech(tf.keras.Model):
                   attention_mask,
                   speaker_ids,
                   duration_gts=None,
-                  speed_ratios=None,
-                  training=False):
+                  speed_ratios=None):
         """Call logic."""
-        embedding_output = self.embeddings([input_ids, speaker_ids], training=training)
-        encoder_output = self.encoder([embedding_output, attention_mask], training=training)
+        embedding_output = self.embeddings([input_ids, speaker_ids], training=False)
+        encoder_output = self.encoder([embedding_output, attention_mask], training=False)
         last_encoder_hidden_states = encoder_output[0]
 
         # duration predictor, here use last_encoder_hidden_states, u can use more hidden_states layers
@@ -653,19 +671,19 @@ class TFFastSpeech(tf.keras.Model):
             duration_outputs = duration_gts
 
         length_regulator_outputs, encoder_masks = self.length_regulator([
-            last_encoder_hidden_states, duration_outputs], training=training)
+            last_encoder_hidden_states, duration_outputs], training=False)
 
         # create decoder positional embedding
         decoder_pos = tf.range(1, tf.shape(length_regulator_outputs)[1] + 1, dtype=tf.int32)
         masked_decoder_pos = tf.expand_dims(decoder_pos, 0) * encoder_masks
 
         decoder_output = self.decoder(
-            [length_regulator_outputs, encoder_masks, masked_decoder_pos], training=training)
+            [length_regulator_outputs, encoder_masks, masked_decoder_pos], training=False)
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.
         mel_before = self.mel_dense(last_decoder_hidden_states)
-        mel_after = self.postnet([mel_before, encoder_masks], training=training) + mel_before
+        mel_after = self.postnet([mel_before, encoder_masks], training=False) + mel_before
 
         outputs = (mel_before, mel_after, duration_outputs)
         return outputs
