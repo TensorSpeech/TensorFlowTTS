@@ -1,14 +1,14 @@
 # Tacotron 2
-Based on the script [`train_tacotron2.py`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/train_tacotron2.py).
+Based on the script [`train_tacotron2.py`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/train_tacotron2.py).
 
 ## Training Tacotron-2 from scratch with LJSpeech dataset.
 This example code show you how to train Tactron-2 from scratch with Tensorflow 2 based on custom training loop and tf.function. The data used for this example is LJSpeech, you can download the dataset at  [link](https://keithito.com/LJ-Speech-Dataset/).
 
 ### Step 1: Create Tensorflow based Dataloader (tf.dataset)
-First, you need define data loader based on AbstractDataset class (see [`abstract_dataset.py`](https://https://github.com/dathudeptrai/TensorflowTTS/tensorflow_tts/dataset/abstract_dataset.py)). On this example, a dataloader read dataset from path. I use suffix to classify what file is a charactor and mel-spectrogram (see [`tacotron_dataset.py`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/tacotron_dataset.py)). If you already have preprocessed version of your target dataset, you don't need to use this example dataloader, you just need refer my dataloader and modify **generator function** to adapt with your case. Normally, a generator function should return [charactor_ids, char_length, mel, mel_length], here i also return guided attention (see [`DC_TTS`](https://arxiv.org/pdf/1710.08969.pdf)) to support training.
+First, you need define data loader based on AbstractDataset class (see [`abstract_dataset.py`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/tensorflow_tts/datasets/abstract_dataset.py)). On this example, a dataloader read dataset from path. I use suffix to classify what file is a charactor and mel-spectrogram (see [`tacotron_dataset.py`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/tacotron_dataset.py)). If you already have preprocessed version of your target dataset, you don't need to use this example dataloader, you just need refer my dataloader and modify **generator function** to adapt with your case. Normally, a generator function should return [charactor_ids, char_length, mel, mel_length], here i also return guided attention (see [`DC_TTS`](https://arxiv.org/pdf/1710.08969.pdf)) to support training.
 
 ### Step 2: Training from scratch
-After you redefine your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_tacotron2.py`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/train_tacotron2.py). Here is an example command line to training tacotron-2 from scratch:
+After you redefine your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_tacotron2.py`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/train_tacotron2.py). Here is an example command line to training tacotron-2 from scratch:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 nohup python train_tacotron2.py \
@@ -52,7 +52,7 @@ Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https:/
 <img src="fig/tensorboard.png" height="500">
 
 ### Audio samples
-You can hear some audio samples at [`audios`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/audios/). This is Tacotron-2 with reduction factor = 7 and vocoder is Melgan at 2M steps.
+You can hear some audio samples at [`audios`](https://github.com/dathudeptrai/TensorflowTTS/tree/tacotron-2-example/examples/tacotron-2/audios). This is Tacotron-2 with reduction factor = 7 and vocoder is Melgan at 2M steps.
 
 ## Some important notes
 	
