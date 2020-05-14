@@ -28,9 +28,9 @@ tacotron2_params:
     n_prenet_layers: 2
     prenet_units: 256
     prenet_activation: 'mish'
-    prenet_dropout_rate: 0.1
+    prenet_dropout_rate: 0.5
     n_lstm_decoder: 1
-    reduction_factor: 5
+    reduction_factor: 7
     decoder_lstm_units: 1024
     attention_dim: 128
     attention_filters: 32
@@ -44,10 +44,10 @@ tacotron2_params:
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 2              # Batch size.
+batch_size: 32              # Batch size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
-mel_length_threshold: 32
+mel_length_threshold: null
 is_shuffle: true
 
 ###########################################################
@@ -68,11 +68,11 @@ train_max_steps: 200000                # Number of training steps.
 save_interval_steps: 5000               # Interval steps to save checkpoint.
 eval_interval_steps: 500              # Interval steps to evaluate the network.
 log_interval_steps: 100                # Interval steps to record the training log.
-start_schedule_teacher_forcing: 20000
-start_ratio_value: 1.0
-schedule_decay_steps: 80000
+start_schedule_teacher_forcing: 2000001
+start_ratio_value: 0.5
+schedule_decay_steps: 30000
 end_ratio_value: 0.0
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
-num_save_intermediate_results: 1  # Number of batch to be saved as intermediate results.
+num_save_intermediate_results: 1  # Number of results to be saved as intermediate results.

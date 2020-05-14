@@ -43,7 +43,7 @@ tacotron2.summary()
 ```
 
 ## Results
-Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/conf/tacotron2.v1.yaml)
+Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml)
 
 ### Alignments progress
 <img src="fig/alignment.gif" height="300">
@@ -58,6 +58,8 @@ You can hear some audio samples at [`audios`](https://github.com/dathudeptrai/Te
 	
 * This implementation use guided attention by default to help a model learn diagonal alignment faster.
 * GMM attention also supported but i haven't test it yet.
+* Mish activation function.
+* Support window masking for inference, solve problem with very long sentences.
 * 50K steps is enough to get a best checkpoint.
 * Scheduled teacher forcing is supported but training with teacher forcing give a best performance based on my experiments. You need to be aware of the importance of applying high dropout for prenet (both training and inference), this will reduce the effect of prev mel, so in an inference stage, a noise of prev mel prediction won't affect too much to a current decoder.
 * If an amplitude levels of synthesis audio is lower compared to original speech, you may need multiply mel predicted to global gain constant (eg 1.2).
