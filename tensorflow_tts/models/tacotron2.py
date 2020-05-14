@@ -268,7 +268,7 @@ class TestingSampler(TrainingSampler):
         stop_token_prediction = kwargs.get("stop_token_prediction")
         stop_token_prediction = tf.nn.sigmoid(stop_token_prediction)
         finished = tf.cast(tf.round(stop_token_prediction), tf.bool)
-        finished = tf.reduce_any(finished)
+        finished = tf.reduce_all(finished)
         next_inputs = outputs[:, -self.config.n_mels:]
         next_state = state
         return (finished, next_inputs, next_state)
@@ -752,7 +752,7 @@ class TFTacotron2(tf.keras.Model):
         speaker_ids = np.array([0])
         mel_outputs = np.random.normal(size=(1, 50, 80))
         mel_lengths = np.array([50])
-        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, mel_lengths, training=True)
+        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, 10, training=False)
 
     def call(self,
              input_ids,
@@ -760,6 +760,7 @@ class TFTacotron2(tf.keras.Model):
              speaker_ids,
              mel_outputs,
              mel_lengths,
+             maximum_iterations=None,
              training=False):
         """Call logic."""
         # create input-mask based on input_lengths
@@ -790,7 +791,8 @@ class TFTacotron2(tf.keras.Model):
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
-            self.decoder
+            self.decoder,
+            maximum_iterations=maximum_iterations
         )
 
         decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
