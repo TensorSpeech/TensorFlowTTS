@@ -591,8 +591,6 @@ class TFFastSpeech(tf.keras.Model):
     def __init__(self, config, **kwargs):
         """Init layers for fastspeech."""
         super().__init__(**kwargs)
-        self.num_hidden_layers = config.num_hidden_layers
-
         self.embeddings = TFFastSpeechEmbeddings(config, name='embeddings')
         self.encoder = TFFastSpeechEncoder(config, name='encoder')
         self.duration_predictor = TFFastSpeechDurationPredictor(config, name='duration_predictor')
@@ -678,7 +676,7 @@ class TFFastSpeech(tf.keras.Model):
         masked_decoder_pos = tf.expand_dims(decoder_pos, 0) * encoder_masks
 
         decoder_output = self.decoder(
-            [length_regulator_outputs, encoder_masks, masked_decoder_pos], training=False)
+            [length_regulator_outputs, speaker_ids, encoder_masks, masked_decoder_pos], training=False)
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.

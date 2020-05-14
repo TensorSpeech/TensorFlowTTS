@@ -268,7 +268,7 @@ class TestingSampler(TrainingSampler):
         stop_token_prediction = kwargs.get("stop_token_prediction")
         stop_token_prediction = tf.nn.sigmoid(stop_token_prediction)
         finished = tf.cast(tf.round(stop_token_prediction), tf.bool)
-        finished = tf.reduce_all(finished)
+        finished = tf.reduce_any(finished)
         next_inputs = outputs[:, -self.config.n_mels:]
         next_state = state
         return (finished, next_inputs, next_state)
@@ -787,7 +787,6 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
-        self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
