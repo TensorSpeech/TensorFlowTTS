@@ -44,3 +44,29 @@ tacotron2.summary()
 
 ## Results
 Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/conf/tacotron2.v1.yaml)
+
+### Alignments progress
+<img src="fig/alignment.gif" height="300">
+
+### Learning curves
+<img src="fig/tensorboard.png" height="500">
+
+### Audio samples
+You can hear some audio samples at [`audios`](https://https://github.com/dathudeptrai/TensorflowTTS/examples/tacotron-2/audios/). This is Tacotron-2 with reduction factor = 7 and vocoder is Melgan at 2M steps.
+
+## Some important notes
+	
+* This implementation use guided attention by default to help a model learn diagonal alignment faster.
+* GMM attention also supported but i haven't test it yet.
+* 50K steps is enough to get a best checkpoint.
+* Scheduled teacher forcing is supported but training with teacher forcing give a best performance based on my experiments. You need to be aware of the importance of applying high dropout for prenet (both training and inference), this will reduce the effect of prev mel, so in an inference stage, a noise of prev mel prediction won't affect too much to a current decoder.
+* If an amplitude levels of synthesis audio is lower compared to original speech, you may need multiply mel predicted to global gain constant (eg 1.2).
+
+## Reference
+
+1. https://github.com/Rayhane-mamah/Tacotron-2
+2. https://github.com/mozilla/TTS
+3. https://github.com/tensorflow/addons
+4. https://github.com/espnet/espnet
+5. [Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions](https://arxiv.org/abs/1712.05884)
+6. [Generating Sequences With Recurrent Neural Networks](https://arxiv.org/abs/1308.0850)
