@@ -344,7 +344,7 @@ class GmmAttention(AttentionMechanism):
 
     def __call__(self, inputs, training=False):
         """Call logic."""
-        query, previous_kappa = inputs
+        query, previous_kappa, prev_max_alignments = inputs
 
         params = self.query_layer(query)
 
@@ -459,9 +459,9 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         """Calculate location sensitive energy."""
         return tf.squeeze(self.v(tf.nn.tanh(W_keys + W_query + W_fil)), -1)
 
-    def get_initial_state(self, batch_size, max_time):
+    def get_initial_state(self, batch_size, size):
         """Get initial alignments."""
-        return tf.zeros(shape=[batch_size, max_time], dtype=tf.float32)
+        return tf.zeros(shape=[batch_size, size], dtype=tf.float32)
 
     def get_initial_context(self, batch_size):
         """Get initial attention."""
@@ -603,7 +603,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         initial_attention_lstm_cell_states = self.attention_lstm.get_initial_state(None, batch_size, dtype=tf.float32)
         initial_decoder_lstms_cell_states = self.decoder_lstms.get_initial_state(None, batch_size, dtype=tf.float32)
         initial_context = tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
-        initial_state = self.attention_layer.get_initial_state(batch_size, self.alignment_size)
+        initial_state = self.attention_layer.get_initial_state(batch_size, size=self.alignment_size)
         initial_alignment_history = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         return TFTacotronDecoderCellState(
             attention_lstm_state=initial_attention_lstm_cell_states,
@@ -752,7 +752,7 @@ class TFTacotron2(tf.keras.Model):
         speaker_ids = np.array([0])
         mel_outputs = np.random.normal(size=(1, 50, 80))
         mel_lengths = np.array([50])
-        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, mel_lengths, training=True)
+        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, training=True)
 
     def call(self,
              input_ids,

@@ -19,7 +19,7 @@ import tensorflow_tts
 from tqdm import tqdm
 
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from tensorflow_tts.datasets import CharactorMelDataset
+from tacotron_dataset import CharactorMelDataset
 
 from tensorflow_tts.configs.tacotron2 import Tacotron2Config
 
