@@ -220,7 +220,7 @@ class TrainingSampler(Sampler):
     def setup_target(self, targets, mel_lengths):
         """Setup ground-truth mel outputs for decoder."""
         self.mel_lengths = mel_lengths
-        self._batch_size = tf.shape(targets)[0]
+        self.set_batch_size(tf.shape(targets)[0])
         self.targets = targets[:, self._reduction_factor - 1::self._reduction_factor, :]
         self.max_lengths = tf.tile([tf.shape(self.targets)[1]], [self._batch_size])
 
@@ -255,6 +255,9 @@ class TrainingSampler(Sampler):
         next_state = state
         return (finished, next_inputs, next_state)
 
+    def set_batch_size(self, batch_size):
+        self._batch_size = batch_size
+
 
 class TestingSampler(TrainingSampler):
     """Testing sampler for Seq2Seq training."""
@@ -272,9 +275,6 @@ class TestingSampler(TrainingSampler):
         next_inputs = outputs[:, -self.config.n_mels:]
         next_state = state
         return (finished, next_inputs, next_state)
-
-    def set_batch_size(self, batch_size):
-        self._batch_size = batch_size
 
 
 class GmmAttention(AttentionMechanism):
@@ -344,7 +344,7 @@ class GmmAttention(AttentionMechanism):
 
     def __call__(self, inputs, training=False):
         """Call logic."""
-        query, previous_kappa, prev_max_alignments = inputs
+        query, previous_kappa, _ = inputs
 
         params = self.query_layer(query)
 
@@ -354,7 +354,7 @@ class GmmAttention(AttentionMechanism):
         kappa = tf.expand_dims(previous_kappa + tf.exp(kappa_hat), axis=2)
 
         # [batch_size, num_mixtures, 1]
-        alpha = tf.expand_dims(tf.exp(alpha_hat), axis=2)
+        alpha = tf.expand_dims(tf.nn.softmax(alpha_hat), axis=2)
 
         # [1, 1, max_input_steps]
         mu = tf.reshape(tf.cast(tf.range(self.alignments_size), dtype=tf.float32),
@@ -403,6 +403,7 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         self.v = tf.keras.layers.Dense(1, use_bias=True, name='scores_attention')
         self.config = config
         self.is_cumulate = is_cumulate
+        self.use_window = False
 
     def setup_window(self, win_front=2, win_back=4):
         self.win_front = tf.constant(win_front, tf.int32)
@@ -410,6 +411,8 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
 
         self._indices = tf.expand_dims(tf.range(tf.shape(self.keys)[1]), 0)
         self._indices = tf.tile(self._indices, [tf.shape(self.keys)[0], 1])  # [batch_size, max_time]
+
+        self.use_window = True
 
     def _compute_window_mask(self, max_alignments):
         """Compute window mask for inference.
@@ -439,7 +442,7 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
                                                 self.keys)
 
         # mask energy on inference steps.
-        if training is False:
+        if self.use_window is True:
             window_mask = self._compute_window_mask(prev_max_alignments)
             energy = energy + window_mask * -1e20
 
@@ -805,10 +808,15 @@ class TFTacotron2(tf.keras.Model):
 
         return decoder_output, mel_outputs, stop_token_prediction, alignment_history
 
+    @tf.function(experimental_relax_shapes=True)
     def inference(self,
                   input_ids,
                   input_lengths,
-                  speaker_ids):
+                  speaker_ids,
+                  use_window_mask=False,
+                  win_front=2,
+                  win_back=4,
+                  maximum_iterations=tf.constant(2000, dtype=tf.int32)):
         """Call logic."""
         # create input-mask based on input_lengths
         input_mask = tf.sequence_mask(input_lengths,
@@ -835,12 +843,13 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
-        if self.config.attention_type == "lsa":
-            self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
+        if use_window_mask:
+            self.decoder.cell.attention_layer.setup_window(win_front=win_front, win_back=win_back)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
-            self.decoder
+            self.decoder,
+            maximum_iterations=maximum_iterations
         )
 
         decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
