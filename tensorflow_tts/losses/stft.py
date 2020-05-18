@@ -43,7 +43,7 @@ class TFLogSTFTMagnitude(tf.keras.layers.Layer):
         Returns:
             Tensor: Spectral convergence loss value.
         """
-        return tf.math.log(tf.abs(y_mag) + 1e-9) - tf.math.log(tf.abs(x_mag) + 1e-9)
+        return tf.abs(tf.math.log(y_mag + 1e-9) - tf.math.log(x_mag + 1e-9))
 
 
 class TFSTFT(tf.keras.layers.Layer):
