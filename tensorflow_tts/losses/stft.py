@@ -49,7 +49,7 @@ class TFLogSTFTMagnitude(tf.keras.layers.Layer):
 class TFSTFT(tf.keras.layers.Layer):
     """STFT loss module."""
 
-    def __init__(self, frame_length=1024, frame_step=120, fft_length=600):
+    def __init__(self, frame_length=600, frame_step=120, fft_length=1024):
         """Initialize."""
         super().__init__()
         self.frame_length = frame_length
@@ -76,7 +76,6 @@ class TFSTFT(tf.keras.layers.Layer):
                                       frame_step=self.frame_step,
                                       fft_length=self.fft_length))
 
-        # calculate loss
         sc_loss = self.spectral_convergenge_loss(y_mag, x_mag)
         mag_loss = self.log_stft_magnitude_loss(y_mag, x_mag)
 
@@ -87,9 +86,9 @@ class TFMultiResolutionSTFT(tf.keras.layers.Layer):
     """Multi resolution STFT loss module."""
 
     def __init__(self,
-                 frame_lengths=[1024, 2048, 512],
+                 frame_lengths=[600, 1200, 240],
                  frame_steps=[120, 240, 50],
-                 fft_lengths=[600, 1200, 240]):
+                 fft_lengths=[1024, 2048, 512]):
         """Initialize Multi resolution STFT loss module.
         Args:
             frame_lengths (list): List of FFT sizes.
