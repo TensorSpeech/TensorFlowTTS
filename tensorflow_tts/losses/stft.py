@@ -25,7 +25,7 @@ class TFSpectralConvergence(tf.keras.layers.Layer):
         Returns:
             Tensor: Spectral convergence loss value.
         """
-        return tf.norm(y_mag - x_mag, ord="fro", axis=(1, 2)) / tf.norm(y_mag, ord="fro", axis=(1, 2))
+        return tf.norm(y_mag - x_mag, ord="fro", axis=(-2, -1)) / tf.norm(y_mag, ord="fro", axis=(-2, -1))
 
 
 class TFLogSTFTMagnitude(tf.keras.layers.Layer):
@@ -43,7 +43,7 @@ class TFLogSTFTMagnitude(tf.keras.layers.Layer):
         Returns:
             Tensor: Spectral convergence loss value.
         """
-        return tf.abs(tf.math.log(y_mag + 1e-9) - tf.math.log(x_mag + 1e-9))
+        return tf.abs(tf.math.log(y_mag) - tf.math.log(x_mag))
 
 
 class TFSTFT(tf.keras.layers.Layer):
@@ -76,6 +76,10 @@ class TFSTFT(tf.keras.layers.Layer):
                                       frame_step=self.frame_step,
                                       fft_length=self.fft_length))
 
+        # add small number to prevent nan value.
+        x_mag += 1e-9
+        y_mag += 1e-9
+
         sc_loss = self.spectral_convergenge_loss(y_mag, x_mag)
         mag_loss = self.log_stft_magnitude_loss(y_mag, x_mag)
 
@@ -86,9 +90,9 @@ class TFMultiResolutionSTFT(tf.keras.layers.Layer):
     """Multi resolution STFT loss module."""
 
     def __init__(self,
+                 fft_lengths=[1024, 2048, 512],
                  frame_lengths=[600, 1200, 240],
-                 frame_steps=[120, 240, 50],
-                 fft_lengths=[1024, 2048, 512]):
+                 frame_steps=[120, 240, 50],):
         """Initialize Multi resolution STFT loss module.
         Args:
             frame_lengths (list): List of FFT sizes.
