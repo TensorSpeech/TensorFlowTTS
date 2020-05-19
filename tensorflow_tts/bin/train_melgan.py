@@ -62,7 +62,7 @@ class MelganTrainer(GanBasedTrainer):
             "gen_loss",
             "real_loss",
             "fake_loss",
-            "dis_loss"
+            "dis_loss",
         ]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
@@ -199,7 +199,7 @@ class MelganTrainer(GanBasedTrainer):
 
             if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
                 # save intermedia
-                self.generate_and_save_intermediate_result(batch, eval_steps_per_epoch)
+                self.generate_and_save_intermediate_result(batch)
 
         logging.info(f"(Steps: {self.steps}) Finished evaluation "
                      f"({eval_steps_per_epoch} steps per epoch).")
@@ -278,7 +278,7 @@ class MelganTrainer(GanBasedTrainer):
         """Predict."""
         return self.generator(mels)
 
-    def generate_and_save_intermediate_result(self, batch, idx):
+    def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
@@ -291,7 +291,7 @@ class MelganTrainer(GanBasedTrainer):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for _, (y, y_) in enumerate(zip(y_batch, y_batch_), 1):
+        for idx, (y, y_) in enumerate(zip(y_batch, y_batch_), 1):
             # convert to ndarray
             y, y_ = tf.reshape(y, [-1]).numpy(), tf.reshape(y_, [-1]).numpy()
 
@@ -476,7 +476,7 @@ def main():
         map_fn=lambda a, b: collater(a, b,
                                      batch_max_steps=tf.constant(config["batch_max_steps_valid"], dtype=tf.int32)),
         allow_cache=config["allow_cache"],
-        batch_size=1
+        batch_size=config["batch_size"]
     )
 
     # define generator and discriminator
@@ -510,7 +510,7 @@ def main():
     try:
         trainer.fit(train_dataset,
                     valid_dataset,
-                    saved_path=config["outdir"] + '/checkpoints/',
+                    saved_path=os.path.join(config["outdir"], 'checkpoints/'),
                     resume=args.resume)
     except KeyboardInterrupt:
         trainer.save_checkpoint()
