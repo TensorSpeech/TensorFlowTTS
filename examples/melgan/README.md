@@ -35,19 +35,13 @@ You can hear some audio samples at [`audios`](https://github.com/dathudeptrai/Te
 
 ## Some important notes
 	
-* This implementation use guided attention by default to help a model learn diagonal alignment faster.
-* GMM attention also supported but i haven't test it yet.
-* Mish activation function.
-* Support window masking for inference, solve problem with very long sentences.
-* 50K steps is enough to get a best checkpoint.
-* Scheduled teacher forcing is supported but training with teacher forcing give a best performance based on my experiments. You need to be aware of the importance of applying high dropout for prenet (both training and inference), this will reduce the effect of prev mel, so in an inference stage, a noise of prev mel prediction won't affect too much to a current decoder.
-* If an amplitude levels of synthesis audio is lower compared to original speech, you may need multiply mel predicted to global gain constant (eg 1.2).
+* We don't need use learning rate decay for melgan.
+* A weight-norm tensorflow based layer have many problem about ability to save graph, multi-gpu and convergence problem, i will investigate a solution but at this time, pls set is_weight_norm is False on config.
+* After one step generator, **DO NOT FORGET** re-generate y_hat for discriminator training.
 
 ## Reference
 
-1. https://github.com/Rayhane-mamah/Tacotron-2
-2. https://github.com/mozilla/TTS
+1. https://github.com/descriptinc/melgan-neurips
+2. https://github.com/kan-bayashi/ParallelWaveGAN
 3. https://github.com/tensorflow/addons
-4. https://github.com/espnet/espnet
-5. [Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions](https://arxiv.org/abs/1712.05884)
-6. [Generating Sequences With Recurrent Neural Networks](https://arxiv.org/abs/1308.0850)
+4. [MelGAN: Generative Adversarial Networks for Conditional Waveform Synthesis](https://arxiv.org/abs/1910.06711)
