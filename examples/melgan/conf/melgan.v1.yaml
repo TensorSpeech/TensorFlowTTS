@@ -7,7 +7,7 @@
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
 ###########################################################
-sampling_rate: 22050
+sampling_rate: 22050     # Sampling rate of dataset.
 hop_size: 256            # Hop size.
 format: "npy"
 
@@ -18,10 +18,11 @@ format: "npy"
 generator_params:
     out_channels: 1               # Number of output channels.
     kernel_size: 7                # Kernel size of initial and final conv layers.
-    filters: 512                 # Initial number of channels for conv layers.
+    filters: 512                  # Initial number of channels for conv layers.
     upsample_scales: [8, 8, 2, 2] # List of Upsampling scales.
     stack_kernel_size: 3          # Kernel size of dilated conv layers in residual stack.
     stacks: 3                     # Number of stacks in a single residual stack module.
+    is_weight_norm: false         # Use weight-norm or not.
 
 ###########################################################
 #       DISCRIMINATOR NETWORK ARCHITECTURE SETTING        #
@@ -34,12 +35,13 @@ discriminator_params:
         pool_size: 4
         strides: 2
     kernel_sizes: [5, 3]              # List of kernel size.
-    filters: 16                      # Number of channels of the initial conv layer.
-    max_downsample_filters: 1024     # Maximum number of channels of downsampling layers.
+    filters: 16                       # Number of channels of the initial conv layer.
+    max_downsample_filters: 1024      # Maximum number of channels of downsampling layers.
     downsample_scales: [4, 4, 4, 4]   # List of downsampling scales.
     nonlinear_activation: "LeakyReLU" # Nonlinear activation function.
     nonlinear_activation_params:      # Parameters of nonlinear activation function.
         alpha: 0.2
+    is_weight_norm: false             # Use weight-norm or not.
 
 ###########################################################
 #               ADVERSARIAL LOSS SETTING                  #
@@ -50,8 +52,8 @@ lambda_feat_match: 10.0
 #                  DATA LOADER SETTING                    #
 ###########################################################
 batch_size: 16                 # Batch size.
-batch_max_steps: 8192          # Length of each audio in batch for training. Make sure dividable by hop_size.
-batch_max_steps_valid: 88064   # Length of each audio for validation. Make sure dividable by hope_size.
+batch_max_steps: 16384         # Length of each audio in batch for training. Make sure dividable by hop_size.
+batch_max_steps_valid: 81920   # Length of each audio for validation. Make sure dividable by hope_size.
 remove_short_samples: true     # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true              # Whether to allow cache in dataset. If true, it requires cpu memory.
 
