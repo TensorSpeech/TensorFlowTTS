@@ -73,7 +73,15 @@ class MultiSTFTMelganTrainer(MelganTrainer):
     def _train_step(self, batch):
         """Train model one step."""
         y, mels = batch
-        y, y_hat = self._one_step_generator(y, mels)
+
+        if self.steps == 0:
+            self.one_step_generator = tf.function(self._one_step_generator, experimental_relax_shapes=True)
+        if self.steps == self.config["discriminator_train_start_steps"]:
+            # we need re-define function for generator because the logic
+            # of generator changed after discriminator enable.
+            self.one_step_generator = tf.function(self._one_step_generator, experimental_relax_shapes=True)
+
+        y, y_hat = self.one_step_generator(y, mels)
         if self.steps >= self.config["discriminator_train_start_steps"]:
             self._one_step_discriminator(y, y_hat)
 
@@ -82,7 +90,6 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         self.tqdm.update(1)
         self._check_train_finish()
 
-    @tf.function(experimental_relax_shapes=True)
     def _one_step_generator(self, y, mels):
         """One step generator training."""
         with tf.GradientTape() as g_tape:
@@ -187,6 +194,17 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         self.eval_metrics["gen_loss"].update_state(gen_loss)
         self.eval_metrics["spectral_convergence_loss"].update_state(sc_loss)
         self.eval_metrics["log_magnitude_loss"].update_state(mag_loss)
+
+    def load_checkpoint(self, pretrained_path):
+        """Load checkpoint."""
+        self.ckpt.restore(pretrained_path)
+        self.steps = self.ckpt.steps.numpy()
+        self.epochs = self.ckpt.epochs.numpy()
+        self.gen_optimizer = self.ckpt.gen_optimizer
+        self.dis_optimizer = self.ckpt.dis_optimizer
+        self.generator.load_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
+        if self.steps > self.config["discriminator_train_start_steps"]:
+            self.discriminator.load_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
 
 
 def main():
@@ -309,6 +327,14 @@ def main():
 
     discriminator = TFMelGANMultiScaleDiscriminator(
         MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["discriminator_params"]), name='melgan_discriminator')
+
+    # dummy input to build model.
+    fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
+    y_hat = generator(fake_mels)
+    discriminator(y_hat)
+
+    generator.summary()
+    discriminator.summary()
 
     # define trainer
     trainer = MultiSTFTMelganTrainer(steps=0,
