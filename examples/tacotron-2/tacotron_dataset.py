@@ -187,13 +187,20 @@ class CharactorMelDataset(AbstractDataset):
             datasets = datasets.shuffle(
                 self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
 
+        # define padding value for each element
+        padding_values = (self.char_pad_value, 0, self.mel_pad_value, 0, self.ga_pad_value)
+
+        # define padded shapes.
+        padded_shapes = ([None], [], [None, 80], [], [None, None])
+
+        if self.return_utt_id:
+            padding_values = ("", *padding_values)
+            padded_shapes = ([], *padded_shapes)
+
         datasets = datasets.padded_batch(batch_size,
-                                         padded_shapes=([None], [], [None, 80], [], [None, None]),
-                                         padding_values=(self.char_pad_value,
-                                                         0,
-                                                         self.mel_pad_value,
-                                                         0,
-                                                         self.ga_pad_value))
+                                         padded_shapes=padded_shapes,
+                                         padding_values=padding_values
+                                         )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
 

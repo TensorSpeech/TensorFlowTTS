@@ -198,7 +198,7 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
         conv_outputs = self.convbn(input_embeddings, training=training)
 
         # bi-lstm.
-        outputs = self.bilstm(conv_outputs, mask=input_mask)
+        outputs = self.bilstm(conv_outputs)
 
         return outputs
 
@@ -763,6 +763,9 @@ class TFTacotron2(tf.keras.Model):
              speaker_ids,
              mel_outputs,
              mel_lengths,
+             use_window_mask=False,
+             win_front=2,
+             win_back=3,
              training=False):
         """Call logic."""
         # create input-mask based on input_lengths
@@ -790,6 +793,8 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
+        if use_window_mask:
+            self.decoder.cell.attention_layer.setup_window(win_front=win_front, win_back=win_back)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
