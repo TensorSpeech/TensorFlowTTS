@@ -250,7 +250,7 @@ class GanBasedTrainer(BasedTrainer):
         try:
             discriminator_train_start_steps = self.config["discriminator_train_start_steps"]
             discriminator_train_start_steps = tf.math.maximum(
-                0, discriminator_train_start_steps - self.train_steps_per_epoch
+                0, discriminator_train_start_steps - self.steps
             )
         except:
             discriminator_train_start_steps = self.steps
