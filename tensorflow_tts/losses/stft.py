@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Copyright 2020 Minh Nguyen (@dathudeptrai)
-# This code is modified from
+# This code is ref from pytorch parallelwavegan
 # https://github.com/kan-bayashi/ParallelWaveGAN/blob/master/parallel_wavegan/losses/stft_loss.py
 #  MIT License (https://opensource.org/licenses/MIT)
 
@@ -77,8 +77,9 @@ class TFSTFT(tf.keras.layers.Layer):
                                       fft_length=self.fft_length))
 
         # add small number to prevent nan value.
-        x_mag += 1e-9
-        y_mag += 1e-9
+        # compatible with pytorch version.
+        x_mag = tf.math.sqrt(x_mag ** 2 + 1e-7)
+        y_mag = tf.math.sqrt(y_mag ** 2 + 1e-7)
 
         sc_loss = self.spectral_convergenge_loss(y_mag, x_mag)
         mag_loss = self.log_stft_magnitude_loss(y_mag, x_mag)
