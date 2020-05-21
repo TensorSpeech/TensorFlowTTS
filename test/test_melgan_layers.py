@@ -44,7 +44,7 @@ def test_convtranpose1d(filters, kernel_size, strides, padding, is_weight_norm):
         strides=strides,
         padding=padding,
         is_weight_norm=is_weight_norm,
-        initializer_range=0.02
+        initializer_seed=42
     )
     out = conv1d_transpose(fake_input_1d)
     assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000 * strides, filters])
@@ -71,6 +71,6 @@ def test_residualblock(kernel_size,
                                      nonlinear_activation=nonlinear_activation,
                                      nonlinear_activation_params=nonlinear_activation_params,
                                      is_weight_norm=is_weight_norm,
-                                     initializer_range=0.02)
+                                     initializer_seed=42)
     out = residual_block(fake_input_1d)
     assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000, filters])
