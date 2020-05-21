@@ -218,7 +218,8 @@ class GanBasedTrainer(BasedTrainer):
         """Create checkpoint management."""
         if saved_path is None:
             saved_path = self.config["outdir"] + '/checkpoints/'
-            os.makedirs(saved_path, exist_ok=True)
+
+        os.makedirs(saved_path, exist_ok=True)
 
         self.saved_path = saved_path
         self.ckpt = tf.train.Checkpoint(steps=tf.Variable(1),
@@ -243,7 +244,20 @@ class GanBasedTrainer(BasedTrainer):
         self.steps = self.ckpt.steps.numpy()
         self.epochs = self.ckpt.epochs.numpy()
         self.gen_optimizer = self.ckpt.gen_optimizer
+        # re-assign iterations (global steps) for gen_optimizer.
+        self.gen_optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
+        # re-assign iterations (global steps) for dis_optimizer.
+        try:
+            discriminator_train_start_steps = self.config["discriminator_train_start_steps"]
+            discriminator_train_start_steps = tf.math.maximum(
+                0, discriminator_train_start_steps - self.train_steps_per_epoch
+            )
+        except:
+            discriminator_train_start_steps = self.steps
         self.dis_optimizer = self.ckpt.dis_optimizer
+        self.dis_optimizer.iterations.assign(tf.cast(discriminator_train_start_steps, tf.int64))
+
+        # load weights.
         self.generator.load_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
         self.discriminator.load_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
 
@@ -321,4 +335,8 @@ class Seq2SeqBasedTrainer(BasedTrainer):
         self.steps = self.ckpt.steps.numpy()
         self.epochs = self.ckpt.epochs.numpy()
         self.optimizer = self.ckpt.optimizer
+        # re-assign iterations (global steps) for optimizer.
+        self.optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
+
+        # load weights.
         self.model.load_weights(self.saved_path + 'model-{}.h5'.format(self.steps))
