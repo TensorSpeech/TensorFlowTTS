@@ -238,6 +238,7 @@ class TFMelGANGenerator(tf.keras.Model):
 
         self.melgan = tf.keras.models.Sequential(layers)
 
+    @tf.function(input_signature=[tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32)])
     def call(self, c):
         """Calculate forward propagation.
         Args:
@@ -256,6 +257,11 @@ class TFMelGANGenerator(tf.keras.Model):
                     list_layers[i] = WeightNormalization(list_layers[i])
             except Exception:
                 pass
+
+    def _build(self):
+        """Build model by passing fake input."""
+        fake_mels = tf.random.uniform(shape=[1, 20, 80], dtype=tf.float32)
+        self(fake_mels)
 
 
 class TFMelGANDiscriminator(tf.keras.layers.Layer):

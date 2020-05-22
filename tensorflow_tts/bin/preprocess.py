@@ -109,12 +109,10 @@ def main():
         os.makedirs(os.path.join(args.outdir, 'valid', 'raw-feats'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'valid', 'wavs'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'valid', 'ids'), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, 'valid', 'durations'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train', 'raw-feats'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train', 'wavs'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train', 'ids'), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, 'train', 'durations'), exist_ok=True)
 
     # train test split
     idx_train, idx_valid = train_test_split(
@@ -149,11 +147,6 @@ def main():
         utt_id = sample["utt_id"]
         rate = sample["rate"]
 
-        # read pre-compute alignment from teacher model if it exist
-        duration_exist = os.path.exists(os.path.join(args.rootdir, "alignments"))
-        if duration_exist:
-            duration = np.load(os.path.join(args.rootdir, "alignments", f"{idx}.npy"))
-
         # check
         assert len(audio.shape) == 1, \
             f"{utt_id} seems to be multi-channel signal."
@@ -161,10 +154,6 @@ def main():
             f"{utt_id} seems to be different from 16 bit PCM."
         assert rate == config["sampling_rate"], \
             f"{utt_id} seems to have a different sampling rate."
-
-        if duration_exist:
-            assert len(duration) == len(text_ids), \
-                f"{utt_id} seems to have a different len between text_ids and duration."
 
         # trim silence
         if config["trim_silence"]:
@@ -198,13 +187,10 @@ def main():
                                fmin=config["fmin"],
                                fmax=config["fmax"])
 
-        # make sure the audio length and feature length and sum duration are matched
+        # make sure the audio length and feature length
         audio = np.pad(audio, (0, config["fft_size"]), mode='edge')
         audio = audio[:len(mel) * config["hop_size"]]
         assert len(mel) * config["hop_size"] == len(audio)
-        if duration_exist:
-            assert np.sum(duration) == len(mel), \
-                f"{utt_id} seems to have a different len between mel and sum duration."
 
         # apply global gain
         if config["global_gain_scale"] > 0.0:
@@ -226,9 +212,6 @@ def main():
                     mel.astype(np.float32), allow_pickle=False)
             np.save(os.path.join(args.outdir, subdir, "ids", f"{utt_id}-ids.npy"),
                     text_ids.astype(np.int32), allow_pickle=False)
-            if duration_exist:
-                np.save(os.path.join(args.outdir, subdir, "durations", f"{utt_id}-durations.npy"),
-                        duration.astype(np.int32), allow_pickle=False)
         else:
             raise ValueError("support only npy format.")
 
