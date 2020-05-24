@@ -1,0 +1,84 @@
+
+# This is the hyperparameter configuration file for MelGAN.
+# Please make sure this is adjusted for the LJSpeech dataset. If you want to
+# apply to the other dataset, you might need to carefully change some parameters.
+# This configuration performs 4000k iters.
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+sampling_rate: 22050     # Sampling rate of dataset.
+hop_size: 256            # Hop size.
+format: "npy"
+
+
+###########################################################
+#         GENERATOR NETWORK ARCHITECTURE SETTING          #
+###########################################################
+generator_params:
+    out_channels: 1               # Number of output channels.
+    kernel_size: 7                # Kernel size of initial and final conv layers.
+    filters: 512                  # Initial number of channels for conv layers.
+    upsample_scales: [8, 8, 2, 2] # List of Upsampling scales.
+    stack_kernel_size: 3          # Kernel size of dilated conv layers in residual stack.
+    stacks: 3                     # Number of stacks in a single residual stack module.
+    is_weight_norm: false         # Use weight-norm or not.
+
+###########################################################
+#       DISCRIMINATOR NETWORK ARCHITECTURE SETTING        #
+###########################################################
+discriminator_params:
+    out_channels: 1                   # Number of output channels.
+    scales: 3                         # Number of multi-scales.
+    downsample_pooling: "AveragePooling1D"   # Pooling type for the input downsampling.
+    downsample_pooling_params:        # Parameters of the above pooling function.
+        pool_size: 4
+        strides: 2
+    kernel_sizes: [5, 3]              # List of kernel size.
+    filters: 16                       # Number of channels of the initial conv layer.
+    max_downsample_filters: 1024      # Maximum number of channels of downsampling layers.
+    downsample_scales: [4, 4, 4, 4]   # List of downsampling scales.
+    nonlinear_activation: "LeakyReLU" # Nonlinear activation function.
+    nonlinear_activation_params:      # Parameters of nonlinear activation function.
+        alpha: 0.2
+    is_weight_norm: false             # Use weight-norm or not.
+
+###########################################################
+#               ADVERSARIAL LOSS SETTING                  #
+###########################################################
+lambda_feat_match: 10.0
+
+###########################################################
+#                  DATA LOADER SETTING                    #
+###########################################################
+batch_size: 16                 # Batch size.
+batch_max_steps: 16384         # Length of each audio in batch for training. Make sure dividable by hop_size.
+batch_max_steps_valid: 81920   # Length of each audio for validation. Make sure dividable by hope_size.
+remove_short_samples: true     # Whether to remove samples the length of which are less than batch_max_steps.
+allow_cache: true              # Whether to allow cache in dataset. If true, it requires cpu memory.
+
+###########################################################
+#             OPTIMIZER & SCHEDULER SETTING               #
+###########################################################
+generator_optimizer_params:
+    lr: 0.0001             # Generator's learning rate.
+    beta_1: 0.5
+    beta_2: 0.9
+    
+discriminator_optimizer_params:
+    lr: 0.0001            # Discriminator's learning rate.
+    beta_1: 0.5
+    beta_2: 0.9
+
+###########################################################
+#                    INTERVAL SETTING                     #
+###########################################################
+train_max_steps: 4000000                # Number of training steps.
+save_interval_steps: 10000               # Interval steps to save checkpoint.
+eval_interval_steps: 5000              # Interval steps to evaluate the network.
+log_interval_steps: 200                # Interval steps to record the training log.
+
+###########################################################
+#                     OTHER SETTING                       #
+###########################################################
+num_save_intermediate_results: 1  # Number of batch to be saved as intermediate results.

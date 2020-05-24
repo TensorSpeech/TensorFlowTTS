@@ -86,7 +86,7 @@ def main():
 
     # process each file
     for items in tqdm(dataset):
-        utt_id, mel = items
+        utt_id, mel, _ = items
 
         # convert to numpy
         utt_id = utt_id[0].numpy().decode("utf-8")

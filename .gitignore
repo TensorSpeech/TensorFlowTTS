@@ -28,6 +28,5 @@ egs/*/dump
 egs/*/exp
 *.h5
 *.npy
-*.png
 *.wav
 *.yml

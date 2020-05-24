@@ -21,10 +21,12 @@ from tqdm import tqdm
 
 from tensorflow_tts.trainers import GanBasedTrainer
 
-from tensorflow_tts.datasets import AudioMelDataset
+from examples.melgan.audio_mel_dataset import AudioMelDataset
 
 from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
+
+from tensorflow_tts.losses import TFMelSpectrogram
 
 import tensorflow_tts.configs.melgan as MELGAN_CONFIG
 
@@ -63,6 +65,7 @@ class MelganTrainer(GanBasedTrainer):
             "real_loss",
             "fake_loss",
             "dis_loss",
+            "mels_spectrogram_loss"
         ]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
@@ -75,6 +78,7 @@ class MelganTrainer(GanBasedTrainer):
         # define loss
         self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.mae_loss = tf.keras.losses.MeanAbsoluteError()
+        self.mels_loss = TFMelSpectrogram()
 
     def init_train_eval_metrics(self, list_metrics_name):
         """Init train and eval metrics to save it to tensorboard."""
@@ -148,6 +152,7 @@ class MelganTrainer(GanBasedTrainer):
         self.train_metrics["adversarial_loss"].update_state(adv_loss)
         self.train_metrics["fm_loss"].update_state(fm_loss)
         self.train_metrics["gen_loss"].update_state(gen_loss)
+        self.train_metrics["mels_spectrogram_loss"].update_state(self.mels_loss(y, tf.squeeze(y_hat, -1)))
 
         # recompute y_hat after 1 step generator for discriminator training.
         y_hat = self.generator(mels)
@@ -260,6 +265,7 @@ class MelganTrainer(GanBasedTrainer):
         self.eval_metrics["real_loss"].update_state(real_loss)
         self.eval_metrics["fake_loss"].update_state(fake_loss)
         self.eval_metrics["dis_loss"].update_state(dis_loss)
+        self.eval_metrics["mels_spectrogram_loss"].update_state(self.mels_loss(y, tf.squeeze(y_hat, -1)))
 
     def _check_log_interval(self):
         """Log to tensorboard."""
@@ -493,6 +499,11 @@ def main():
 
     generator.summary()
     discriminator.summary()
+
+    # Load pretrained here
+    # and fine-tune on ur target dataset.
+    # generater.load_weights(pretrained_generator.h5)
+    # discriminator.load_weights(pretrained_discriminator.h5)
 
     # define trainer
     trainer = MelganTrainer(steps=0,

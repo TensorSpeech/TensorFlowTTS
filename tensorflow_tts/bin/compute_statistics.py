@@ -72,7 +72,7 @@ def main():
 
     # calculate statistics
     scaler = StandardScaler()
-    for mel in tqdm(dataset):
+    for mel, mel_length in tqdm(dataset):
         mel = mel[0].numpy()
         scaler.partial_fit(mel)
 
