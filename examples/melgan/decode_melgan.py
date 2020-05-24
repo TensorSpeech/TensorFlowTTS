@@ -3,7 +3,7 @@
 # Copyright 2020 Minh Nguyen Quan Anh
 #  MIT License (https://opensource.org/licenses/MIT)
 
-"""Decode trained Melgan from folders."""
+"""Decode trained Melgan from folder."""
 
 import argparse
 import logging

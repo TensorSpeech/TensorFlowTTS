@@ -27,7 +27,6 @@ Just load pretrained model and training from scratch with other languages. **DO 
 ## Learning Cuves
 Here is a learning curves of melgan based on this config [`melgan.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/melgan-example/examples/melgan/conf/melgan.v1.yaml)
 
-
 <img src="fig/melgan.v1.png" height="300" width="2500">
 
 ## Some important notes
@@ -35,11 +34,12 @@ Here is a learning curves of melgan based on this config [`melgan.v1.yaml`](http
 * We don't need use learning rate decay for melgan.
 * A weight-norm tensorflow based layer have many problem about ability to save graph, multi-gpu and convergence problem, i will investigate a solution but at this time, pls set is_weight_norm is False on config.
 * After one step generator, **DO NOT FORGET** re-generate y_hat for discriminator training.
+* Mixed precision make Group Convolution training slower on Discriminator, both pytorch (apex) and tensorflow also has this problems.
 
 ## Pretrained Models and Audio samples
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
-| [melgan.v1](https://drive.google.com/open?id=1wdHr1a51TLeo4iKrGErVKHVFyq6D17TU)             | [link](https://github.com/dathudeptrai/TensorflowTTS/blob/melgan-example/examples/melgan/conf/melgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 400k    |
+| [melgan.v1](https://drive.google.com/drive/u/1/folders/1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2)             | [link](https://github.com/dathudeptrai/TensorflowTTS/blob/melgan-example/examples/melgan/conf/melgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 1500k    |
 
 
 ## Reference
