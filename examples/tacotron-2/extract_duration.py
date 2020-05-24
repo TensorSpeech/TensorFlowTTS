@@ -130,15 +130,23 @@ def main():
         alignment_historys = alignment_historys.numpy()
 
         for i, alignment in enumerate(alignment_historys):
+            real_char_length = char_length[i].numpy() - 1  # minus 1 because char have eos tokens.
+            real_mel_length = mel_length[i].numpy()
+            alignment = alignment[:real_char_length, :real_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
-            real_length = char_length[i].numpy() - 1  # minus 1 because char have eos tokens.
-            d_real = d[:real_length]
 
             saved_name = utt_id[i].decode("utf-8")
 
+            # check a length compatible
+            assert len(d) == real_char_length, \
+                f"different between len_char and len_durations, {len(d)} and {real_char_length}"
+
+            assert np.sum(d) == real_mel_length, \
+                f"different between sum_durations and len_mel, {np.sum(d)} and {real_mel_length}"
+
             # save D to folder.
             np.save(os.path.join(args.outdir, f"{saved_name}-durations.npy"),
-                    d_real.astype(np.int32), allow_pickle=False)
+                    d.astype(np.int32), allow_pickle=False)
 
             # save alignment to debug.
             if args.save_alignment is True:
@@ -147,7 +155,7 @@ def main():
                 ax = fig.add_subplot(111)
                 ax.set_title(f'Alignment of {saved_name}')
                 im = ax.imshow(
-                    alignment[:real_length, :mel_length[i].numpy()],
+                    alignment,
                     aspect='auto',
                     origin='lower',
                     interpolation='none')
