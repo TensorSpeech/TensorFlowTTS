@@ -21,7 +21,7 @@ from tqdm import tqdm
 
 from tensorflow_tts.trainers import GanBasedTrainer
 
-from tensorflow_tts.datasets import AudioMelDataset
+from examples.melgan.audio_mel_dataset import AudioMelDataset
 
 from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
@@ -499,6 +499,11 @@ def main():
 
     generator.summary()
     discriminator.summary()
+
+    # Load pretrained here
+    # and fine-tune on ur target dataset.
+    # generater.load_weights(pretrained_generator.h5)
+    # discriminator.load_weights(pretrained_discriminator.h5)
 
     # define trainer
     trainer = MelganTrainer(steps=0,
