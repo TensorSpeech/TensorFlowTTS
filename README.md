@@ -171,6 +171,64 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 
 All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](), [train_melgan_stft.py]) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](), [train_fastspeech.py]()). In the near future, i will implement MultiGPU for **BasedTrainer** class.
 
+# End-to-End Examples
+Here is an example code for end2end inference with fastspeech and melgan.
+
+```
+import numpy as np
+import soundfile as sf
+import yaml
+
+import tensorflow as tf
+
+from tensorflow_tts.processor import LJSpeechProcessor
+
+from tensorflow_tts.configs.fastspeech import FastSpeechConfig
+from tensorflow_tts.configs.melgan import MelGANGeneratorConfig
+
+from tensorflow_tts.models import TFFastSpeech
+from tensorflow_tts.models import TFMelGANGenerator
+
+# initialize fastspeech model.
+with open('./examples/fastspeech/conf/fastspeech.v1.yaml') as f:
+    fs_config = yaml.load(f, Loader=yaml.Loader)
+fs_config = FastSpeechConfig(**fs_config["fastspeech_params"])
+fastspeech = TFFastSpeech(config=fs_config, name="fastspeech")
+fastspeech._build()
+fastspeech.load_weights("./examples/fastspeech/pretrained/model-195000.h5")
+
+# initialize melgan model
+with open('./examples/melgan/conf/melgan.v1.yaml') as f:
+    melgan_config = yaml.load(f, Loader=yaml.Loader)
+melgan_config = MelGANGeneratorConfig(**melgan_config["generator_params"])
+melgan = TFMelGANGenerator(config=melgan_config, name='melgan_generator')
+melgan._build()
+melgan.load_weights("./examples/melgan/pretrained/generator-1920000.h5")
+
+
+# inference
+processor = LJSpeechProcessor(None, None)
+
+ids = processor.text_to_sequence("Recent research at Harvard has shown meditating for as little as 8 weeks, can actually increase the grey matter in the parts of the brain responsible for emotional regulation, and learning.", cleaner_names=["english_cleaners"])
+ids = tf.expand_dims(ids, 0)
+# fastspeech inference
+
+masked_mel_before, masked_mel_after, duration_outputs = fastspeech.inference(
+    ids,
+    attention_mask=tf.math.not_equal(ids, 0),
+    speaker_ids=tf.zeros(shape=[tf.shape(ids)[0]]),
+    duration_gts=None,
+    speed_ratios=tf.constant([1.0], dtype=tf.float32)
+)
+
+# melgan inference
+audio_before = melgan(masked_mel_before)[0, :, 0]
+audio_after = melgan(masked_mel_after)[0, :, 0]
+
+# save to file
+sf.write('./audio_before.wav', audio_before, 22050, "PCM_16")
+sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
+```
 
 # References implementations
 - https://github.com/Rayhane-mamah/Tacotron-2
