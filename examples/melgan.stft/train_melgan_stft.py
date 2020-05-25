@@ -3,7 +3,7 @@
 # Copyright 2020 Minh Nguyen Quan Anh
 #  MIT License (https://opensource.org/licenses/MIT)
 
-"""Train MelGAN."""
+"""Train MelGAN Multi Resolution STFT Loss."""
 
 import argparse
 import logging
@@ -16,10 +16,10 @@ import yaml
 
 import tensorflow_tts
 
-from tensorflow_tts.bin.train_melgan import MelganTrainer
-from tensorflow_tts.bin.train_melgan import collater
+from examples.melgan.train_melgan import MelganTrainer
+from examples.melgan.train_melgan import collater
 
-from tensorflow_tts.datasets import AudioMelDataset
+from examples.melgan.audio_mel_dataset import AudioMelDataset
 
 from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
@@ -30,7 +30,7 @@ import tensorflow_tts.configs.melgan as MELGAN_CONFIG
 
 
 class MultiSTFTMelganTrainer(MelganTrainer):
-    """Melgan Trainer class based on GanBasedTrainer."""
+    """Multi STFT Melgan Trainer class based on MelganTrainer."""
 
     def __init__(self,
                  config,
@@ -48,7 +48,6 @@ class MultiSTFTMelganTrainer(MelganTrainer):
             is_generator_mixed_precision (bool): Use mixed precision for generator or not.
             is_discriminator_mixed_precision (bool): Use mixed precision for discriminator or not.
 
-
         """
         super(MultiSTFTMelganTrainer, self).__init__(
             config=config,
@@ -58,8 +57,16 @@ class MultiSTFTMelganTrainer(MelganTrainer):
             is_discriminator_mixed_precision=is_discriminator_mixed_precision
         )
 
-        self.list_metrics_name.append("spectral_convergence_loss")
-        self.list_metrics_name.append("log_magnitude_loss")
+        self.list_metrics_name = [
+            "adversarial_loss",
+            "fm_loss",
+            "gen_loss",
+            "real_loss",
+            "fake_loss",
+            "dis_loss",
+            "spectral_convergence_loss",
+            "log_magnitude_loss"
+        ]
 
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
@@ -74,14 +81,7 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         """Train model one step."""
         y, mels = batch
 
-        if self.steps == 0:
-            self.one_step_generator = tf.function(self._one_step_generator, experimental_relax_shapes=True)
-        if self.steps == self.config["discriminator_train_start_steps"]:
-            # we need re-define function for generator because the logic
-            # of generator changed after discriminator enable.
-            self.one_step_generator = tf.function(self._one_step_generator, experimental_relax_shapes=True)
-
-        y, y_hat = self.one_step_generator(y, mels)
+        y, y_hat = self._one_step_generator(y, mels)
         if self.steps >= self.config["discriminator_train_start_steps"]:
             self._one_step_discriminator(y, y_hat)
 
@@ -90,6 +90,7 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         self.tqdm.update(1)
         self._check_train_finish()
 
+    @tf.function(experimental_relax_shapes=True)
     def _one_step_generator(self, y, mels):
         """One step generator training."""
         with tf.GradientTape() as g_tape:
@@ -194,6 +195,15 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         self.eval_metrics["gen_loss"].update_state(gen_loss)
         self.eval_metrics["spectral_convergence_loss"].update_state(sc_loss)
         self.eval_metrics["log_magnitude_loss"].update_state(mag_loss)
+
+    def _check_train_finish(self):
+        """Check training finished."""
+        if self.steps >= self.config["train_max_steps"]:
+            self.finish_train = True
+
+        if self.steps == self.config["discriminator_train_start_steps"]:
+            self.finish_train = True
+            logging.info(f"Finished training only generator at {self.steps}steps, pls resume and continue training.")
 
     def load_checkpoint(self, pretrained_path):
         """Load checkpoint."""
@@ -353,8 +363,8 @@ def main():
         **config["discriminator_optimizer_params"]["lr_params"]
     )
 
-    gen_optimizer = tf.keras.optimizers.Adam(learning_rate=generator_lr_fn)
-    dis_optimizer = tf.keras.optimizers.Adam(learning_rate=discriminator_lr_fn)
+    gen_optimizer = tf.keras.optimizers.Adam(learning_rate=generator_lr_fn, beta_1=0.5, beta_2=0.9, amsgrad=True)
+    dis_optimizer = tf.keras.optimizers.Adam(learning_rate=discriminator_lr_fn, beta_1=0.5, beta_2=0.9, amsgrad=True)
 
     trainer.compile(gen_model=generator,
                     dis_model=discriminator,
