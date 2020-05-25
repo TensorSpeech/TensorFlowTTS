@@ -19,7 +19,7 @@ import tensorflow_tts
 from tqdm import tqdm
 
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from tensorflow_tts.datasets import CharactorDurationMelDataset
+from examples.fastspeech.fastspeech_dataset import CharactorDurationMelDataset
 
 import tensorflow_tts.configs.fastspeech as FASTSPEECH_CONFIG
 
@@ -147,7 +147,7 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
 
             if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
                 # save intermedia
-                self.generate_and_save_intermediate_result(batch, eval_steps_per_epoch)
+                self.generate_and_save_intermediate_result(batch)
 
         logging.info(f"(Steps: {self.steps}) Finished evaluation "
                      f"({eval_steps_per_epoch} steps per epoch).")
@@ -211,7 +211,7 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         )
         return masked_mel_before, masked_mel_after
 
-    def generate_and_save_intermediate_result(self, batch, idx):
+    def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
@@ -226,7 +226,8 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for _, (mel_gt, mel_pred_before, mel_pred_after) in enumerate(zip(mel, masked_mel_before, masked_mel_after), 1):
+        for idx, (mel_gt, mel_pred_before, mel_pred_after) in enumerate(
+                zip(mel, masked_mel_before, masked_mel_after), 1):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_pred_before = tf.reshape(mel_pred_before, (-1, 80)).numpy()  # [length, 80]
             mel_pred_after = tf.reshape(mel_pred_after, (-1, 80)).numpy()  # [length, 80]
@@ -358,7 +359,7 @@ def main():
         mel_length_threshold=mel_length_threshold,
         return_utt_id=False
     ).create(
-        is_shuffle=False,
+        is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
         batch_size=config["batch_size"]
     )
@@ -374,12 +375,13 @@ def main():
         mel_length_threshold=None,
         return_utt_id=False
     ).create(
-        is_shuffle=True,
+        is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=4
+        batch_size=config["batch_size"]
     )
 
     fastspeech = TFFastSpeech(config=FASTSPEECH_CONFIG.FastSpeechConfig(**config["fastspeech_params"]))
+    fastspeech._build()
     fastspeech.summary()
 
     # define trainer
@@ -418,7 +420,7 @@ def main():
     try:
         trainer.fit(train_dataset,
                     valid_dataset,
-                    saved_path=config["outdir"] + '/checkpoints/',
+                    saved_path=os.path.join(config["outdir"], 'checkpoints/'),
                     resume=args.resume)
     except KeyboardInterrupt:
         trainer.save_checkpoint()

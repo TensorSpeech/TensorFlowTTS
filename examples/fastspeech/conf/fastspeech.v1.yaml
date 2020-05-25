@@ -17,15 +17,15 @@ format: "npy"
 fastspeech_params:
     n_speakers: 1
     hidden_size: 384
-    num_hidden_layers: 6
+    num_hidden_layers: 4
     num_attention_heads: 2
     intermediate_size: 1024
     intermediate_kernel_size: 3
-    num_duration_conv_layers: 3
+    num_duration_conv_layers: 2
     duration_predictor_filters: 256
     duration_predictor_kernel_sizes: 3
     num_mels: 80
-    hidden_act: "gelu_new"
+    hidden_act: "mish"
     hidden_dropout_prob: 0.1
     attention_probs_dropout_prob: 0.1
     duration_predictor_dropout_probs: 0.1
@@ -37,11 +37,11 @@ fastspeech_params:
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 32              # Batch size.
+batch_size: 16              # Batch size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
 mel_length_threshold: 32
-
+is_shuffle: true
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
 ###########################################################
@@ -50,18 +50,18 @@ optimizer_params:
     end_learning_rate: 0.00005
     decay_steps: 150000          # < train_max_steps is recommend.
     warmup_proportion: 0.02
-    weight_decay: 0.002
+    weight_decay: 0.001
     
     
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
-train_max_steps: 200000                # Number of training steps.
-save_interval_steps: 10000               # Interval steps to save checkpoint.
-eval_interval_steps: 5000              # Interval steps to evaluate the network.
-log_interval_steps: 200                # Interval steps to record the training log.
+train_max_steps: 200000               # Number of training steps.
+save_interval_steps: 5000             # Interval steps to save checkpoint.
+eval_interval_steps: 500              # Interval steps to evaluate the network.
+log_interval_steps: 200               # Interval steps to record the training log.
 
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
-num_save_intermediate_results: 16  # Number of results to be saved as intermediate results.
+num_save_intermediate_results: 1  # Number of batch to be saved as intermediate results.

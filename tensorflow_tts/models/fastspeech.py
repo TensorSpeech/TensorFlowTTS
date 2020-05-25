@@ -599,9 +599,6 @@ class TFFastSpeech(tf.keras.Model):
         self.mel_dense = tf.keras.layers.Dense(units=config.num_mels, name='mel_before')
         self.postnet = TFTacotronPostnet(config=config, name='postnet')
 
-        # build model.
-        self._build()
-
     def _build(self):
         """Dummy input for building model."""
         # fake inputs
