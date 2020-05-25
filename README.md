@@ -174,7 +174,7 @@ All models on this repo are trained based-on **GanBasedTrainer** (see [train_mel
 # End-to-End Examples
 Here is an example code for end2end inference with fastspeech and melgan.
 
-```
+```python
 import numpy as np
 import soundfile as sf
 import yaml

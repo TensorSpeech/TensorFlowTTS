@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=0 nohup python examples/fastspeech/train_fastspeech.py \
 ## Finetune FastSpeech with ljspeech pretrained on other languages
 Here is an example show you how to use pretrained ljspeech to training with other languages. This does not guarantee a better model or faster convergence in all cases but it will improve if there is a correlation between target language and pretrained language. The only thing you need to do before finetune on other languages is re-define embedding layers. You can do it by following code:
 
-```bash
+```python
 pretrained_config = ...
 fastspeech = TFFastSpeech(pretrained_config)
 fastspeech._build()
