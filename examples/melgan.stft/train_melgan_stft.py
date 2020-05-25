@@ -205,17 +205,6 @@ class MultiSTFTMelganTrainer(MelganTrainer):
             self.finish_train = True
             logging.info(f"Finished training only generator at {self.steps}steps, pls resume and continue training.")
 
-    def load_checkpoint(self, pretrained_path):
-        """Load checkpoint."""
-        self.ckpt.restore(pretrained_path)
-        self.steps = self.ckpt.steps.numpy()
-        self.epochs = self.ckpt.epochs.numpy()
-        self.gen_optimizer = self.ckpt.gen_optimizer
-        self.dis_optimizer = self.ckpt.dis_optimizer
-        self.generator.load_weights(self.saved_path + 'generator-{}.h5'.format(self.steps))
-        if self.steps > self.config["discriminator_train_start_steps"]:
-            self.discriminator.load_weights(self.saved_path + 'discriminator-{}.h5'.format(self.steps))
-
 
 def main():
     """Run training process."""
