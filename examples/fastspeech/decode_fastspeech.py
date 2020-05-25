@@ -16,7 +16,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from tensorflow_tts.configs import FastSpeechConfig
-from tensorflow_tts.datasets import CharactorDurationDataset
+from examples.fastspeech.fastspeech_dataset import CharactorDataset
 from tensorflow_tts.models import TFFastSpeech
 
 
@@ -34,6 +34,8 @@ def main():
     parser.add_argument("--config", default=None, type=str, required=True,
                         help="yaml format configuration file. if not explicitly provided, "
                              "it will be searched in the checkpoint directory. (default=None)")
+    parser.add_argument("--batch-size", default=8, type=int, required=False,
+                        help="Batch size for inference.")
     parser.add_argument("--verbose", type=int, default=1,
                         help="logging level. higher is more logging. (default=1)")
     args = parser.parse_args()
@@ -61,66 +63,50 @@ def main():
 
     if config["format"] == "npy":
         char_query = "*-ids.npy"
-        duration_query = "*-durations.npy"
         char_load_fn = np.load
-        duration_load_fn = np.load
     else:
         raise ValueError("Only npy is supported.")
 
     # define data-loader
-    dataset = CharactorDurationDataset(
+    dataset = CharactorDataset(
         root_dir=args.rootdir,
         charactor_query=char_query,
-        duration_query=duration_query,
         charactor_load_fn=char_load_fn,
-        duration_load_fn=duration_load_fn,
         return_utt_id=True
     )
-    len_dataset = len(dataset.utt_ids)
-    dataset = dataset.create(batch_size=1)
+    dataset = dataset.create(batch_size=args.batch_size)
 
     # define model and load checkpoint
     fastspeech = TFFastSpeech(config=FastSpeechConfig(**config["fastspeech_params"]), name='fastspeech')
     fastspeech._build()
     fastspeech.load_weights(args.checkpoint)
 
-    fastspeech = tf.function(fastspeech, experimental_relax_shapes=True)
-
-    pbar = tqdm(initial=0,
-                total=len_dataset,
-                desc="[Decoding]]")
-
-    for data in dataset:
-        utt_id = data[0].numpy().decode("utf-8")
-        char_id = data[1]
-        duration = data[2]
-
-        # expand input
-        ids = tf.expand_dims(char_id, 0)
-        durations = tf.expand_dims(duration, 0)
+    for data in tqdm(dataset, desc="Decoding"):
+        utt_ids = data[0]
+        char_ids = data[1]
 
         # fastspeech inference.
-        masked_mel_before, masked_mel_after, _ = fastspeech(
-            ids,
-            attention_mask=tf.math.not_equal(ids, 0),
-            speaker_ids=tf.zeros(shape=[tf.shape(ids)[0]]),
-            duration_gts=durations,
-            training=False
+        masked_mel_before, masked_mel_after, duration_outputs = fastspeech.inference(
+            char_ids,
+            attention_mask=tf.math.not_equal(char_ids, 0),
+            speaker_ids=tf.zeros(shape=[tf.shape(char_ids)[0]]),
+            duration_gts=None
         )
 
         # convert to numpy
-        masked_mel_before = masked_mel_before.numpy()
-        masked_mel_after = masked_mel_after.numpy()
+        masked_mel_befores = masked_mel_before.numpy()
+        masked_mel_afters = masked_mel_after.numpy()
 
-        # save to folder.
-        np.save(os.path.join(args.outdir, f"{utt_id}-fs-before-feats.npy"),
-                masked_mel_before.astype(np.float32), allow_pickle=False)
-        np.save(os.path.join(args.outdir, f"{utt_id}-fs-after-feats.npy"),
-                masked_mel_after.astype(np.float32), allow_pickle=False)
-        # update progress bar.
-        pbar.update(1)
-
-    pbar.close()
+        for (utt_id, mel_before, mel_after, durations) in zip(
+                utt_ids, masked_mel_befores, masked_mel_afters, duration_outputs):
+            # real len of mel predicted
+            real_length = durations.numpy().sum()
+            utt_id = utt_id.numpy().decode("utf-8")
+            # save to folder.
+            np.save(os.path.join(args.outdir, f"{utt_id}-fs-before-feats.npy"),
+                    mel_before[:real_length, :].astype(np.float32), allow_pickle=False)
+            np.save(os.path.join(args.outdir, f"{utt_id}-fs-after-feats.npy"),
+                    mel_after[:real_length, :].astype(np.float32), allow_pickle=False)
 
 
 if __name__ == "__main__":
