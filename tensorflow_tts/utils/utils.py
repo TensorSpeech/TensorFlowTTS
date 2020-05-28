@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 Minh Nguyen Quan Anh
+# Copyright 2019 Tomoki Hayashi
 #  MIT License (https://opensource.org/licenses/MIT)
-
 """Utility functions."""
 
 import fnmatch

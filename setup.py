@@ -55,9 +55,6 @@ entry_points = {
         "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:main",
         "tensorflow-tts-compute-statistics=tensorflow_tts.bin.compute_statistics:main",
         "tensorflow-tts-normalize=tensorflow_tts.bin.normalize:main",
-        "tensorflow-tts-train-melgan=tensorflow_tts.bin.train_melgan:main",
-        "tensorflow-tts-train-fastspeech=tensorflow_tts.bin.train_fastspeech:main",
-        "tensorflow-tts-decode-fastspeech=tensorflow_tts.bin.decode_fastspeech:main",
     ]
 }
 
@@ -68,16 +65,16 @@ extras_require = {k: v for k, v in requirements.items()
                   if k not in ["install", "setup"]}
 
 dirname = os.path.dirname(__file__)
-setup(name="tensorflow_tts",
+setup(name="TensorflowTTS",
       version="0.0.0",
       url="https://github.com/dathudeptrai/TensorflowTTS",
-      author="Minh Nguyen Quan Anh, Trinh Le Quang, Quoc Van Huu",
-      author_email="nguyenquananhminh@gmail.com",
-      description="Deep learning for Text to Speech implementation with Tensorflow",
+      author="Minh Nguyen Quan Anh, Eren Gölge",
+      author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com",
+      description="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
       long_description=open(os.path.join(dirname, "README.md"),
                             encoding="utf-8").read(),
       long_description_content_type="text/markdown",
-      license="MIT License",
+      license="Apache-2.0",
       packages=find_packages(include=["tensorflow_tts*"]),
       install_requires=install_requires,
       setup_requires=setup_requires,
@@ -89,7 +86,7 @@ setup(name="tensorflow_tts",
           "Programming Language :: Python :: 3.7",
           "Intended Audience :: Science/Research",
           "Operating System :: POSIX :: Linux",
-          "License :: OSI Approved :: MIT License",
+          "License :: OSI Approved :: Apache-2.0 License",
           "Topic :: Software Development :: Libraries :: Python Modules"
       ],
       )

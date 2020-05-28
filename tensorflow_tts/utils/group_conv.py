@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
-
-# Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
-#  MIT License (https://opensource.org/licenses/MIT)
-
+# Copyright 2020 The Tensorflow Authors and Minh Nguyen (@dathudeptrai)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Group Convolution Modules."""
 
-from tensorflow.python.eager import context
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.keras import activations
-from tensorflow.python.keras import backend
 from tensorflow.python.keras import constraints
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import regularizers
@@ -16,11 +23,9 @@ from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.engine.input_spec import InputSpec
 
 from tensorflow.python.keras.utils import conv_utils
-from tensorflow.python.keras.utils import tf_utils
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import nn
 from tensorflow.python.ops import nn_ops
-from tensorflow.python.util.tf_export import keras_export
 
 from tensorflow.python.keras.layers import Conv1D
 from tensorflow.python.keras.layers import SeparableConv1D
@@ -540,7 +545,3 @@ class GroupConv1D(Conv):
             kernel_constraint=constraints.get(kernel_constraint),
             bias_constraint=constraints.get(bias_constraint),
             **kwargs)
-
-
-def enclosing_tpu_context():
-    pass
