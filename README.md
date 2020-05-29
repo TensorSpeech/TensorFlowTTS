@@ -13,7 +13,7 @@ TensorflowTTS provides real-time state-of-the-art speech synthesis architectures
 - Fast, Scalable and Reliable.
 - Suitable for deployment.
 - Easy to implement new model based-on abtract class.
-- Mixed precision to speed training if posible.
+- Mixed precision to speed-up training if posible.
 
 ## Requirements
 This repository is tested on Ubuntu 18.04 with:
@@ -52,6 +52,9 @@ We are also implement some techniques to improve quality and convergence speed f
 ](https://arxiv.org/abs/1710.08969) by Hideyuki Tachibana, Katsuya Uenoyama, Shunsuke Aihara.
 
 
+# Audio Samples
+Here in an audio samples on valid set. [tacotron-2](), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b)
+
 # Tutorial End-to-End
 
 ## Prepare Dataset
@@ -78,9 +81,9 @@ The preprocessing have three steps:
 This is a command line to do three steps above:
 
 ```
-tensorflow-tts-preprocess --rootdir ./datasets/ --outdir ./dump/ --conf conf/preprocess.yaml
-tensorflow-tts-compute-statistics --rootdir ./dump/train/ --outdir ./dump --config conf/preprocess.yaml
-tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --stats ./dump/stats.npy --config conf/preprocess.yaml
+tensorflow-tts-preprocess --rootdir ./datasets/ --outdir ./dump/ --conf preprocess/lspeech_preprocess.yaml
+tensorflow-tts-compute-statistics --rootdir ./dump/train/ --outdir ./dump --config preprocess/ljspeech_preprocess.yaml
+tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --stats ./dump/stats.npy --config preprocess/ljspeech_preprocess.yaml
 
 ```
 
@@ -121,9 +124,14 @@ After preprocessing, a structure of project will become:
 |   |- stats.npy/ 
 |   |- train_utt_ids.npy
 |   |- valid_utt_ids.npy
+|- examples/
+|   |- melgan/
+|   |- fastspeech/
+|   |- tacotron-2/
+|   ...
 ```
 
-Where stats.npy contains mean/var of train melspectrogram, train_utt_ids/valid_utt_ids contains training and valid utt ids respectively. We use suffix (ids, raw-feats, norm-feats, wave) for each type of input. 
+Where stats.npy contains mean/var of train melspectrogram (we can use mean/var to de-normalization to get melspectrogram raw), train_utt_ids/valid_utt_ids contains training and valid utt ids respectively. We use suffix (ids, raw-feats, norm-feats, wave) for each type of input. 
 
 **IMPORTANT NOTES**:
 - This preprocessing step based-on [ESP-NET](https://github.com/espnet/espnet) so you can combine all models here with other models from espnet repo.
@@ -132,10 +140,10 @@ Where stats.npy contains mean/var of train melspectrogram, train_utt_ids/valid_u
 
 To know how to training model from scratch or fine-tune with other datasets/languages, pls see detail at example directory.
 
-- For Tacotron-2 tutorial, pls see [example/tacotron-2]()
-- For FastSpeech tutorial, pls see [example/fastspeech]()
-- For MelGAN tutorial, pls see [example/melgan]()
-- For MelGAN + STFT Loss tutorial, pls see [example/melgan-stft]()
+- For Tacotron-2 tutorial, pls see [example/tacotron-2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron-2)
+- For FastSpeech tutorial, pls see [example/fastspeech](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech)
+- For MelGAN tutorial, pls see [example/melgan](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan)
+- For MelGAN + STFT Loss tutorial, pls see [example/melgan.stft](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan.stft)
 
 # Abstract Class Explaination
 
@@ -151,10 +159,10 @@ A detail implementation of abstract dataset class from [tensorflow_tts/dataset/a
 **IMPORTANT NOTES**:
 
 - A pipeline of creating dataset should be: cache -> shuffle -> map_fn -> get_batch -> prefetch.
-- If you do shuffle before cache, the dataset won't shuffle when it re-iterations over datasets.
+- If you do shuffle before cache, the dataset won't shuffle when it re-iterate over datasets.
 - You should apply map_fn to make each elements return from **generator** function have a same length before get batch and feed it into a model.
 
-Some example to use this **abstract_dataset** is [tacotron_dataset.py](), [fastspeech_dataset.py](), [melgan_dataset.py]().
+Some examples to use this **abstract_dataset** are [tacotron_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron-2/tacotron_dataset.py), [fastspeech_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/fastspeech_dataset.py), [melgan_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/audio_mel_dataset.py).
 
 
 ## Abstract Trainer Class
@@ -169,7 +177,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 - **generate_and_save_intermediate_result**: This function will save intermediate result such as: plot alignment, save audio generated, plot mel-spectrogram ...
 - **_check_train_finish**: Check if a training progress finished or not.
 
-All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](), [train_melgan_stft.py]) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](), [train_fastspeech.py]()). In the near future, i will implement MultiGPU for **BasedTrainer** class.
+All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron-2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). In the near future, we will implement MultiGPU for **BasedTrainer** class.
 
 # End-to-End Examples
 Here is an example code for end2end inference with fastspeech and melgan.
@@ -207,9 +215,9 @@ melgan.load_weights("./examples/melgan/pretrained/generator-1920000.h5")
 
 
 # inference
-processor = LJSpeechProcessor(None, None)
+processor = LJSpeechProcessor(None, cleaner_names=["english_cleaners"])
 
-ids = processor.text_to_sequence("Recent research at Harvard has shown meditating for as little as 8 weeks, can actually increase the grey matter in the parts of the brain responsible for emotional regulation, and learning.", cleaner_names=["english_cleaners"])
+ids = processor.text_to_sequence("Recent research at Harvard has shown meditating for as little as 8 weeks, can actually increase the grey matter in the parts of the brain responsible for emotional regulation, and learning.")
 ids = tf.expand_dims(ids, 0)
 # fastspeech inference
 
@@ -230,10 +238,11 @@ sf.write('./audio_before.wav', audio_before, 22050, "PCM_16")
 sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
 ```
 
-# References implementations
-- https://github.com/Rayhane-mamah/Tacotron-2
-- https://github.com/espnet/espnet
-- https://github.com/mozilla/TTS
-- https://github.com/kan-bayashi/ParallelWaveGAN
-- https://github.com/huggingface/transformers
-- https://github.com/descriptinc/melgan-neurips
+# Contact
+nguyenquananhminh@gmail.com, erengolge@gmail.com
+
+# License
+This work is licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
+# Acknowledgement
+We would like to thanks [Tomoki Hayashi](https://github.com/kan-bayashi), who discussed with our much about Melgan, Multi-band melgan, Fastspeech and Tacotron. This framework based-on his great open-source [ParallelWaveGan](https://github.com/kan-bayashi/ParallelWaveGAN) project. 

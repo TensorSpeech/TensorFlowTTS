@@ -650,6 +650,7 @@ class TFFastSpeech(tf.keras.Model):
         outputs = (mel_before, mel_after, duration_outputs)
         return outputs
 
+    @tf.function(experimental_relax_shapes=True)
     def inference(self,
                   input_ids,
                   attention_mask,

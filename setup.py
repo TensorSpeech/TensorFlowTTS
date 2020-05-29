@@ -32,7 +32,6 @@ requirements = {
         "PyYAML>=3.12",
         "tqdm>=4.26.1",
         "h5py>=2.10.0",
-        "kaldiio>=2.14.1",
         "pathos>=0.2.5",
         "unidecode>=1.1.1",
         "inflect>=4.1.0"
@@ -66,7 +65,7 @@ extras_require = {k: v for k, v in requirements.items()
 
 dirname = os.path.dirname(__file__)
 setup(name="TensorflowTTS",
-      version="0.0.0",
+      version="0.0",
       url="https://github.com/dathudeptrai/TensorflowTTS",
       author="Minh Nguyen Quan Anh, Eren Gölge",
       author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com",

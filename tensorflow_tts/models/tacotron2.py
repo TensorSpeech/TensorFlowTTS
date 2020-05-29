@@ -816,6 +816,7 @@ class TFTacotron2(tf.keras.Model):
 
         return decoder_output, mel_outputs, stop_token_prediction, alignment_history
 
+    @tf.function(experimental_relax_shapes=True)
     def inference(self,
                   input_ids,
                   input_lengths,

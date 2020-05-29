@@ -1,17 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 Minh Nguyen (@dathudeptrai)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# This code is copy and modify from https://github.com/keithito/tacotron.
 """Perform preprocessing and raw feature extraction."""
 
 import re
@@ -80,7 +68,7 @@ class LJSpeechProcessor(object):
         audio = audio.astype(np.float32)
 
         # convert text to ids
-        text_ids = np.asarray(self.text_to_sequence(text, [self.cleaner_names]), np.int32)
+        text_ids = np.asarray(self.text_to_sequence(text), np.int32)
 
         sample = {
             "raw_text": text,
@@ -93,7 +81,7 @@ class LJSpeechProcessor(object):
 
         return sample
 
-    def text_to_sequence(self, text, cleaner_names):
+    def text_to_sequence(self, text):
         global _symbol_to_id
 
         sequence = []
@@ -101,10 +89,10 @@ class LJSpeechProcessor(object):
         while len(text):
             m = _curly_re.match(text)
             if not m:
-                sequence += _symbols_to_sequence(_clean_text(text, cleaner_names))
+                sequence += _symbols_to_sequence(_clean_text(text, self.cleaner_names))
                 break
             sequence += _symbols_to_sequence(
-                _clean_text(m.group(1), cleaner_names))
+                _clean_text(m.group(1), self.cleaner_names))
             sequence += _arpabet_to_sequence(m.group(2))
             text = m.group(3)
         return sequence
