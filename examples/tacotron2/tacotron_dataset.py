@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
-
 # Copyright 2020 Minh Nguyen (@dathudeptrai)
-#  MIT License (https://opensource.org/licenses/MIT)
-
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Tacotron Related Dataset modules."""
 
 import logging
@@ -41,7 +50,7 @@ class CharactorMelDataset(AbstractDataset):
                  mel_length_threshold=None,
                  return_utt_id=False,
                  reduction_factor=1,
-                 mel_pad_value=-6.0,
+                 mel_pad_value=0.0,
                  char_pad_value=0,
                  ga_pad_value=-1.0,
                  g=0.2,
@@ -57,7 +66,7 @@ class CharactorMelDataset(AbstractDataset):
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
             reduction_factor (int): Reduction factor on Tacotron-2 paper.
-            mel_pad_value (float): Padding value for mel-spectrogram (should out of training mel range).
+            mel_pad_value (float): Padding value for mel-spectrogram.
             char_pad_value (int): Padding value for charactor.
             ga_pad_value (float): Padding value for guided attention.
             g (float): G value for guided attention.
@@ -71,7 +80,6 @@ class CharactorMelDataset(AbstractDataset):
 
         # filter by threshold
         if mel_length_threshold is not None:
-
             idxs = [idx for idx in range(len(mel_files)) if mel_lengths[idx] > mel_length_threshold]
             if len(mel_files) != len(idxs):
                 logging.warning(f"Some files are filtered by mel length threshold "

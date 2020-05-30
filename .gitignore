@@ -6,7 +6,7 @@
 .\#*
 *DS_Store
 out.txt
-tensorflow_tts.egg-info/
+TensorflowTTS.egg-info/
 doc/_build
 slurm-*.out
 tmp*
@@ -21,11 +21,7 @@ coverage.xml*
 .vscode*
 .nfs*
 .ipynb_checkpoints
-
-# recipe related
-egs/*/datasets
-egs/*/dump
-egs/*/exp
+datasets
 *.h5
 *.npy
 ./*.wav

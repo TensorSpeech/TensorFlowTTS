@@ -654,6 +654,7 @@ class TFTacotron2(tf.keras.Model):
         mel_lengths = np.array([50])
         self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, 10, training=True)
 
+    @tf.function(experimental_relax_shapes=True)
     def call(self,
              input_ids,
              input_lengths,

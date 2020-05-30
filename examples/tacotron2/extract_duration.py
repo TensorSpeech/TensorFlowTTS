@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
-
-# Copyright 2020 Minh Nguyen Quan Anh
-#  MIT License (https://opensource.org/licenses/MIT)
-
+# Copyright 2020 Minh Nguyen (@dathudeptrai)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Extract durations based-on tacotron-2 alignments for FastSpeech."""
 
 import argparse
@@ -16,7 +25,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from tensorflow_tts.configs import Tacotron2Config
-from tacotron_dataset import CharactorMelDataset
+from examples.tacotron2.tacotron_dataset import CharactorMelDataset
 from tensorflow_tts.models import TFTacotron2
 
 import matplotlib.pyplot as plt
@@ -33,7 +42,7 @@ def get_duration_from_alignment(alignment):
 
 
 def main():
-    """Run extract tacotron-2 durations."""
+    """Running extract tacotron-2 durations."""
     parser = argparse.ArgumentParser(
         description="Extract durations from charactor with trained Tacotron-2 "
                     "(See detail in tensorflow_tts/example/tacotron-2/extract_duration.py).")
@@ -98,7 +107,7 @@ def main():
         mel_load_fn=mel_load_fn,
         return_utt_id=True
     )
-    dataset = dataset.create(batch_size=args.batch_size)
+    dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
     # define model and load checkpoint
     tacotron2 = TFTacotron2(config=Tacotron2Config(**config["tacotron2_params"]),
@@ -107,9 +116,7 @@ def main():
     tacotron2._build()  # build model to be able load_weights.
     tacotron2.load_weights(args.checkpoint)
 
-    tacotron2 = tf.function(tacotron2, experimental_relax_shapes=True)
-
-    for data in tqdm(dataset, desc="[Extraction]"):
+    for data in tqdm(dataset, desc="[Extract Duration]"):
         utt_id, charactor, char_length, mel, mel_length, g_attention = data
         utt_id = utt_id.numpy()
 
@@ -149,7 +156,7 @@ def main():
                     d.astype(np.int32), allow_pickle=False)
 
             # save alignment to debug.
-            if args.save_alignment is True:
+            if args.save_alignment == 1:
                 figname = os.path.join(args.outdir, f"{saved_name}_alignment.png")
                 fig = plt.figure(figsize=(8, 6))
                 ax = fig.add_subplot(111)
