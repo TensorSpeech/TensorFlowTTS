@@ -1,22 +1,12 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 The Tacotron 2 Author, Minh Nguyen (@dathudeptrai) and Eren Gölge (@erogol)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+
+# Copyright 2020 Minh Nguyen (@dathudeptrai) - Eren Gölge (@erogol)
+#  MIT License (https://opensource.org/licenses/MIT)
+
 """Tacotron-2 Modules."""
 
 import collections
 import numpy as np
-from functools import partial
 
 import tensorflow as tf
 
@@ -24,8 +14,6 @@ from tensorflow_addons.seq2seq import Sampler
 from tensorflow_addons.seq2seq import BahdanauAttention
 from tensorflow_addons.seq2seq import dynamic_decode
 from tensorflow_addons.seq2seq import Decoder
-from tensorflow_addons.seq2seq import AttentionMechanism
-from tensorflow_addons.seq2seq import attention_wrapper
 
 
 def get_initializer(initializer_range=0.02):
@@ -229,7 +217,7 @@ class TrainingSampler(Sampler):
     def setup_target(self, targets, mel_lengths):
         """Setup ground-truth mel outputs for decoder."""
         self.mel_lengths = mel_lengths
-        self._batch_size = tf.shape(targets)[0]
+        self.set_batch_size(tf.shape(targets)[0])
         self.targets = targets[:, self._reduction_factor - 1::self._reduction_factor, :]
         self.max_lengths = tf.tile([tf.shape(self.targets)[1]], [self._batch_size])
 
@@ -264,6 +252,9 @@ class TrainingSampler(Sampler):
         next_state = state
         return (finished, next_inputs, next_state)
 
+    def set_batch_size(self, batch_size):
+        self._batch_size = batch_size
+
 
 class TestingSampler(TrainingSampler):
     """Testing sampler for Seq2Seq training."""
@@ -281,104 +272,6 @@ class TestingSampler(TrainingSampler):
         next_inputs = outputs[:, -self.config.n_mels:]
         next_state = state
         return (finished, next_inputs, next_state)
-
-    def set_batch_size(self, batch_size):
-        self._batch_size = batch_size
-
-
-class GmmAttention(AttentionMechanism):
-    """Tensorflow GMM attention module."""
-
-    def __init__(self,
-                 config,
-                 memory,
-                 num_mixtures=8,
-                 memory_sequence_length=None,
-                 check_inner_dims_defined=True,
-                 score_mask_value=None,
-                 name='GmmAttention'):
-        """Init variables."""
-        self.config = config
-        self.num_mixtures = num_mixtures
-        self.query_layer = tf.keras.layers.Dense(
-            3 * num_mixtures, name='gmm_query_layer', use_bias=True, dtype=tf.float32)
-
-    @property
-    def values(self):
-        return self._value
-
-    @property
-    def batch_size(self):
-        return self._batch_size
-
-    @property
-    def alignments_size(self):
-        return self._alignments_size
-
-    @property
-    def state_size(self):
-        return self.num_mixtures
-
-    def get_initial_state(self, batch_size, **kwargs):
-        """Get initial alignments.
-        Args:
-            batch_size (int): batch_size of training.
-        Returns:
-            init kappa (float): kappa initial value, shape [batch_size, num_mixtures].
-        """
-        return tf.zeros(shape=[batch_size, self.num_mixtures], dtype=tf.float32)
-
-    def get_initial_context(self, batch_size):
-        """Get initial attention."""
-        return tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
-
-    def setup_memory(self,
-                     memory,
-                     memory_sequence_length,
-                     score_mask_value=None,
-                     check_inner_dims_defined=True):
-        if score_mask_value is None:
-            score_mask_value = 0.0
-        self._maybe_mask_score = partial(
-            attention_wrapper._maybe_mask_score,
-            memory_sequence_length=memory_sequence_length,
-            score_mask_value=score_mask_value)
-        self._value = attention_wrapper._prepare_memory(
-            memory, memory_sequence_length, memory_mask=None, check_inner_dims_defined=True)
-        self._batch_size = (
-            self._value.shape[0] or tf.shape(self._value)[0])
-        self._alignments_size = (
-            self._value.shape[1] or tf.shape(self._value)[1])
-        self._keys = memory
-
-    def __call__(self, inputs, training=False):
-        """Call logic."""
-        query, previous_kappa = inputs
-
-        params = self.query_layer(query)
-
-        alpha_hat, beta_hat, kappa_hat = tf.split(params, num_or_size_splits=3, axis=1)
-
-        beta = tf.expand_dims(tf.exp(beta_hat), axis=2)
-        kappa = tf.expand_dims(previous_kappa + tf.exp(kappa_hat), axis=2)
-
-        # [batch_size, num_mixtures, 1]
-        alpha = tf.expand_dims(tf.exp(alpha_hat), axis=2)
-
-        # [1, 1, max_input_steps]
-        mu = tf.reshape(tf.cast(tf.range(self.alignments_size), dtype=tf.float32),
-                        shape=[1, 1, self.alignments_size])
-
-        # [batch_size, max_input_steps]
-        phi = tf.reduce_sum(alpha * tf.exp(-beta * (kappa - mu) ** 8.), axis=1)
-
-        alignments = self._maybe_mask_score(phi)
-        state = tf.squeeze(kappa, axis=2)
-
-        expanded_alignments = tf.expand_dims(alignments, 2)
-        context = tf.reduce_sum(expanded_alignments * self.values, 1)
-
-        return context, alignments, state
 
 
 class TFTacotronLocationSensitiveAttention(BahdanauAttention):
@@ -403,6 +296,7 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
             filters=config.attention_filters,
             kernel_size=config.attention_kernel,
             padding='same',
+            use_bias=False,
             name='location_conv'
         )
         self.location_layer = tf.keras.layers.Dense(units=config.attention_dim,
@@ -412,6 +306,7 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         self.v = tf.keras.layers.Dense(1, use_bias=True, name='scores_attention')
         self.config = config
         self.is_cumulate = is_cumulate
+        self.use_window = False
 
     def setup_window(self, win_front=2, win_back=4):
         self.win_front = tf.constant(win_front, tf.int32)
@@ -419,6 +314,8 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
 
         self._indices = tf.expand_dims(tf.range(tf.shape(self.keys)[1]), 0)
         self._indices = tf.tile(self._indices, [tf.shape(self.keys)[0], 1])  # [batch_size, max_time]
+
+        self.use_window = True
 
     def _compute_window_mask(self, max_alignments):
         """Compute window mask for inference.
@@ -448,7 +345,7 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
                                                 self.keys)
 
         # mask energy on inference steps.
-        if training is False:
+        if self.use_window is True:
             window_mask = self._compute_window_mask(prev_max_alignments)
             energy = energy + window_mask * -1e20
 
@@ -468,9 +365,9 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         """Calculate location sensitive energy."""
         return tf.squeeze(self.v(tf.nn.tanh(W_keys + W_query + W_fil)), -1)
 
-    def get_initial_state(self, batch_size, max_time):
+    def get_initial_state(self, batch_size, size):
         """Get initial alignments."""
-        return tf.zeros(shape=[batch_size, max_time], dtype=tf.float32)
+        return tf.zeros(shape=[batch_size, size], dtype=tf.float32)
 
     def get_initial_context(self, batch_size):
         """Get initial attention."""
@@ -570,14 +467,8 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
                 memory_sequence_length=None,
                 is_cumulate=True
             )
-        elif config.attention_type == 'gmm':
-            self.attention_layer = GmmAttention(
-                config,
-                memory=None,
-                memory_sequence_length=None,
-            )
         else:
-            raise ValueError("Only lsa (location-sensitive attention) and gmm attention are supported")
+            raise ValueError("Only lsa (location-sensitive attention) is supported")
 
         # frame, stop projection layer.
         self.frame_projection = tf.keras.layers.Dense(
@@ -612,7 +503,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         initial_attention_lstm_cell_states = self.attention_lstm.get_initial_state(None, batch_size, dtype=tf.float32)
         initial_decoder_lstms_cell_states = self.decoder_lstms.get_initial_state(None, batch_size, dtype=tf.float32)
         initial_context = tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
-        initial_state = self.attention_layer.get_initial_state(batch_size, self.alignment_size)
+        initial_state = self.attention_layer.get_initial_state(batch_size, size=self.alignment_size)
         initial_alignment_history = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
         return TFTacotronDecoderCellState(
             attention_lstm_state=initial_attention_lstm_cell_states,
@@ -761,15 +652,19 @@ class TFTacotron2(tf.keras.Model):
         speaker_ids = np.array([0])
         mel_outputs = np.random.normal(size=(1, 50, 80))
         mel_lengths = np.array([50])
-        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, 10, training=False)
+        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, 10, training=True)
 
+    @tf.function(experimental_relax_shapes=True)
     def call(self,
              input_ids,
              input_lengths,
              speaker_ids,
              mel_outputs,
              mel_lengths,
-             maximum_iterations=None,
+             maximum_iterations=tf.constant(2000, tf.int32),
+             use_window_mask=False,
+             win_front=2,
+             win_back=3,
              training=False):
         """Call logic."""
         # create input-mask based on input_lengths
@@ -797,6 +692,8 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
+        if use_window_mask:
+            self.decoder.cell.attention_layer.setup_window(win_front=win_front, win_back=win_back)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
@@ -820,7 +717,11 @@ class TFTacotron2(tf.keras.Model):
     def inference(self,
                   input_ids,
                   input_lengths,
-                  speaker_ids):
+                  speaker_ids,
+                  use_window_mask=False,
+                  win_front=2,
+                  win_back=4,
+                  maximum_iterations=tf.constant(2000, dtype=tf.int32)):
         """Call logic."""
         # create input-mask based on input_lengths
         input_mask = tf.sequence_mask(input_lengths,
@@ -834,11 +735,12 @@ class TFTacotron2(tf.keras.Model):
         alignment_size = tf.shape(encoder_hidden_states)[1]
 
         # Setup some initial placeholders for decoder step. Include:
-        # 1. mel_outputs, mel_lengths for teacher forcing mode.
+        # 1. batch_size for inference.
         # 2. alignment_size for attention size.
         # 3. initial state for decoder cell.
         # 4. memory (encoder hidden state) for attention mechanism.
         # 5. window front/back to solve long sentence synthesize problems. (call after setup memory.)
+        self.decoder.sampler.set_batch_size(batch_size)
         self.decoder.cell.set_alignment_size(alignment_size)
         self.decoder.setup_decoder_init_state(
             self.decoder.cell.get_initial_state(batch_size)
@@ -847,12 +749,13 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
-        if self.config.attention_type == "lsa":
-            self.decoder.cell.attention_layer.setup_window(win_front=2, win_back=4)
+        if use_window_mask:
+            self.decoder.cell.attention_layer.setup_window(win_front=win_front, win_back=win_back)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
-            self.decoder
+            self.decoder,
+            maximum_iterations=maximum_iterations
         )
 
         decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])

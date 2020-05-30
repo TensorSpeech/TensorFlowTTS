@@ -21,13 +21,8 @@ coverage.xml*
 .vscode*
 .nfs*
 .ipynb_checkpoints
-
-# recipe related
-egs/*/datasets
-egs/*/dump
-egs/*/exp
-datasets/*
+datasets
 *.h5
 *.npy
-*.wav
+./*.wav
 *.yml
