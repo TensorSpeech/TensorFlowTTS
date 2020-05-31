@@ -105,7 +105,8 @@ def main():
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
-        return_utt_id=True
+        return_utt_id=True,
+        return_guided_attention=False
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
@@ -117,7 +118,7 @@ def main():
     tacotron2.load_weights(args.checkpoint)
 
     for data in tqdm(dataset, desc="[Extract Duration]"):
-        utt_id, charactor, char_length, mel, mel_length, g_attention = data
+        utt_id, charactor, char_length, mel, mel_length = data
         utt_id = utt_id.numpy()
 
         # tacotron2 inference.

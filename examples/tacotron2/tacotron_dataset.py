@@ -49,6 +49,7 @@ class CharactorMelDataset(AbstractDataset):
                  mel_load_fn=np.load,
                  mel_length_threshold=None,
                  return_utt_id=False,
+                 return_guided_attention=True,
                  reduction_factor=1,
                  mel_pad_value=0.0,
                  char_pad_value=0,
@@ -139,6 +140,7 @@ class CharactorMelDataset(AbstractDataset):
         self.mel_load_fn = mel_load_fn
         self.charactor_load_fn = charactor_load_fn
         self.return_utt_id = return_utt_id
+        self.return_guided_attention = return_guided_attention
         self.mel_lengths = mel_lengths
         self.char_lengths = char_lengths
         self.reduction_factor = reduction_factor
@@ -174,12 +176,17 @@ class CharactorMelDataset(AbstractDataset):
                 mel_length = new_mel_length
 
             # create guided attention (default).
-            g_attention = guided_attention(char_length, mel_length // self.reduction_factor, self.g)
+            if self.return_guided_attention:
+                g_attention = guided_attention(char_length, mel_length // self.reduction_factor, self.g)
 
             if self.return_utt_id:
-                items = utt_id, charactor, char_length, mel, mel_length, g_attention
+                items = utt_id, charactor, char_length, mel, mel_length
+                if self.return_guided_attention:
+                    items = *items, g_attention
             else:
-                items = charactor, char_length, mel, mel_length, g_attention
+                items = charactor, char_length, mel, mel_length
+                if self.return_guided_attention:
+                    items = *items, g_attention
             yield items
 
     def create(self,
@@ -205,17 +212,22 @@ class CharactorMelDataset(AbstractDataset):
                 self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
 
         # define padding value for each element
-        padding_values = (self.char_pad_value, 0, self.mel_pad_value, 0, self.ga_pad_value)
+        padding_values = (self.char_pad_value, 0, self.mel_pad_value, 0)
+        if self.return_guided_attention:
+            padding_values = (*padding_values, self.ga_pad_value)
 
         # define padded shapes.
         if self.use_fixed_shapes is False:
-            padded_shapes = ([None], [], [None, 80], [], [None, None])
+            padded_shapes = ([None], [], [None, 80], [])
+            if self.return_guided_attention:
+                padded_shapes = (*padded_shapes, [None, None])
         else:
             padded_shapes = ([self.max_char_length],
                              [],
                              [self.max_mel_length, 80],
-                             [],
-                             [self.max_char_length, self.max_mel_length])
+                             [])
+            if self.return_guided_attention:
+                padded_shapes = (*padded_shapes, [self.max_char_length, self.max_mel_length])
 
         if self.return_utt_id:
             padding_values = ("", *padding_values)
@@ -229,7 +241,9 @@ class CharactorMelDataset(AbstractDataset):
         return datasets
 
     def get_output_dtypes(self):
-        output_types = (tf.int32, tf.int32, tf.float32, tf.int32, tf.float32)
+        output_types = (tf.int32, tf.int32, tf.float32, tf.int32)
+        if self.return_guided_attention:
+            output_types = (*output_types, tf.float32)
         if self.return_utt_id:
             output_types = (tf.dtypes.string, *output_types)
         return output_types

@@ -62,6 +62,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
   --win-back 3
 ```
 
+You also can download my extracted durations at 40k steps at [link](https://drive.google.com/drive/u/1/folders/1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_?usp=drive_open).
+
 ## Finetune Tacotron-2 with ljspeech pretrained on other languages
 Here is an example show you how to use pretrained ljspeech to training with other languages. This does not guarantee a better model or faster convergence in all cases but it will improve if there is a correlation between target language and pretrained language. The only thing you need to do before finetune on other languages is re-define embedding layers. You can do it by following code:
 
