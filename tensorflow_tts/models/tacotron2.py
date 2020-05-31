@@ -211,7 +211,7 @@ class TrainingSampler(Sampler):
         # create schedule factor.
         # the input of a next decoder cell is calculated by formular:
         # next_inputs = ratio * prev_groundtruth_outputs + (1.0 - ratio) * prev_predicted_outputs.
-        self._ratio = tf.constant(1.0)
+        self._ratio = tf.constant(1.0, dtype=tf.float32)
         self._reduction_factor = self.config.reduction_factor
 
     def setup_target(self, targets, mel_lengths):
