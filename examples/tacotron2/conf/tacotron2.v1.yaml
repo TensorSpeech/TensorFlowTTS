@@ -1,8 +1,7 @@
-
-# This is the hyperparameter configuration file for MelGAN.
+# This is the hyperparameter configuration file for Tacotron2 v1.
 # Please make sure this is adjusted for the LJSpeech dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
-# This configuration performs 4000k iters.
+# This configuration performs 200k iters but 65k iters is enough to get a good models.
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
@@ -45,12 +44,14 @@ tacotron2_params:
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 32              # Batch size.
+batch_size: 32             # Batch size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
-mel_length_threshold: 32
-is_shuffle: true
-use_fixed_shapes: true
+mel_length_threshold: 32   # remove all targets has mel_length <= 32 
+is_shuffle: true           # shuffle dataset after each epoch.
+use_fixed_shapes: true     # use_fixed_shapes for training (2x speed-up).
+max_char_length: 190       # maximum charactor length for fixed shape (only for ljspeech).   
+max_mel_length: 870        # maximum mel length for fixed shape (only for ljspeech).
 
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
@@ -66,14 +67,14 @@ optimizer_params:
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
-train_max_steps: 200000                # Number of training steps.
+train_max_steps: 200000                 # Number of training steps.
 save_interval_steps: 5000               # Interval steps to save checkpoint.
-eval_interval_steps: 500              # Interval steps to evaluate the network.
-log_interval_steps: 100                # Interval steps to record the training log.
-start_schedule_teacher_forcing: 250000
-start_ratio_value: 0.5
-schedule_decay_steps: 50000
-end_ratio_value: 0.0
+eval_interval_steps: 500                # Interval steps to evaluate the network.
+log_interval_steps: 100                 # Interval steps to record the training log.
+start_schedule_teacher_forcing: 200001  # don't need to apply schedule teacher forcing.
+start_ratio_value: 0.5                  # start ratio of scheduled teacher forcing.
+schedule_decay_steps: 50000             # decay step scheduled teacher forcing.
+end_ratio_value: 0.0                    # end ratio of scheduled teacher forcing.
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################

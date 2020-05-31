@@ -54,6 +54,9 @@ class CharactorMelDataset(AbstractDataset):
                  char_pad_value=0,
                  ga_pad_value=-1.0,
                  g=0.2,
+                 use_fixed_shapes=False,
+                 max_char_length=190,
+                 max_mel_length=870,
                  ):
         """Initialize dataset.
 
@@ -70,6 +73,9 @@ class CharactorMelDataset(AbstractDataset):
             char_pad_value (int): Padding value for charactor.
             ga_pad_value (float): Padding value for guided attention.
             g (float): G value for guided attention.
+            use_fixed_shapes (bool): Use fixed shape for mel targets or not.
+            max_char_length (int): maximum charactor length if use_fixed_shapes=True.
+            max_mel_length (int): maximum mel length if use_fixed_shapes=True
 
         """
         # find all of charactor and mel files.
@@ -140,6 +146,9 @@ class CharactorMelDataset(AbstractDataset):
         self.char_pad_value = char_pad_value
         self.ga_pad_value = ga_pad_value
         self.g = g
+        self.use_fixed_shapes = use_fixed_shapes
+        self.max_char_length = max_char_length
+        self.max_mel_length = max_mel_length
 
     def get_args(self):
         return [self.utt_ids]
@@ -199,7 +208,14 @@ class CharactorMelDataset(AbstractDataset):
         padding_values = (self.char_pad_value, 0, self.mel_pad_value, 0, self.ga_pad_value)
 
         # define padded shapes.
-        padded_shapes = ([None], [], [None, 80], [], [None, None])
+        if self.use_fixed_shapes is False:
+            padded_shapes = ([None], [], [None, 80], [], [None, None])
+        else:
+            padded_shapes = ([self.max_char_length],
+                             [],
+                             [self.max_mel_length, 80],
+                             [],
+                             [self.max_char_length, self.max_mel_length])
 
         if self.return_utt_id:
             padding_values = ("", *padding_values)

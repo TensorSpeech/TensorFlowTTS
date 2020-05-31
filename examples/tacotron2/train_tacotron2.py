@@ -146,7 +146,9 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             mel_loss_after = self.mae(mel, post_mel_outputs)
 
             # calculate stop grounth truth based-on mel_length.
-            stop_gts = tf.expand_dims(tf.range(tf.reduce_max(mel_length), dtype=tf.int32), 0)  # [1, max_len]
+            max_mel_length = tf.reduce_max(mel_length) if self.config["use_fixed_shapes"] is False else [
+                self.config["max_mel_length"]]
+            stop_gts = tf.expand_dims(tf.range(tf.reduce_max(max_mel_length), dtype=tf.int32), 0)  # [1, max_len]
             stop_gts = tf.tile(stop_gts, [tf.shape(mel_length)[0], 1])  # [B, max_len]
             stop_gts = tf.cast(tf.math.greater_equal(stop_gts, tf.expand_dims(mel_length, 1)), tf.float32)
 
@@ -428,7 +430,10 @@ def main():
         mel_load_fn=mel_load_fn,
         mel_length_threshold=mel_length_threshold,
         return_utt_id=False,
-        reduction_factor=config["tacotron2_params"]["reduction_factor"]
+        reduction_factor=config["tacotron2_params"]["reduction_factor"],
+        use_fixed_shapes=config["use_fixed_shapes"],
+        max_char_length=config["max_char_length"],
+        max_mel_length=config["max_mel_length"]
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
@@ -443,7 +448,8 @@ def main():
         mel_load_fn=mel_load_fn,
         mel_length_threshold=mel_length_threshold,
         return_utt_id=False,
-        reduction_factor=config["tacotron2_params"]["reduction_factor"]
+        reduction_factor=config["tacotron2_params"]["reduction_factor"],
+        use_fixed_shapes=False  # don't need apply fixed shape for evaluation.
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
