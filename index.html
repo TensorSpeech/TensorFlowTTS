@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    
+    <title> - TensorflowTTS Demo</title>
+    
+    <meta name="description" content="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2.
+Github: https://github.com/dathudeptrai/TensorflowTTS.">
+    <meta name="author" content="">
+    
+    <link href="https://dathudeptrai.github.io/TensorflowTTS/an-old-hope.min.css" rel="stylesheet">
+    <link href="https://dathudeptrai.github.io/TensorflowTTS/style.css" rel="stylesheet">
+
+    
+    <meta name="generator" content="Hugo 0.70.0" />
+    
+    <script>
+      function setTheme() {
+        const time = new Date();
+
+        const prev = localStorage.getItem('date');
+        const date = String(time.getMonth() + 1) + '.' + String(time.getDate());
+
+        const now = time.getTime();
+        let sunrise;
+        let sunset;
+
+        function setBodyClass() {
+          if (now > sunrise && now < sunset) return;
+          document.body.classList.add('dark');
+        }
+
+        if (date !== prev) {
+          fetch('https://api.ipgeolocation.io/astronomy?apiKey=5ed37d85103e4defa5df4c5298ed5215')
+            .then(res => res.json())
+            .then(data => {
+              sunrise = data.sunrise.split(':').map(Number);
+              sunset = data.sunset.split(':').map(Number);
+            })
+            .catch(() => {
+              sunrise = [7, 0];
+              sunset = [19, 0];
+            })
+            .finally(() => {
+              sunrise = time.setHours(sunrise[0], sunrise[1], 0);
+              sunset = time.setHours(sunset[0], sunset[1], 0);
+              setBodyClass();
+              localStorage.setItem('sunrise', sunrise);
+              localStorage.setItem('sunset', sunset);
+            });
+          localStorage.setItem('date', date);
+        } else {
+          sunrise = Number(localStorage.getItem('sunrise'));
+          sunset = Number(localStorage.getItem('sunset'));
+          setBodyClass();
+        }
+      }
+    </script>
+  </head>
+  <body class="single">
+    <script>
+      setTheme();
+    </script>
+    <header class="header">
+      <nav class="nav">
+        
+        <p class="logo"><a href="https://dathudeptrai.github.io/TensorflowTTS/">TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2 demo </a></p>
+        
+        
+      </nav>
+    </header>
+    <main class="main">
+
+
+<article class="post-single">
+  <header class="post-header">
+    <h1 class="post-title"></h1>
+    <div class="post-meta">June 1, 2020</div>
+  </header>
+  <div class="post-content"><h1>TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2 demo</h1>
+<p>This is the demonstration page of <strong>TensorflowTTS:</strong> Real-Time State-of-the-art Speech Synthesis for Tensorflow 2 demo</p>
+<p>Github: <a href="https://github.com/dathudeptrai/TensorflowTTS">https://github.com/dathudeptrai/TensorflowTTS</a></p>
+
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://arxiv.org/abs/1910.11480">Parallel WaveGAN</a></li>
+<li><a href="https://arxiv.org/abs/1910.06711">MelGAN</a></li>
+<li><a href="https://arxiv.org/abs/1712.05884">Tacotron-2</a></li>
+<li><a href="https://arxiv.org/abs/1905.09263">FastSpeech</a></li>
+</ul>
+<h2 id="author">Author</h2>
+<p>Minh Nguyen Quan Anh, Eren Gölge<br>
+e-mail: <a href="mailto:nguyenquananhminh@gmail.com">nguyenquananhminh@gmail.com</a>, <a href="mailto:erengolge@gmail.com">erengolge@gmail.com</a></p>
+</div>
+  
+  
+  
+  
+</article>
+
+</main>
+<footer class="footer">
+  <span>&copy; 2020 <a href="https://dathudeptrai.github.io/TensorflowTTS/">TensorflowTTS Demo</a></span>
+  <span>&middot;</span>
+  <span>Powered by <a href="https://gohugo.io/" rel="noopener" target="_blank">Hugo️️</a>️</span>
+  <span>&middot;</span>
+  <span>Theme️ <a href="https://github.com/nanxiaobei/hugo-paper" rel="noopener" target="_blank">Paper</a></span>
+</footer>
+</body>
+</html>
