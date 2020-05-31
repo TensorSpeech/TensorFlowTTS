@@ -11,14 +11,55 @@ First, you need define data loader based on AbstractDataset class (see [`abstrac
 After you redefine your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_tacotron2.py`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/train_tacotron2.py). Here is an example command line to training tacotron-2 from scratch:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 nohup python train_tacotron2.py \
+CUDA_VISIBLE_DEVICES=0 python train_tacotron2.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
   --outdir ./exp/train.tacotron2.v1/ \
   --config conf/tacotron2.v1.yaml \
   --use-norm 1
   --mixed_precision 0 \
-  --resume "" > log.tacotron2.v1.txt 2>&1
+  --resume ""
+```
+
+### Step 3: Decode mel-spectrogram from folder ids
+To running inference on folder ids (charactor), run below command line:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python decode_tacotron2.py \
+  --rootdir ./dump/valid/ \
+  --outdir ./prediction/tacotron2-65k/ \
+  --checkpoint ./examples/tacotron2/pretrained/model-65000.h5 \
+  --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
+  --batch-size 32
+```
+
+### Step 4: Extract duration from alignments for FastSpeech
+You may need to extract durations for student models like fastspeech. Here we use teacher forcing with window masking trick to extract durations from alignment maps:
+
+Extract for valid set: 
+```bash
+CUDA_VISIBLE_DEVICES=0 python extract_duration.py \
+  --rootdir ./dump/valid/ \
+  --outdir ./dump/valid/durations/ \
+  --checkpoint ./examples/tacotron2/pretrained/model-65000.h5 \
+  --use-norm 1 \
+  --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
+  --batch-size 32
+  --win-front 3 \
+  --win-back 3
+```
+
+Extract for training set:
+```bash
+CUDA_VISIBLE_DEVICES=0 python extract_duration.py \
+  --rootdir ./dump/train/ \
+  --outdir ./dump/train/durations/ \
+  --checkpoint ./examples/tacotron2/pretrained/model-65000.h5 \
+  --use-norm 1 \
+  --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
+  --batch-size 32
+  --win-front 3 \
+  --win-back 3
 ```
 
 ## Finetune Tacotron-2 with ljspeech pretrained on other languages
@@ -56,13 +97,18 @@ You can hear some audio samples at [`audios`](https://github.com/dathudeptrai/Te
 
 ## Some important notes
 	
-* This implementation use guided attention by default to help a model learn diagonal alignment faster.
-* GMM attention also supported but i haven't test it yet.
-* Mish activation function.
+* This implementation use guided attention by default to help a model learn diagonal alignment faster. After 15-20k, you can disble alignment loss.
+* Relu activation function is still a best compared with mish and others.
 * Support window masking for inference, solve problem with very long sentences.
-* 50K steps is enough to get a best checkpoint.
+* 65k steps is enough to get a best checkpoint.
 * Scheduled teacher forcing is supported but training with teacher forcing give a best performance based on my experiments. You need to be aware of the importance of applying high dropout for prenet (both training and inference), this will reduce the effect of prev mel, so in an inference stage, a noise of prev mel prediction won't affect too much to a current decoder.
 * If an amplitude levels of synthesis audio is lower compared to original speech, you may need multiply mel predicted to global gain constant (eg 1.2).
+
+
+## Pretrained Models and Audio samples
+| Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters | reduction factor|
+| :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |  :-----: |
+| [tacotron2.v1](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron2/conf/tacotron2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 65k    | 1
 
 ## Reference
 

@@ -48,8 +48,6 @@ def main():
                         help="win-front.")
     parser.add_argument("--win-back", default=3, type=int,
                         help="win-front.")
-    parser.add_argument("--save-alignment", default=0, type=int,
-                        help="save-alignment.")
     parser.add_argument("--config", default=None, type=str, required=True,
                         help="yaml format configuration file. if not explicitly provided, "
                              "it will be searched in the checkpoint directory. (default=None)")
@@ -123,13 +121,13 @@ def main():
 
         for i, post_mel_output in enumerate(post_mel_outputs):
             stop_token = tf.math.round(tf.nn.sigmoid(stop_outputs[i]))  # [T]
-            real_length = tf.reduce_sum(tf.math.equal(stop_token, 0.0), -1)
+            real_length = tf.math.reduce_sum(tf.cast(tf.math.equal(stop_token, 0.0), tf.int32), -1)
             post_mel_output = post_mel_output[:real_length, :]
 
             saved_name = utt_id[i].decode("utf-8")
 
             # save D to folder.
-            np.save(os.path.join(args.outdir, f"{saved_name}-norm-feats-tacotron2.npy"),
+            np.save(os.path.join(args.outdir, f"{saved_name}-norm-feats.npy"),
                     post_mel_output.astype(np.float32), allow_pickle=False)
 
 

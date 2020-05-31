@@ -22,21 +22,20 @@ logging.basicConfig(
 
 
 @pytest.mark.parametrize(
-    "n_speakers, n_chars, max_input_length, max_mel_length, batch_size, att_type", [
-        (2, 15, 25, 50, 2, "lsa"),
-        (2, 15, 25, 50, 2, "gmm")
+    "n_speakers, n_chars, max_input_length, max_mel_length, batch_size", [
+        (2, 15, 25, 50, 2),
     ]
 )
-def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_length, batch_size, att_type):
-    config = Tacotron2Config(n_speakers=n_speakers, reduction_factor=1, attention_type=att_type)
+def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_length, batch_size):
+    config = Tacotron2Config(n_speakers=n_speakers, reduction_factor=1)
     model = TFTacotron2(config, training=True)
-    model._build()
+    # model._build()
 
     # fake input
     input_ids = tf.random.uniform([batch_size, max_input_length], maxval=n_chars, dtype=tf.int32)
     speaker_ids = tf.convert_to_tensor([0] * batch_size, tf.int32)
     mel_outputs = tf.random.uniform(shape=[batch_size, max_mel_length, 80])
-    mel_lengths = np.random.randint(max_mel_length - 50, high=max_mel_length + 1, size=[batch_size])
+    mel_lengths = np.random.randint(max_mel_length, high=max_mel_length + 1, size=[batch_size])
     mel_lengths[-1] = max_mel_length
     mel_lengths = tf.convert_to_tensor(mel_lengths, dtype=tf.int32)
 
@@ -49,7 +48,6 @@ def test_tacotron2_trainable(n_speakers, n_chars, max_input_length, max_mel_leng
 
     @tf.function(experimental_relax_shapes=True)
     def one_step_training(input_ids, speaker_ids, mel_outputs, mel_lengths):
-        print("retrace")
         with tf.GradientTape() as tape:
             mel_preds, \
                 post_mel_preds, \
