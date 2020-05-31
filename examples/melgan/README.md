@@ -11,15 +11,30 @@ First, you need define data loader based on AbstractDataset class (see [`abstrac
 After you redefine your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_melgan.py`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan/train_melgan.py). Here is an example command line to training tacotron-2 from scratch:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 nohup python examples/melgan/train_melgan.py \
+CUDA_VISIBLE_DEVICES=0 python examples/melgan/train_melgan.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
   --outdir ./examples/melgan/exp/train.melgan.v1/ \
   --config ./examples/melgan/conf/melgan.v1.yaml \
   --use-norm 1
   --mixed_precision 0 \
-  --resume "" > log.melgan.v1.txt 2>&1
+  --resume ""
 ```
+
+
+### Step 3: Decode audio from folder mel-spectrogram
+To running inference on folder mel-spectrogram (eg tacotron2.v1), run below command line:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python examples/melgan/decode_melgan.py \
+  --rootdir ./prediction/tacotron2.v1/ \
+  --outdir ./prediction/tacotron2.v1_melgan.v1/ \
+  --checkpoint ./examples/melgan/exp/train.melgan.v1/checkpoints/model-1500000.h5 \
+  --config ./examples/melgan/conf/melgan.v1.yaml \
+  --batch-size 32
+  --use-norm 1
+```
+
 
 ## Finetune MelGAN with ljspeech pretrained on other languages
 Just load pretrained model and training from scratch with other languages. **DO NOT FORGET** re-preprocessing on your dataset if needed. A hop_size should be 256 if you want to use our pretrained.

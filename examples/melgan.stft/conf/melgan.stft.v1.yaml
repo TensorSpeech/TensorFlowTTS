@@ -1,5 +1,5 @@
 
-# This is the hyperparameter configuration file for MelGAN.
+# This is the hyperparameter configuration file for MelGAN with Multi Resolution STFT.
 # Please make sure this is adjusted for the LJSpeech dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 4000k iters.
@@ -66,7 +66,7 @@ batch_max_steps: 8192          # Length of each audio in batch for training. Mak
 batch_max_steps_valid: 81920   # Length of each audio for validation. Make sure dividable by hope_size.
 remove_short_samples: true     # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true              # Whether to allow cache in dataset. If true, it requires cpu memory.
-is_shuffle: true
+is_shuffle: true               # shuffle dataset after each epoch.
 
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #

@@ -52,10 +52,11 @@ lambda_feat_match: 10.0
 #                  DATA LOADER SETTING                    #
 ###########################################################
 batch_size: 16                 # Batch size.
-batch_max_steps: 16384         # Length of each audio in batch for training. Make sure dividable by hop_size.
+batch_max_steps: 8192          # Length of each audio in batch for training. Make sure dividable by hop_size.
 batch_max_steps_valid: 81920   # Length of each audio for validation. Make sure dividable by hope_size.
 remove_short_samples: true     # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true              # Whether to allow cache in dataset. If true, it requires cpu memory.
+is_shuffle: true               # shuffle dataset after each epoch.
 
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #

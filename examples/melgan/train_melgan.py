@@ -473,7 +473,7 @@ def main():
         mel_load_fn=mel_load_fn,
         mel_length_threshold=mel_length_threshold,
     ).create(
-        is_shuffle=True,
+        is_shuffle=config["is_shuffle"],
         map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
         allow_cache=config["allow_cache"],
         batch_size=config["batch_size"]
@@ -487,7 +487,7 @@ def main():
         mel_load_fn=mel_load_fn,
         mel_length_threshold=mel_length_threshold,
     ).create(
-        is_shuffle=True,
+        is_shuffle=config["is_shuffle"],
         map_fn=lambda a, b: collater(a, b,
                                      batch_max_steps=tf.constant(config["batch_max_steps_valid"], dtype=tf.int32)),
         allow_cache=config["allow_cache"],
