@@ -1,11 +1,11 @@
 <h2 align="center">
-<p>TensorflowTTS
+<p> :yum: TensorflowTTS
 </h2>
 <h2 align="center">
 <p>Real-Time State-of-the-art Speech Synthesis for Tensorflow 2
 </h2>
 
-TensorflowTTS provides real-time state-of-the-art speech synthesis architectures (Tacotron-2, Melgan, FastSpeech ...) based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems. 
+:zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures (Tacotron-2, Melgan, FastSpeech ...) based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems. 
 
 ## Features
 - High performance on Speech Synthesis.
@@ -53,7 +53,7 @@ We are also implement some techniques to improve quality and convergence speed f
 
 
 # Audio Samples
-Here in an audio samples on valid set. [tacotron-2](), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b)
+Here in an audio samples on valid set. [tacotron-2](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b)
 
 # Tutorial End-to-End
 
@@ -81,7 +81,7 @@ The preprocessing have three steps:
 This is a command line to do three steps above:
 
 ```
-tensorflow-tts-preprocess --rootdir ./datasets/ --outdir ./dump/ --conf preprocess/lspeech_preprocess.yaml
+tensorflow-tts-preprocess --rootdir ./datasets/ --outdir ./dump/ --conf preprocess/ljspeech_preprocess.yaml
 tensorflow-tts-compute-statistics --rootdir ./dump/train/ --outdir ./dump --config preprocess/ljspeech_preprocess.yaml
 tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --stats ./dump/stats.npy --config preprocess/ljspeech_preprocess.yaml
 
@@ -127,7 +127,7 @@ After preprocessing, a structure of project will become:
 |- examples/
 |   |- melgan/
 |   |- fastspeech/
-|   |- tacotron-2/
+|   |- tacotron2/
 |   ...
 ```
 
@@ -140,7 +140,7 @@ Where stats.npy contains mean/var of train melspectrogram (we can use mean/var t
 
 To know how to training model from scratch or fine-tune with other datasets/languages, pls see detail at example directory.
 
-- For Tacotron-2 tutorial, pls see [example/tacotron-2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron-2)
+- For Tacotron-2 tutorial, pls see [example/tacotron2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron2)
 - For FastSpeech tutorial, pls see [example/fastspeech](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech)
 - For MelGAN tutorial, pls see [example/melgan](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan)
 - For MelGAN + STFT Loss tutorial, pls see [example/melgan.stft](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan.stft)
@@ -162,7 +162,7 @@ A detail implementation of abstract dataset class from [tensorflow_tts/dataset/a
 - If you do shuffle before cache, the dataset won't shuffle when it re-iterate over datasets.
 - You should apply map_fn to make each elements return from **generator** function have a same length before get batch and feed it into a model.
 
-Some examples to use this **abstract_dataset** are [tacotron_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron-2/tacotron_dataset.py), [fastspeech_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/fastspeech_dataset.py), [melgan_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/audio_mel_dataset.py).
+Some examples to use this **abstract_dataset** are [tacotron_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/tacotron_dataset.py), [fastspeech_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/fastspeech_dataset.py), [melgan_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/audio_mel_dataset.py).
 
 
 ## Abstract Trainer Class
@@ -177,7 +177,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 - **generate_and_save_intermediate_result**: This function will save intermediate result such as: plot alignment, save audio generated, plot mel-spectrogram ...
 - **_check_train_finish**: Check if a training progress finished or not.
 
-All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron-2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). In the near future, we will implement MultiGPU for **BasedTrainer** class.
+All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). In the near future, we will implement MultiGPU for **BasedTrainer** class.
 
 # End-to-End Examples
 Here is an example code for end2end inference with fastspeech and melgan.
@@ -191,8 +191,8 @@ import tensorflow as tf
 
 from tensorflow_tts.processor import LJSpeechProcessor
 
-from tensorflow_tts.configs.fastspeech import FastSpeechConfig
-from tensorflow_tts.configs.melgan import MelGANGeneratorConfig
+from tensorflow_tts.configs import FastSpeechConfig
+from tensorflow_tts.configs import MelGANGeneratorConfig
 
 from tensorflow_tts.models import TFFastSpeech
 from tensorflow_tts.models import TFMelGANGenerator
@@ -211,7 +211,7 @@ with open('./examples/melgan/conf/melgan.v1.yaml') as f:
 melgan_config = MelGANGeneratorConfig(**melgan_config["generator_params"])
 melgan = TFMelGANGenerator(config=melgan_config, name='melgan_generator')
 melgan._build()
-melgan.load_weights("./examples/melgan/pretrained/generator-1920000.h5")
+melgan.load_weights("./examples/melgan/pretrained/generator-1500000.h5")
 
 
 # inference

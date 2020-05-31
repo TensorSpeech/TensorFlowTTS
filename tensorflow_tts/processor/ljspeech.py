@@ -89,7 +89,7 @@ class LJSpeechProcessor(object):
         while len(text):
             m = _curly_re.match(text)
             if not m:
-                sequence += _symbols_to_sequence(_clean_text(text, self.cleaner_names))
+                sequence += _symbols_to_sequence(_clean_text(text, [self.cleaner_names]))
                 break
             sequence += _symbols_to_sequence(
                 _clean_text(m.group(1), self.cleaner_names))
