@@ -84,7 +84,7 @@ tacotron2.summary()
 ```
 
 ## Results
-Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml)
+Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml) but with reduction_factor = 7, we will update learning curves for reduction_factor = 1.
 
 ### Alignments progress
 <img src="fig/alignment.gif" height="300">
