@@ -215,7 +215,7 @@ melgan.load_weights("./examples/melgan/pretrained/generator-1500000.h5")
 
 
 # inference
-processor = LJSpeechProcessor(None, cleaner_names=["english_cleaners"])
+processor = LJSpeechProcessor(None, cleaner_names="english_cleaners")
 
 ids = processor.text_to_sequence("Recent research at Harvard has shown meditating for as little as 8 weeks, can actually increase the grey matter in the parts of the brain responsible for emotional regulation, and learning.")
 ids = tf.expand_dims(ids, 0)
