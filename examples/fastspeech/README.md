@@ -11,14 +11,26 @@ First, you need define data loader based on AbstractDataset class (see [`abstrac
 After you redefine your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_fastspeech.py`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech/train_fastspeech.py). Here is an example command line to training fastspeech from scratch:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 nohup python examples/fastspeech/train_fastspeech.py \
+CUDA_VISIBLE_DEVICES=0 python examples/fastspeech/train_fastspeech.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
   --outdir ./examples/fastspeech/exp/train.fastspeech.v1/ \
   --config ./examples/fastspeech/conf/fastspeech.v1.yaml \
   --use-norm 1
   --mixed_precision 0 \
-  --resume "" > log.fastspeech.v1.txt 2>&1
+  --resume ""
+```
+
+### Step 3: Decode mel-spectrogram from folder ids
+To running inference on folder ids (charactor), run below command line:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/decode_fastspeech.py \
+  --rootdir ./dump/valid/ \
+  --outdir ./prediction/fastspeech-200k/ \
+  --checkpoint ./examples/fastspeech/exp/train.fastspeech.v1/checkpoints/model-200000.h5 \
+  --config ./examples/fastspeech/conf/fastspeech.v1.yaml \
+  --batch-size 32
 ```
 
 ## Finetune FastSpeech with ljspeech pretrained on other languages
@@ -53,7 +65,7 @@ Here is a learning curves of fastspeech based on this config [`fastspeech.v1.yam
 * **DO NOT** apply any activation function on intermediate layer (TFFastSpeechIntermediate).
 * There is no different between num_hidden_layers = 6 and num_hidden_layers = 4.
 * I use mish rather than relu.
-* For extract durations, i use my tacotron2.v1 at 75k steps with window masking. Let say it's not a strong tacotron-2 model. If you want to improve the quality of fastspeech model, you may consider to use other teacher models from [ESP-NET](https://github.com/espnet/espnet) or [Mozilla-TTS](https://github.com/mozilla/TTS).
+* For extract durations, i use my tacotron2.v1 at 40k steps with window masking (front=4, back=4). Let say, at that steps it's not a strong tacotron-2 model. If you want to improve the quality of fastspeech model, you may consider use my latest checkpoint tacotron2.
 
 
 ## Pretrained Models and Audio samples

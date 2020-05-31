@@ -1,8 +1,7 @@
-
-# This is the hyperparameter configuration file for MelGAN.
+# This is the hyperparameter configuration file for FastSpeech v1.
 # Please make sure this is adjusted for the LJSpeech dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
-# This configuration performs 4000k iters.
+# This configuration performs 200k iters but a best checkpoint is around 150k iters.
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
@@ -38,10 +37,10 @@ fastspeech_params:
 #                  DATA LOADER SETTING                    #
 ###########################################################
 batch_size: 16              # Batch size.
-remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
-allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
-mel_length_threshold: 32
-is_shuffle: true
+remove_short_samples: true  # Whether to remove samples the length of which are less than batch_max_steps.
+allow_cache: true           # Whether to allow cache in dataset. If true, it requires cpu memory.
+mel_length_threshold: 32    # remove all targets has mel_length <= 32 
+is_shuffle: true            # shuffle dataset after each epoch.
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
 ###########################################################

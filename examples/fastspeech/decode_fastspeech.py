@@ -33,7 +33,7 @@ def main():
     """Run fastspeech decoding from folder."""
     parser = argparse.ArgumentParser(
         description="Decode soft-mel features from charactor with trained FastSpeech "
-                    "(See detail in tensorflow_tts/bin/decode_fastspeech.py).")
+                    "(See detail in examples/fastspeech/decode_fastspeech.py).")
     parser.add_argument("--rootdir", default=None, type=str, required=True,
                         help="directory including ids/durations files.")
     parser.add_argument("--outdir", type=str, required=True,
