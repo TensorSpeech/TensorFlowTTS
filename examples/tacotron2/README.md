@@ -92,9 +92,6 @@ Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https:/
 ### Learning curves
 <img src="fig/tensorboard.png" height="500">
 
-### Audio samples
-You can hear some audio samples at [`audios`](https://github.com/dathudeptrai/TensorflowTTS/tree/tacotron-2-example/examples/tacotron-2/audios). This is Tacotron-2 with reduction factor = 7 and vocoder is Melgan at 2M steps.
-
 ## Some important notes
 	
 * This implementation use guided attention by default to help a model learn diagonal alignment faster. After 15-20k, you can disble alignment loss.
