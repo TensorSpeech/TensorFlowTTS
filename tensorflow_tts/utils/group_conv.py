@@ -280,7 +280,7 @@ class Conv(Layer):
 
     def call(self, inputs):
         if self._recreate_conv_op(inputs):
-            self._convolution_op = nn_ops.Convolution(
+            self._convolution_op = Convolution(
                 inputs.get_shape(),
                 filter_shape=self.kernel.shape,
                 dilation_rate=self.dilation_rate,
