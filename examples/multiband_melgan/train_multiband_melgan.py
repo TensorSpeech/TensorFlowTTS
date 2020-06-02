@@ -404,9 +404,6 @@ def main():
     y_hat = generator.pqmf.synthesis(y_mb_hat)
     discriminator(y_hat)
 
-    generator.summary()
-    discriminator.summary()
-
     # define trainer
     trainer = MultiBandMelganTrainer(steps=0,
                                      epochs=0,
@@ -425,12 +422,8 @@ def main():
     )
 
     gen_optimizer = tf.keras.optimizers.Adam(learning_rate=generator_lr_fn,
-                                             beta_1=0.5,
-                                             beta_2=0.9,
                                              amsgrad=config["optimizer_params"]["amsgrad"])
     dis_optimizer = tf.keras.optimizers.Adam(learning_rate=discriminator_lr_fn,
-                                             beta_1=0.5,
-                                             beta_2=0.9,
                                              amsgrad=config["optimizer_params"]["amsgrad"])
 
     trainer.compile(gen_model=generator,

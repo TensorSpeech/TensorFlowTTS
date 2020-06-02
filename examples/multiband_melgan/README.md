@@ -19,7 +19,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/multiband_melgan/train_multiband_melgan.p
   --outdir ./examples/multiband_melgan/exp/train.multiband_melgan.v1/ \
   --config ./examples/multiband_melgan/conf/multiband_melgan.v1.yaml \
   --use-norm 1
-  --mixed_precision 1 \
+  --generator_mixed_precision 1 \
   --resume ""
 ```
 
@@ -32,7 +32,6 @@ CUDA_VISIBLE_DEVICES=0 python examples/multiband_melgan/train_multiband_melgan.p
   --outdir ./examples/multiband_melgan/exp/train.multiband_melgan.v1/ \
   --config ./examples/multiband_melgan/conf/multiband_melgan.v1.yaml \
   --use-norm 1
-  --mixed_precision 1 \
   --resume ./examples/multiband_melgan/exp/train.multiband_melgan.v1/checkpoints/ckpt-200000
 ```
 
