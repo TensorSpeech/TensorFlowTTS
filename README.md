@@ -180,7 +180,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). In the near future, we will implement MultiGPU for **BasedTrainer** class.
 
 # End-to-End Examples
-Here is an example code for end2end inference with fastspeech and melgan.
+You can know how to inference each model at [notebooks](https://github.com/dathudeptrai/TensorflowTTS/tree/master/notebooks). Here is an example code for end2end inference with fastspeech and melgan.
 
 ```python
 import numpy as np
