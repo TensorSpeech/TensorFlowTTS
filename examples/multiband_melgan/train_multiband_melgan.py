@@ -413,18 +413,18 @@ def main():
 
     # define optimizer
     generator_lr_fn = getattr(tf.keras.optimizers.schedules,
-                              config["optimizer_params"]["lr_fn"])(
-        **config["optimizer_params"]["lr_params"]
+                              config["generator_optimizer_params"]["lr_fn"])(
+        **config["generator_optimizer_params"]["lr_params"]
     )
     discriminator_lr_fn = getattr(tf.keras.optimizers.schedules,
-                                  config["optimizer_params"]["lr_fn"])(
-        **config["optimizer_params"]["lr_params"]
+                                  config["discriminator_optimizer_params"]["lr_fn"])(
+        **config["discriminator_optimizer_params"]["lr_params"]
     )
 
     gen_optimizer = tf.keras.optimizers.Adam(learning_rate=generator_lr_fn,
-                                             amsgrad=config["optimizer_params"]["amsgrad"])
+                                             amsgrad=config["generator_optimizer_params"]["amsgrad"])
     dis_optimizer = tf.keras.optimizers.Adam(learning_rate=discriminator_lr_fn,
-                                             amsgrad=config["optimizer_params"]["amsgrad"])
+                                             amsgrad=config["discriminator_optimizer_params"]["amsgrad"])
 
     trainer.compile(gen_model=generator,
                     dis_model=discriminator,

@@ -75,11 +75,18 @@ is_shuffle: true               # shuffle dataset after each epoch.
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
 ###########################################################
-optimizer_params:
+generator_optimizer_params:
     lr_fn: "PiecewiseConstantDecay"
     lr_params: 
         boundaries: [100000, 200000, 300000, 400000, 500000, 600000, 700000]
         values: [0.001, 0.0005, 0.00025, 0.000125, 0.0000625, 0.00003125, 0.000015625, 0.000001]
+    amsgrad: true
+
+discriminator_optimizer_params:
+    lr_fn: "PiecewiseConstantDecay"
+    lr_params: 
+        boundaries: [100000, 200000, 300000, 400000, 500000]
+        values: [0.00025, 0.000125, 0.0000625, 0.00003125, 0.000015625, 0.000001]
     amsgrad: true
 
 ###########################################################
