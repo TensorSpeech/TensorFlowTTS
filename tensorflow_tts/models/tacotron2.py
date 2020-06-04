@@ -671,7 +671,7 @@ class TFTacotron2(tf.keras.Model):
              speaker_ids,
              mel_outputs,
              mel_lengths,
-             maximum_iterations=tf.constant(2000, tf.int32),
+             maximum_iterations=2000,
              use_window_mask=False,
              win_front=2,
              win_back=3,
@@ -731,7 +731,7 @@ class TFTacotron2(tf.keras.Model):
                   use_window_mask=False,
                   win_front=2,
                   win_back=4,
-                  maximum_iterations=tf.constant(2000, dtype=tf.int32)):
+                  maximum_iterations=2000):
         """Call logic."""
         # create input-mask based on input_lengths
         input_mask = tf.sequence_mask(input_lengths,
