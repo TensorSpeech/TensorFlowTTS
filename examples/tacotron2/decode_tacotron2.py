@@ -102,6 +102,9 @@ def main():
     tacotron2._build()  # build model to be able load_weights.
     tacotron2.load_weights(args.checkpoint)
 
+    # setup window
+    tacotron2.setup_window(win_front=args.win_front, win_back=args.win_back)
+
     for data in tqdm(dataset, desc="[Decoding]"):
         utt_id, charactor, char_length, mel, mel_length, g_attention = data
         utt_id = utt_id.numpy()
@@ -111,9 +114,6 @@ def main():
             charactor,
             char_length,
             speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-            use_window_mask=True,
-            win_front=args.win_front,
-            win_back=args.win_back,
         )
 
         # convert to numpy
