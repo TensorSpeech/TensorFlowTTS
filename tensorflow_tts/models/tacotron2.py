@@ -656,6 +656,16 @@ class TFTacotron2(tf.keras.Model):
 
         self.config = config
 
+    def setup_window(self, win_front, win_back):
+        """Call only for inference."""
+        self.use_window_mask = True
+        self.win_front = win_front
+        self.win_back = win_back
+
+    def setup_maximum_iterations(self, maximum_iterations):
+        """Call only for inference."""
+        self.maximum_iterations = maximum_iterations
+
     def _build(self):
         input_ids = np.array([[1, 2, 3, 4, 5, 6, 7, 8, 9]])
         input_lengths = np.array([9])
@@ -723,15 +733,14 @@ class TFTacotron2(tf.keras.Model):
 
         return decoder_output, mel_outputs, stop_token_prediction, alignment_history
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
+                                  tf.TensorSpec([None, ], dtype=tf.int32),
+                                  tf.TensorSpec([None, ], dtype=tf.int32)])
     def inference(self,
                   input_ids,
                   input_lengths,
-                  speaker_ids,
-                  use_window_mask=False,
-                  win_front=2,
-                  win_back=4,
-                  maximum_iterations=2000):
+                  speaker_ids):
         """Call logic."""
         # create input-mask based on input_lengths
         input_mask = tf.sequence_mask(input_lengths,
@@ -759,13 +768,13 @@ class TFTacotron2(tf.keras.Model):
             memory=encoder_hidden_states,
             memory_sequence_length=input_lengths  # use for mask attention.
         )
-        if use_window_mask:
-            self.decoder.cell.attention_layer.setup_window(win_front=win_front, win_back=win_back)
+        if self.use_window_mask:
+            self.decoder.cell.attention_layer.setup_window(win_front=self.win_front, win_back=self.win_back)
 
         # run decode step.
         (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
             self.decoder,
-            maximum_iterations=maximum_iterations
+            maximum_iterations=self.maximum_iterations
         )
 
         decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
