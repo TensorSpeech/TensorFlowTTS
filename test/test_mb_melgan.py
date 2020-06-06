@@ -21,7 +21,9 @@ import pytest
 import tensorflow as tf
 
 from tensorflow_tts.configs import MultiBandMelGANGeneratorConfig
-from tensorflow_tts.models import TFMultiBandMelGANGenerator
+
+from tensorflow_tts.models import TFMelGANGenerator
+from tensorflow_tts.models import TFPQMF
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -58,15 +60,17 @@ def make_multi_band_melgan_generator_args(**kwargs):
 def test_multi_band_melgan(dict_g):
     args_g = make_multi_band_melgan_generator_args(**dict_g)
     args_g = MultiBandMelGANGeneratorConfig(**args_g)
-    generator = TFMultiBandMelGANGenerator(args_g, name="multi_band_melgan")
+    generator = TFMelGANGenerator(args_g, name="multi_band_melgan")
     generator._build()
+
+    pqmf = TFPQMF(args_g, name="pqmf")
 
     fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
     fake_y = tf.random.uniform(shape=[1, 100 * 256, 1], dtype=tf.float32)
     y_hat_subbands = generator(fake_mels)
 
-    y_hat = generator.pqmf.synthesis(y_hat_subbands)
-    y_subbands = generator.pqmf.analysis(fake_y)
+    y_hat = pqmf.synthesis(y_hat_subbands)
+    y_subbands = pqmf.analysis(fake_y)
 
     assert np.shape(y_subbands) == np.shape(y_hat_subbands)
     assert np.shape(fake_y) == np.shape(y_hat)

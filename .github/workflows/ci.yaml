@@ -38,6 +38,7 @@ jobs:
           pip install -q tensorflow-gpu==${{ matrix.tensorflow-version }}
           pip install -q -e .
           pip install -q -e .[test]
+          pip install typing_extensions
           sudo apt-get install libsndfile1-dev
       - name: Flake8
         run: |

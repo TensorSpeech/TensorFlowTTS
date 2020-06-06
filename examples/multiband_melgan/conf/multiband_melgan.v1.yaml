@@ -19,7 +19,7 @@ generator_params:
     out_channels: 4               # Number of output channels (number of subbands).
     kernel_size: 7                # Kernel size of initial and final conv layers.
     filters: 384                  # Initial number of channels for conv layers.
-    upsample_scales: [2, 4, 8]    # List of Upsampling scales.
+    upsample_scales: [8, 4, 2]    # List of Upsampling scales.
     stack_kernel_size: 3          # Kernel size of dilated conv layers in residual stack.
     stacks: 4                     # Number of stacks in a single residual stack module.
     is_weight_norm: false         # Use weight-norm or not.
@@ -80,20 +80,20 @@ generator_optimizer_params:
     lr_params: 
         boundaries: [100000, 200000, 300000, 400000, 500000, 600000, 700000]
         values: [0.001, 0.0005, 0.00025, 0.000125, 0.0000625, 0.00003125, 0.000015625, 0.000001]
-    amsgrad: true
+    amsgrad: false
 
 discriminator_optimizer_params:
     lr_fn: "PiecewiseConstantDecay"
     lr_params: 
         boundaries: [100000, 200000, 300000, 400000, 500000]
         values: [0.00025, 0.000125, 0.0000625, 0.00003125, 0.000015625, 0.000001]
-    amsgrad: true
+    amsgrad: false
 
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
 discriminator_train_start_steps: 200000  # steps begin training discriminator
-train_max_steps: 1000000                 # Number of training steps.
+train_max_steps: 4000000                 # Number of training steps.
 save_interval_steps: 20000               # Interval steps to save checkpoint.
 eval_interval_steps: 5000                # Interval steps to evaluate the network.
 log_interval_steps: 200                  # Interval steps to record the training log.

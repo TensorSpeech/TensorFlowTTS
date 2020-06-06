@@ -21,8 +21,6 @@ import tensorflow as tf
 import numpy as np
 from scipy.signal import kaiser
 
-from tensorflow_tts.models import TFMelGANGenerator
-
 
 def design_prototype_filter(taps=62, cutoff_ratio=0.15, beta=9.0):
     """Design prototype filter for PQMF.
@@ -59,15 +57,16 @@ def design_prototype_filter(taps=62, cutoff_ratio=0.15, beta=9.0):
 class TFPQMF(tf.keras.layers.Layer):
     """PQMF module."""
 
-    def __init__(self, subbands=4, taps=62, cutoff_ratio=0.15, beta=9.0, **kwargs):
+    def __init__(self, config, **kwargs):
         """Initilize PQMF module.
         Args:
-            subbands (int): The number of subbands.
-            taps (int): The number of filter taps.
-            cutoff_ratio (float): Cut-off frequency ratio.
-            beta (float): Beta coefficient for kaiser window.
+            config (class): MultiBandMelGANGeneratorConfig
         """
         super().__init__(**kwargs)
+        subbands = config.subbands
+        taps = config.taps
+        cutoff_ratio = config.cutoff_ratio
+        beta = config.beta
 
         # define filter coefficient
         h_proto = design_prototype_filter(taps, cutoff_ratio, beta)
@@ -101,7 +100,8 @@ class TFPQMF(tf.keras.layers.Layer):
         self.synthesis_filter = synthesis_filter.astype(np.float32)
         self.updown_filter = updown_filter.astype(np.float32)
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32)])
     def analysis(self, x):
         """Analysis with PQMF.
         Args:
@@ -114,7 +114,8 @@ class TFPQMF(tf.keras.layers.Layer):
         x = tf.nn.conv1d(x, self.updown_filter, stride=self.subbands, padding='VALID')
         return x
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec(shape=[None, None, None], dtype=tf.float32)])
     def synthesis(self, x):
         """Synthesis with PQMF.
         Args:
@@ -128,17 +129,3 @@ class TFPQMF(tf.keras.layers.Layer):
                                    output_shape=(tf.shape(x)[0], tf.shape(x)[1] * self.subbands, self.subbands))
         x = tf.pad(x, [[0, 0], [self.taps // 2, self.taps // 2], [0, 0]])
         return tf.nn.conv1d(x, self.synthesis_filter, stride=1, padding="VALID")
-
-
-class TFMultiBandMelGANGenerator(TFMelGANGenerator):
-    """Tensorflow Multi-band MelGAN generator module."""
-
-    def __init__(self, config, **kwargs):
-        super().__init__(config, **kwargs)
-        self.pqmf = TFPQMF(
-            subbands=config.subbands,
-            taps=config.taps,
-            cutoff_ratio=config.cutoff_ratio,
-            beta=config.beta,
-            name="pqmf"
-        )

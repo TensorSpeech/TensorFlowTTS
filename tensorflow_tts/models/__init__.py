@@ -6,4 +6,4 @@ from tensorflow_tts.models.fastspeech import TFFastSpeech
 
 from tensorflow_tts.models.tacotron2 import TFTacotron2
 
-from tensorflow_tts.models.mb_melgan import TFMultiBandMelGANGenerator
+from tensorflow_tts.models.mb_melgan import TFPQMF

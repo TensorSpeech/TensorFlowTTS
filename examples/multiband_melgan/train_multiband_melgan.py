@@ -31,8 +31,9 @@ from examples.melgan.train_melgan import collater
 
 from examples.melgan.audio_mel_dataset import AudioMelDataset
 
-from tensorflow_tts.models import TFMultiBandMelGANGenerator
+from tensorflow_tts.models import TFMelGANGenerator
 from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
+from tensorflow_tts.models import TFPQMF
 
 from tensorflow_tts.losses import TFMultiResolutionSTFT
 
@@ -85,13 +86,16 @@ class MultiBandMelganTrainer(MelganTrainer):
         self.reset_states_train()
         self.reset_states_eval()
 
-    def compile(self, gen_model, dis_model, gen_optimizer, dis_optimizer):
+    def compile(self, gen_model, dis_model, gen_optimizer, dis_optimizer, pqmf):
         super().compile(gen_model, dis_model, gen_optimizer, dis_optimizer)
         # define loss
         self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.mae_loss = tf.keras.losses.MeanAbsoluteError()
         self.sub_band_stft_loss = TFMultiResolutionSTFT(**self.config["subband_stft_loss_params"])
         self.full_band_stft_loss = TFMultiResolutionSTFT(**self.config["stft_loss_params"])
+
+        # define pqmf module
+        self.pqmf = pqmf
 
     def _train_step(self, batch):
         """Train model one step."""
@@ -111,10 +115,10 @@ class MultiBandMelganTrainer(MelganTrainer):
         """One step generator training."""
         with tf.GradientTape() as g_tape:
             y_mb_hat = self.generator(mels)  # [B, T // subbands, subbands]
-            y_hat = self.generator.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
+            y_hat = self.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
 
             # subband multi-resolution stft loss for multi-band model
-            y_mb = self.generator.pqmf.analysis(tf.expand_dims(y, -1))  # [B, T//subbands, subbands]
+            y_mb = self.pqmf.analysis(tf.expand_dims(y, -1))  # [B, T//subbands, subbands]
             y_mb = tf.transpose(y_mb, (0, 2, 1))  # [B, subbands, T//subbands]
             y_mb = tf.reshape(y_mb, (-1, tf.shape(y_mb)[-1]))  # [B * subbands, T']
 
@@ -159,7 +163,7 @@ class MultiBandMelganTrainer(MelganTrainer):
 
         # recompute y_hat after 1 step generator for discriminator training.
         y_mb_hat = self.generator(mels)  # [B, T // subbands, subbands]
-        y_hat = self.generator.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
+        y_hat = self.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
         return y, y_hat
 
     @tf.function(experimental_relax_shapes=True)
@@ -169,10 +173,10 @@ class MultiBandMelganTrainer(MelganTrainer):
 
         # Generator
         y_mb_hat = self.generator(mels)
-        y_hat = self.generator.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
+        y_hat = self.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
 
         # subband multi-resolution stft loss for multi-band model
-        y_mb = self.generator.pqmf.analysis(tf.expand_dims(y, -1))  # [B, T//subbands, subbands]
+        y_mb = self.pqmf.analysis(tf.expand_dims(y, -1))  # [B, T//subbands, subbands]
         y_mb = tf.transpose(y_mb, (0, 2, 1))  # [B, subbands, T//subbands]
         y_mb = tf.reshape(y_mb, (-1, tf.shape(y_mb)[-1]))  # [B * subbands, T']
 
@@ -236,7 +240,7 @@ class MultiBandMelganTrainer(MelganTrainer):
         # generate
         y_batch, x_batch = batch
         y_mb_batch_ = self.predict(x_batch)  # [B, T // subbands, subbands]
-        y_batch_ = self.generator.pqmf.synthesis(y_mb_batch_)  # [B, T, 1]
+        y_batch_ = self.pqmf.synthesis(y_mb_batch_)  # [B, T, 1]
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
@@ -392,17 +396,22 @@ def main():
     )
 
     # define generator and discriminator
-    generator = TFMultiBandMelGANGenerator(
+    generator = TFMelGANGenerator(
         MultiBandMelGANGeneratorConfig(**config["generator_params"]), name='multi_band_melgan_generator')
 
     discriminator = TFMelGANMultiScaleDiscriminator(
         MultiBandMelGANDiscriminatorConfig(**config["discriminator_params"]), name='multi_band_melgan_discriminator')
 
+    pqmf = TFPQMF(MultiBandMelGANGeneratorConfig(**config["generator_params"]), name="pqmf")
+
     # dummy input to build model.
     fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
     y_mb_hat = generator(fake_mels)
-    y_hat = generator.pqmf.synthesis(y_mb_hat)
+    y_hat = pqmf.synthesis(y_mb_hat)
     discriminator(y_hat)
+
+    generator.summary()
+    discriminator.summary()
 
     # define trainer
     trainer = MultiBandMelganTrainer(steps=0,
@@ -429,7 +438,8 @@ def main():
     trainer.compile(gen_model=generator,
                     dis_model=discriminator,
                     gen_optimizer=gen_optimizer,
-                    dis_optimizer=dis_optimizer)
+                    dis_optimizer=dis_optimizer,
+                    pqmf=pqmf)
 
     # start training
     try:
