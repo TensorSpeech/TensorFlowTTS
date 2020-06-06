@@ -131,7 +131,8 @@ class CharactorMelDataset(AbstractDataset):
                 ({len(mel_files)} vs {len(charactor_files)} vs {len(mel_lengths)})."
 
         if ".npy" in charactor_query:
-            utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
+            suffix = charactor_query[1:]
+            utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
 
         # set global params
         self.utt_ids = utt_ids

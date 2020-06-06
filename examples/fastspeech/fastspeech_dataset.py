@@ -107,7 +107,8 @@ class CharactorDurationMelDataset(AbstractDataset):
                 ({len(mel_files)} vs {len(charactor_files)} vs {len(duration_files)})."
 
         if ".npy" in charactor_query:
-            utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
+            suffix = charactor_query[1:]
+            utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
 
         # set global params
         self.utt_ids = utt_ids
@@ -208,7 +209,8 @@ class CharactorDurationDataset(AbstractDataset):
         assert len(charactor_files) == len(duration_files), "number of charactor and duration files are different."
 
         if ".npy" in charactor_query:
-            utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
+            suffix = charactor_query[1:]
+            utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
 
         # set global params
         self.utt_ids = utt_ids
@@ -301,7 +303,8 @@ class CharactorDataset(AbstractDataset):
         assert len(charactor_files) != 0, \
             f"Not found any char or duration files in ${root_dir}."
         if ".npy" in charactor_query:
-            utt_ids = [os.path.basename(f).replace("-ids.npy", "") for f in charactor_files]
+            suffix = charactor_query[1:]
+            utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
 
         # set global params
         self.utt_ids = utt_ids

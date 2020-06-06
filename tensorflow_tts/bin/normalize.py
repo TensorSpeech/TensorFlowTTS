@@ -71,7 +71,7 @@ def main():
     # get dataset
     if args.rootdir is not None:
         if config["format"] == "npy":
-            mel_query = "*-feats.npy"
+            mel_query = "*-raw-feats.npy"
             def mel_load_fn(x): return np.load(x, allow_pickle=True)
         else:
             raise ValueError("support only npy format.")

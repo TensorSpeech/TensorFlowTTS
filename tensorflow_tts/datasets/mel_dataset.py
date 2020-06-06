@@ -61,8 +61,8 @@ class MelDataset(AbstractDataset):
         assert len(mel_files) != 0, f"Not found any mel files in ${root_dir}."
 
         if ".npy" in mel_query:
-            utt_ids = ["-".join([os.path.basename(f).split("-")[0], os.path.basename(f).split("-")[1]])
-                       for f in mel_files]
+            suffix = mel_query[1:]
+            utt_ids = [os.path.basename(f).replace(suffix, "") for f in mel_files]
 
         # set global params
         self.utt_ids = utt_ids
