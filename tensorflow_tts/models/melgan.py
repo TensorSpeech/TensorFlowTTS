@@ -269,7 +269,7 @@ class TFMelGANGenerator(tf.keras.Model):
 
     def _build(self):
         """Build model by passing fake input."""
-        fake_mels = tf.random.uniform(shape=[1, 20, 80], dtype=tf.float32)
+        fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
         self(fake_mels)
 
 

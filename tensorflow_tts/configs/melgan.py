@@ -31,7 +31,8 @@ class MelGANGeneratorConfig(object):
                  padding_type="REFLECT",
                  use_final_nolinear_activation=True,
                  is_weight_norm=True,
-                 initializer_seed=42):
+                 initializer_seed=42,
+                 **kwargs):
         """Init parameters for MelGAN Generator model."""
         self.out_channels = out_channels
         self.kernel_size = kernel_size
@@ -68,7 +69,8 @@ class MelGANDiscriminatorConfig(object):
                  nonlinear_activation_params={"alpha": 0.2},
                  padding_type="REFLECT",
                  is_weight_norm=True,
-                 initializer_seed=42):
+                 initializer_seed=42,
+                 **kwargs):
         """Init parameters for MelGAN Discriminator model."""
         self.out_channels = out_channels
         self.scales = scales

@@ -19,7 +19,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/melgan/train_melgan.py \
   --outdir ./examples/melgan.stft/exp/train.melgan.stft.v1/ \
   --config ./examples/melgan.stft/conf/melgan.stft.v1.yaml \
   --use-norm 1
-  --mixed_precision 1 \
+  --generator_mixed_precision 1 \
   --resume ""
 ```
 
@@ -32,7 +32,6 @@ CUDA_VISIBLE_DEVICES=0 python examples/melgan/train_melgan.py \
   --outdir ./examples/melgan/exp/train.melgan.v1/ \
   --config ./examples/melgan/conf/melgan.v1.yaml \
   --use-norm 1
-  --mixed_precision 0 \
   --resume ./examples/melgan.stft/exp/train.melgan.stft.v1/checkpoints/ckpt-100000
 ```
 
