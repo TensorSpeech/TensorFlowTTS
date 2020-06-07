@@ -655,6 +655,8 @@ class TFTacotron2(tf.keras.Model):
                                                      name='residual_projection')
 
         self.config = config
+        self.use_window_mask = False
+        self.maximum_iterations = 4000
 
     def setup_window(self, win_front, win_back):
         """Call only for inference."""
