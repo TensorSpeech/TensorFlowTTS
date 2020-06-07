@@ -213,7 +213,7 @@ img {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: left;
   height: 320px;
   margin-bottom: var(--header-height);
 }
@@ -488,7 +488,7 @@ img {
   padding: calc((var(--footer-height) - var(--gap)) / 2) var(--gap);
   color: var(--secondary);
   font-size: 12px;
-  text-align: center;
+  text-align: left;
   line-height: 24px;
 }
 .footer span {
@@ -509,8 +509,8 @@ img {
   left: 0;
   right: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: left;
+  justify-content: left;
   height: 80%;
   font-size: 160px;
   font-weight: 700;
