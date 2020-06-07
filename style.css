@@ -213,7 +213,7 @@ img {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: left;
+  justify-content: center;
   height: 320px;
   margin-bottom: var(--header-height);
 }
@@ -378,7 +378,7 @@ img {
 }
 .post-content table th {
   font-size: 14px;
-  text-align: left;
+  text-align: center;
 }
 .post-content table:not(.highlighttable) td code:only-child {
   margin-left: 0;
@@ -509,8 +509,8 @@ img {
   left: 0;
   right: 0;
   display: flex;
-  align-items: left;
-  justify-content: left;
+  align-items: center;
+  justify-content: center;
   height: 80%;
   font-size: 160px;
   font-weight: 700;
