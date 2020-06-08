@@ -29,13 +29,25 @@ from tensorflow_tts.utils import find_files
 from tensorflow_tts.processor.ljspeech import symbols
 
 
-def guided_attention(char_len, mel_len, g=0.2):
-    """Guided attention. Refer to page 3 on the paper."""
-    ga = np.zeros((char_len, mel_len), dtype=np.float32)
-    for n_pos in range(char_len):
-        for t_pos in range(mel_len):
-            ga[n_pos, t_pos] = 1 - np.exp(-(t_pos / float(mel_len) - n_pos / float(char_len)) ** 2 / (2 * g * g))
-    return ga
+def guided_attention(char_len, mel_len, max_char_len, max_mel_len, g=0.2):
+    '''Guided attention. Refer to page 3 on the paper.'''
+    max_char_seq = np.arange(max_char_len)
+    max_char_seq = tf.expand_dims(max_char_seq, 0)  # [1, t_seq]
+    # [mel_seq, max_t_seq]
+    max_char_seq = tf.tile(max_char_seq, [max_mel_len, 1])
+
+    max_mel_seq = np.arange(max_mel_len)
+    max_mel_seq = tf.expand_dims(max_mel_seq, 1)  # [mel_seq, 1]
+    # [mel_seq, max_t_seq]
+    max_mel_seq = tf.tile(max_mel_seq, [1, max_char_len])
+
+    right = tf.cast(max_mel_seq, tf.float32) / \
+        tf.constant(mel_len, dtype=tf.float32)
+    left = tf.cast(max_char_seq, tf.float32) / \
+        tf.constant(char_len, dtype=tf.float32)
+
+    ga_ = 1.0 - tf.math.exp(-(right - left)**2 / (2 * g * g))
+    return tf.transpose(ga_[:mel_len, :char_len], (1, 0))
 
 
 class CharactorMelDataset(AbstractDataset):
@@ -178,7 +190,11 @@ class CharactorMelDataset(AbstractDataset):
 
             # create guided attention (default).
             if self.return_guided_attention:
-                g_attention = guided_attention(char_length, mel_length // self.reduction_factor, self.g)
+                g_attention = guided_attention(char_length,
+                                               mel_length // self.reduction_factor,
+                                               self.max_char_length,
+                                               self.max_mel_length,
+                                               self.g)
 
             if self.return_utt_id:
                 items = utt_id, charactor, char_length, mel, mel_length
