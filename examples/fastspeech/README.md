@@ -72,6 +72,7 @@ Here is a learning curves of fastspeech based on this config [`fastspeech.v1.yam
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
 | [fastspeech.v1](https://drive.google.com/drive/folders/1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech/conf/fastspeech.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 195k    |
+| [fastspeech.v3](https://drive.google.com/drive/folders/1ITxTJDrS1I0K8S_x0s0tNbym748p9FUI?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech/conf/fastspeech.v3.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 150k    |
 
 
 ## Reference
