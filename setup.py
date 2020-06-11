@@ -34,7 +34,8 @@ requirements = {
         "h5py>=2.10.0",
         "pathos>=0.2.5",
         "unidecode>=1.1.1",
-        "inflect>=4.1.0"
+        "inflect>=4.1.0",
+        "scikit-learn>=0.22.0",
     ],
     "setup": [
         "numpy",
