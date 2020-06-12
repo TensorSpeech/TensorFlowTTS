@@ -88,6 +88,7 @@ def main():
     if config["format"] == "npy":
         scaler.mean_ = np.load(args.stats)[0]
         scaler.scale_ = np.load(args.stats)[1]
+        scaler.n_features_in_ = config["num_mels"]
     else:
         raise ValueError("Support only npy format")
 
