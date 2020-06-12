@@ -650,13 +650,16 @@ class TFFastSpeech(tf.keras.Model):
         outputs = (mel_before, mel_after, duration_outputs)
         return outputs
 
-    @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32),
+                                  tf.TensorSpec(shape=[None, None], dtype=tf.bool),
+                                  tf.TensorSpec(shape=[None, ], dtype=tf.int32),
+                                  tf.TensorSpec(shape=[None, ], dtype=tf.float32)])
     def inference(self,
                   input_ids,
                   attention_mask,
                   speaker_ids,
-                  duration_gts=None,
-                  speed_ratios=None):
+                  speed_ratios):
         """Call logic."""
         embedding_output = self.embeddings([input_ids, speaker_ids], training=False)
         encoder_output = self.encoder([embedding_output, attention_mask], training=False)
@@ -671,9 +674,6 @@ class TFFastSpeech(tf.keras.Model):
             speed_ratios = tf.convert_to_tensor(np.array([1.0]), dtype=tf.float32)
 
         duration_outputs = tf.cast(tf.math.round(duration_outputs * speed_ratios), tf.int32)
-
-        if duration_gts is not None:
-            duration_outputs = duration_gts
 
         length_regulator_outputs, encoder_masks = self.length_regulator([
             last_encoder_hidden_states, duration_outputs], training=False)

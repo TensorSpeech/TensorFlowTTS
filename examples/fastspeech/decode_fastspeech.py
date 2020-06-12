@@ -99,7 +99,7 @@ def main():
             char_ids,
             attention_mask=tf.math.not_equal(char_ids, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(char_ids)[0]]),
-            duration_gts=None
+            speed_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
         )
 
         # convert to numpy
