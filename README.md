@@ -196,7 +196,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py), [train_multiband_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/train_multiband_melgan.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). In the near future, we will implement MultiGPU for **BasedTrainer** class.
 
 # End-to-End Examples
-You can know how to inference each model at [notebooks](https://github.com/dathudeptrai/TensorflowTTS/tree/master/notebooks). Here is an example code for end2end inference with fastspeech and melgan.
+You can know how to inference each model at [notebooks](https://github.com/dathudeptrai/TensorflowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing). Here is an example code for end2end inference with fastspeech and melgan.
 
 ```python
 import numpy as np
@@ -241,7 +241,6 @@ masked_mel_before, masked_mel_after, duration_outputs = fastspeech.inference(
     ids,
     attention_mask=tf.math.not_equal(ids, 0),
     speaker_ids=tf.zeros(shape=[tf.shape(ids)[0]]),
-    duration_gts=None,
     speed_ratios=tf.constant([1.0], dtype=tf.float32)
 )
 
