@@ -7,7 +7,7 @@
     <a href="https://github.com/dathudeptrai/TensorflowTTS/blob/master/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/github/license/dathudeptrai/TensorflowTTS?color=red">
     </a>
-    <a href="https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing#scrollTo=_ChvXMc8mF7K">
+    <a href="https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing">
         <img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
     </a>
 </p>
