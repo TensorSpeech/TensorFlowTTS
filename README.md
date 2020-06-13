@@ -1,5 +1,16 @@
 <h2 align="center">
 <p> :yum: TensorflowTTS
+<p align="center">
+    <a href="https://github.com/dathudeptrai/TensorflowTTS/actions">
+        <img alt="Build" src="https://github.com/dathudeptrai/TensorflowTTS/workflows/CI/badge.svg?branch=master">
+    </a>
+    <a href="https://github.com/dathudeptrai/TensorflowTTS/blob/master/LICENSE">
+        <img alt="GitHub" src="https://img.shields.io/github/license/dathudeptrai/TensorflowTTS?color=red">
+    </a>
+    <a href="https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing#scrollTo=_ChvXMc8mF7K">
+        <img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
+    </a>
+</p>
 </h2>
 <h2 align="center">
 <p>Real-Time State-of-the-art Speech Synthesis for Tensorflow 2
