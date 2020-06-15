@@ -26,3 +26,5 @@ datasets
 *.npy
 ./*.wav
 *.yml
+Pipfile
+Pipfile.lock
