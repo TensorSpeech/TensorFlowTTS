@@ -36,6 +36,7 @@ requirements = {
         "unidecode>=1.1.1",
         "inflect>=4.1.0",
         "scikit-learn>=0.22.0",
+        "pyworld>=0.2.10"
     ],
     "setup": [
         "numpy",

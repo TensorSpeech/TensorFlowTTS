@@ -23,6 +23,7 @@ from pathos.multiprocessing import ProcessingPool as Pool
 import librosa
 import numpy as np
 import yaml
+import pyworld as pw
 
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
@@ -68,7 +69,7 @@ def logmelfilterbank(audio,
     fmax = sampling_rate / 2 if fmax is None else fmax
     mel_basis = librosa.filters.mel(sampling_rate, fft_size, num_mels, fmin, fmax)
 
-    return np.log10(np.maximum(eps, np.dot(spc, mel_basis.T)))
+    return np.log10(np.maximum(eps, np.dot(spc, mel_basis.T))), x_stft
 
 
 def main():
@@ -118,10 +119,14 @@ def main():
         os.makedirs(os.path.join(args.outdir, 'valid', 'raw-feats'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'valid', 'wavs'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'valid', 'ids'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid', 'raw-f0'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'valid', 'raw-energies'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train', 'raw-feats'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train', 'wavs'), exist_ok=True)
         os.makedirs(os.path.join(args.outdir, 'train', 'ids'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train', 'raw-f0'), exist_ok=True)
+        os.makedirs(os.path.join(args.outdir, 'train', 'raw-energies'), exist_ok=True)
 
     # train test split
     idx_train, idx_valid = train_test_split(
@@ -183,20 +188,33 @@ def main():
             hop_size = config["hop_size"] * config["sampling_rate_for_feats"] // rate
 
         # extract feature
-        mel = logmelfilterbank(x,
-                               sampling_rate=sampling_rate,
-                               hop_size=hop_size,
-                               fft_size=config["fft_size"],
-                               win_length=config["win_length"],
-                               window=config["window"],
-                               num_mels=config["num_mels"],
-                               fmin=config["fmin"],
-                               fmax=config["fmax"])
+        mel, x_stft = logmelfilterbank(x,
+                                       sampling_rate=sampling_rate,
+                                       hop_size=hop_size,
+                                       fft_size=config["fft_size"],
+                                       win_length=config["win_length"],
+                                       window=config["window"],
+                                       num_mels=config["num_mels"],
+                                       fmin=config["fmin"],
+                                       fmax=config["fmax"])
 
         # make sure the audio length and feature length
         audio = np.pad(audio, (0, config["fft_size"]), mode='edge')
         audio = audio[:len(mel) * config["hop_size"]]
+
+        # extract raw pitch
+        f0, _ = pw.dio(x.astype(np.double),
+                       fs=config["sampling_rate"],
+                       f0_ceil=config["fmax"],
+                       frame_period=1000 * config["hop_size"] / config["sampling_rate"])
+        f0 = f0[:len(mel)]
+
+        # extract energy
+        S = librosa.magphase(x_stft)[0]
+        energy = np.sqrt(np.sum(S ** 2, axis=0))
+
         assert len(mel) * config["hop_size"] == len(audio)
+        assert len(mel) == len(f0) == len(energy)
 
         # apply global gain
         if config["global_gain_scale"] > 0.0:
@@ -218,6 +236,10 @@ def main():
                     mel.astype(np.float32), allow_pickle=False)
             np.save(os.path.join(args.outdir, subdir, "ids", f"{utt_id}-ids.npy"),
                     text_ids.astype(np.int32), allow_pickle=False)
+            np.save(os.path.join(args.outdir, subdir, "raw-f0", f"{utt_id}-raw-f0.npy"),
+                    f0.astype(np.float32), allow_pickle=False)
+            np.save(os.path.join(args.outdir, subdir, "raw-energies", f"{utt_id}-raw-energy.npy"),
+                    energy.astype(np.float32), allow_pickle=False)
         else:
             raise ValueError("support only npy format.")
 

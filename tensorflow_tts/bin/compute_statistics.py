@@ -25,6 +25,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.datasets import MelDataset
+from tensorflow_tts.datasets import AudioDataset
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -70,6 +71,8 @@ def main():
     # get dataset
     if config["format"] == "npy":
         mel_query = "*-raw-feats.npy"
+        f0_query = "*-raw-f0.npy"
+        energy_query = "*-raw-energy.npy"
         mel_load_fn = np.load
     else:
         raise ValueError("Support only npy format.")
@@ -89,6 +92,48 @@ def main():
     # save to file
     stats = np.stack([scaler.mean_, scaler.scale_], axis=0)
     np.save(os.path.join(args.outdir, "stats.npy"), stats.astype(np.float32), allow_pickle=False)
+
+    # calculate statistic of f0
+    f0_dataset = AudioDataset(
+        args.rootdir,
+        audio_query=f0_query,
+        audio_load_fn=np.load,
+    ).create(batch_size=1)
+
+    max_f0 = -10e9
+    min_f0 = 10e9
+
+    for f0, f0_length in tqdm(f0_dataset):
+        f0 = f0[0].numpy()
+        if np.max(f0) > max_f0:
+            max_f0 = np.max(f0)
+
+        if np.min(f0) < min_f0:
+            min_f0 = np.min(f0)
+
+    # calculate statistic of energy
+    energy_dataset = AudioDataset(
+        args.rootdir,
+        audio_query=energy_query,
+        audio_load_fn=np.load,
+    ).create(batch_size=1)
+
+    max_e = -10e9
+    min_e = 10e9
+
+    for e, e_length in tqdm(energy_dataset):
+        e = e[0].numpy()
+        if np.max(e) > max_e:
+            max_e = np.max(e)
+
+        if np.min(e) < min_e:
+            min_e = np.min(e)
+
+    f0_stats = np.stack([min_f0, max_f0], axis=0)
+    np.save(os.path.join(args.outdir, "stats_f0.npy"), f0_stats.astype(np.float32), allow_pickle=False)
+
+    e_stats = np.stack([min_e, max_e], axis=0)
+    np.save(os.path.join(args.outdir, "stats_energy.npy"), e_stats.astype(np.float32), allow_pickle=False)
 
 
 if __name__ == "__main__":
