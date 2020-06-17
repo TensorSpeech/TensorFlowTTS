@@ -81,8 +81,8 @@ class FastSpeech2Trainer(FastSpeechTrainer):
 
     def _train_step(self, batch):
         """Train model one step."""
-        charactor, duration, f0, f0_quantize, energy, energy_quantize, mel = batch
-        self._one_step_fastspeech2(charactor, duration, f0, f0_quantize, energy, energy_quantize, mel)
+        charactor, duration, f0, energy, mel = batch
+        self._one_step_fastspeech2(charactor, duration, f0, energy, mel)
 
         # update counts
         self.steps += 1
@@ -93,27 +93,24 @@ class FastSpeech2Trainer(FastSpeechTrainer):
                  input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
-    def _one_step_fastspeech2(self, charactor, duration, f0, f0_quantize, energy, energy_quantize, mel):
+    def _one_step_fastspeech2(self, charactor, duration, f0, energy, mel):
         with tf.GradientTape() as tape:
             mel_before, mel_after, duration_outputs, f0_outputs, energy_outputs = self.model(
                 charactor,
                 attention_mask=tf.math.not_equal(charactor, 0),
                 speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
                 duration_gts=duration,
-                f0_gts=f0_quantize,
-                energy_gts=energy_quantize,
+                f0_gts=f0,
+                energy_gts=energy,
+                is_use_f0_energy=tf.cast((self.steps % self.config["delay_f0_energy_steps"] == 0), tf.float32),
                 training=True
             )
             log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
-            log_f0 = tf.math.log(tf.cast(tf.math.add(f0, 1e-5), tf.float32))
-            log_energy = tf.math.log(tf.cast(tf.math.add(energy, 1e-5), tf.float32))
             duration_loss = self.mse(log_duration, duration_outputs)
-            f0_loss = self.mse(log_f0, f0_outputs)
-            energy_loss = self.mse(log_energy, energy_outputs)
+            f0_loss = self.mse(f0, f0_outputs)
+            energy_loss = self.mse(energy, energy_outputs)
             mel_loss_before = self.mae(mel, mel_before)
             mel_loss_after = self.mae(mel, mel_after)
             loss = duration_loss + f0_loss + energy_loss + mel_loss_before + mel_loss_after
@@ -142,8 +139,8 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         # calculate loss for each batch
         for eval_steps_per_epoch, batch in enumerate(tqdm(self.eval_data_loader, desc="[eval]"), 1):
             # eval one step
-            charactor, duration, f0, f0_quantize, energy, energy_quantize, mel = batch
-            self._eval_step(charactor, duration, f0, f0_quantize, energy, energy_quantize, mel)
+            charactor, duration, f0, energy, mel = batch
+            self._eval_step(charactor, duration, f0, energy, mel)
 
             if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
                 # save intermedia
@@ -166,27 +163,23 @@ class FastSpeech2Trainer(FastSpeechTrainer):
                  input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
-    def _eval_step(self, charactor, duration, f0, f0_quantize, energy, energy_quantize, mel):
+    def _eval_step(self, charactor, duration, f0, energy, mel):
         """Evaluate model one step."""
         mel_before, mel_after, duration_outputs, f0_outputs, energy_outputs = self.model(
             charactor,
             attention_mask=tf.math.not_equal(charactor, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
             duration_gts=duration,
-            f0_gts=f0_quantize,
-            energy_gts=energy_quantize,
+            f0_gts=f0,
+            energy_gts=energy,
             training=False
         )
         log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
-        log_f0 = tf.math.log(tf.cast(tf.math.add(f0, 1e-5), tf.float32))
-        log_energy = tf.math.log(tf.cast(tf.math.add(energy, 1e-5), tf.float32))
         duration_loss = self.mse(log_duration, duration_outputs)
-        f0_loss = self.mse(log_f0, f0_outputs)
-        energy_loss = self.mse(log_energy, energy_outputs)
+        f0_loss = self.mse(f0, f0_outputs)
+        energy_loss = self.mse(energy, energy_outputs)
         mel_loss_before = self.mae(mel, mel_before)
         mel_loss_after = self.mae(mel, mel_after)
 
@@ -214,16 +207,15 @@ class FastSpeech2Trainer(FastSpeechTrainer):
                                   tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
-    def predict(self, charactor, duration, f0_quantize, energy_quantize, mel):
+    def predict(self, charactor, duration, f0, energy, mel):
         """Predict."""
-        mel_before, mel_after, _, _, _ = self.model(
+        mel_before, mel_after, _, _, _ = self.model.inference(
             charactor,
             attention_mask=tf.math.not_equal(charactor, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
-            duration_gts=duration,
-            f0_gts=f0_quantize,
-            energy_gts=energy_quantize,
-            training=False
+            speed_ratios=tf.constant(1.0),
+            f0_ratios=tf.constant(1.0),
+            energy_ratios=tf.constant(1.0)
         )
         return mel_before, mel_after
 
@@ -232,10 +224,10 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         import matplotlib.pyplot as plt
 
         # unpack input.
-        charactor, duration, _, f0_quantize, _, energy_quantize, mel = batch
+        charactor, duration, f0, energy, mel = batch
 
         # predict with tf.function.
-        masked_mel_before, masked_mel_after = self.predict(charactor, duration, f0_quantize, energy_quantize, mel)
+        masked_mel_before, masked_mel_after = self.predict(charactor, duration, f0, energy, mel)
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")

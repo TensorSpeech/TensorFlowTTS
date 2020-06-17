@@ -79,16 +79,16 @@ class TFFastSpeech2(TFFastSpeech):
         self.duration_predictor = TFFastSpeechVariantPredictor(config, name='duration_predictor')
 
         # define f0_embeddings and energy_embeddings
-        self.f0_embeddings = tf.keras.layers.Embedding(
-            config.max_f0_embeddings + 1,  # +1 for padding.
-            config.hidden_size,
-            embeddings_initializer=get_initializer(config.initializer_range),
+        self.f0_embeddings = tf.keras.layers.Conv1D(
+            filters=config.hidden_size,
+            kernel_size=9,
+            padding='same',
             name="f0_embeddings",
         )
-        self.energy_embeddings = tf.keras.layers.Embedding(
-            config.max_energy_embeddings + 1,  # +1 for padding
-            config.hidden_size,
-            embeddings_initializer=get_initializer(config.initializer_range),
+        self.energy_embeddings = tf.keras.layers.Conv1D(
+            filters=config.hidden_size,
+            kernel_size=9,
+            padding='same',
             name="energy_embeddings",
         )
 
@@ -99,29 +99,9 @@ class TFFastSpeech2(TFFastSpeech):
         attention_mask = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32)
         speaker_ids = tf.convert_to_tensor([0], tf.int32)
         duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32)
-        f0_gts = tf.convert_to_tensor([[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]], tf.int32)
-        energy_gts = tf.convert_to_tensor([[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]], tf.int32)
+        f0_gts = tf.convert_to_tensor([[10, 10, 10, 10, 10, 10, 10, 10, 10, 10]], tf.float32)
+        energy_gts = tf.convert_to_tensor([[10, 10, 10, 10, 10, 10, 10, 10, 10, 10]], tf.float32)
         self(input_ids, attention_mask, speaker_ids, duration_gts, f0_gts, energy_gts)
-
-    def setup_f0_stat(self, min_f0=0.0, max_f0=7600.0, max_f0_embeddings=256, log_scale=True):
-        """Setup min/max F0 for quantize."""
-        self.min_f0 = min_f0
-        self.max_f0 = max_f0
-        self.max_f0_embeddings = max_f0_embeddings
-
-        if log_scale is True:
-            self.min_f0 = np.log(self.min_f0 + 1e-5)
-            self.max_f0 = np.log(self.max_f0 + 1e-5)
-
-    def setup_energy_stat(self, min_energy, max_energy, max_energy_embeddings=256, log_scale=True):
-        """Setup min/max energy for quantize."""
-        self.min_energy = min_energy
-        self.max_energy = max_energy
-        self.max_energy_embeddings = max_energy_embeddings
-
-        if log_scale is True:
-            self.min_energy = np.log(self.min_energy + 1e-5)
-            self.max_energy = np.log(self.max_energy + 1e-5)
 
     def call(self,
              input_ids,
@@ -130,6 +110,7 @@ class TFFastSpeech2(TFFastSpeech):
              duration_gts,
              f0_gts,
              energy_gts,
+             is_use_f0_energy=tf.constant(1.0),
              training=False):
         """Call logic."""
         embedding_output = self.embeddings([input_ids, speaker_ids], training=training)
@@ -149,10 +130,16 @@ class TFFastSpeech2(TFFastSpeech):
         energy_outputs = self.energy_predictor(
             [length_regulator_outputs, encoder_masks], training=training)
 
-        f0_embedding = self.f0_embeddings(f0_gts)  # [barch_size, mel_length, feature]
-        energy_embedding = self.energy_embeddings(energy_gts)  # [barch_size, mel_length, feature]
+        f0_embedding = self.f0_embeddings(tf.expand_dims(f0_gts, 2))  # [barch_size, mel_length, feature]
+        energy_embedding = self.energy_embeddings(tf.expand_dims(energy_gts, 2))  # [barch_size, mel_length, feature]
 
         # sum features
+        # f0_energy_contrib_ratios is 0.0 or 1.0
+        # aim to decrease the affect of f0 and energy
+        # to a model. Just like apply dropout 0.5 for
+        # prev decoder steps in Tacotron-2.
+        f0_embedding *= is_use_f0_energy
+        energy_embedding *= is_use_f0_energy
         length_regulator_outputs = length_regulator_outputs + f0_embedding + energy_embedding
 
         # create decoder positional embedding
@@ -209,18 +196,9 @@ class TFFastSpeech2(TFFastSpeech):
         f0_outputs *= f0_ratios
         energy_outputs *= energy_ratios
 
-        # quantize f0 and energy to category
-        quantize_f0 = math_ops._bucketize(f0_outputs,
-                                          boundaries=list(np.linspace(self.min_f0,
-                                                                      self.max_f0,
-                                                                      self.max_f0_embeddings)))
-        quantize_energy = math_ops._bucketize(energy_outputs,
-                                              boundaries=list(np.linspace(self.min_energy,
-                                                                          self.max_energy,
-                                                                          self.max_energy_embeddings)))
-
-        f0_embedding = self.f0_embeddings(quantize_f0)  # [barch_size, mel_length, feature]
-        energy_embedding = self.energy_embeddings(quantize_energy)  # [barch_size, mel_length, feature]
+        f0_embedding = self.f0_embeddings(tf.expand_dims(f0_outputs, 2))  # [barch_size, mel_length, feature]
+        energy_embedding = self.energy_embeddings(tf.expand_dims(
+            energy_outputs, 2))  # [barch_size, mel_length, feature]
 
         # sum features
         length_regulator_outputs = length_regulator_outputs + f0_embedding + energy_embedding

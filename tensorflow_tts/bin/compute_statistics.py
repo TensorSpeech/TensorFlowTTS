@@ -27,6 +27,8 @@ from tqdm import tqdm
 from tensorflow_tts.datasets import MelDataset
 from tensorflow_tts.datasets import AudioDataset
 
+from tensorflow_tts.utils import remove_outlier
+
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
@@ -100,16 +102,18 @@ def main():
         audio_load_fn=np.load,
     ).create(batch_size=1)
 
-    max_f0 = -10e9
-    min_f0 = 10e9
-
+    pitch_vecs = []
     for f0, f0_length in tqdm(f0_dataset):
-        f0 = f0[0].numpy()
-        if np.max(f0) > max_f0:
-            max_f0 = np.max(f0)
+        f0 = f0[0].numpy()  # [T]
+        f0 = remove_outlier(f0)
+        pitch_vecs.append(f0)
+    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]]
+                               for v in pitch_vecs])
+    mean, std = np.mean(nonzeros), np.std(nonzeros)
 
-        if np.min(f0) < min_f0:
-            min_f0 = np.min(f0)
+    # save to file
+    stats = np.stack([mean, std], axis=0)
+    np.save(os.path.join(args.outdir, "stats_f0.npy"), stats.astype(np.float32), allow_pickle=False)
 
     # calculate statistic of energy
     energy_dataset = AudioDataset(
@@ -118,22 +122,18 @@ def main():
         audio_load_fn=np.load,
     ).create(batch_size=1)
 
-    max_e = -10e9
-    min_e = 10e9
-
+    energy_vecs = []
     for e, e_length in tqdm(energy_dataset):
         e = e[0].numpy()
-        if np.max(e) > max_e:
-            max_e = np.max(e)
+        e = remove_outlier(e)
+        energy_vecs.append(e)
+    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]]
+                               for v in energy_vecs])
+    mean, std = np.mean(nonzeros), np.std(nonzeros)
 
-        if np.min(e) < min_e:
-            min_e = np.min(e)
-
-    f0_stats = np.stack([min_f0, max_f0], axis=0)
-    np.save(os.path.join(args.outdir, "stats_f0.npy"), f0_stats.astype(np.float32), allow_pickle=False)
-
-    e_stats = np.stack([min_e, max_e], axis=0)
-    np.save(os.path.join(args.outdir, "stats_energy.npy"), e_stats.astype(np.float32), allow_pickle=False)
+    # save to file
+    stats = np.stack([mean, std], axis=0)
+    np.save(os.path.join(args.outdir, "stats_energy.npy"), stats.astype(np.float32), allow_pickle=False)
 
 
 if __name__ == "__main__":
