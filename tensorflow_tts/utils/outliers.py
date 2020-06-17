@@ -17,14 +17,14 @@ import numpy as np
 
 
 def is_outlier(x, p25, p75):
-    """Check if value is an outlier
-    """
+    """Check if value is an outlier."""
     lower = p25 - 1.5 * (p75 - p25)
     upper = p75 + 1.5 * (p75 - p25)
     return x <= lower or x >= upper
 
 
 def remove_outlier(x):
+    """Remove outlier from x."""
     p25 = np.percentile(x, 25)
     p75 = np.percentile(x, 75)
 
