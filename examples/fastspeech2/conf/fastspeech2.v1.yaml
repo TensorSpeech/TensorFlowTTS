@@ -32,11 +32,13 @@ fastspeech_params:
     initializer_range: 0.02
     output_attentions: False
     output_hidden_states: False
-    max_f0_embeddings: 256
-    max_energy_embeddings: 256
     f0_energy_predictor_filters: 256
     f0_energy_predictor_kernel_sizes: 3
     f0_energy_predictor_dropout_probs: 0.5
+    f0_kernel_size: 9
+    energy_kernel_size: 9
+    f0_dropout_rate: 0.5
+    energy_dropout_rate: 0.5
 
 ###########################################################
 #                  DATA LOADER SETTING                    #
@@ -64,7 +66,7 @@ train_max_steps: 200000               # Number of training steps.
 save_interval_steps: 5000             # Interval steps to save checkpoint.
 eval_interval_steps: 500              # Interval steps to evaluate the network.
 log_interval_steps: 200               # Interval steps to record the training log.
-delay_f0_energy_steps: 5              # 4 steps use LR outputs only then 1 steps LR + F0 + Energy.
+delay_f0_energy_steps: 3              # 2 steps use LR outputs only then 1 steps LR + F0 + Energy.
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################

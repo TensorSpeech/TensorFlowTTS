@@ -88,6 +88,10 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         self.steps += 1
         self.tqdm.update(1)
         self._check_train_finish()
+        self._apply_delay_using_f0_energy()
+
+    def _apply_delay_using_f0_energy(self):
+        self.model.is_use_f0_energy = tf.cast((self.steps % self.config["delay_f0_energy_steps"] == 0), tf.float32)
 
     @tf.function(experimental_relax_shapes=True,
                  input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
@@ -104,7 +108,6 @@ class FastSpeech2Trainer(FastSpeechTrainer):
                 duration_gts=duration,
                 f0_gts=f0,
                 energy_gts=energy,
-                is_use_f0_energy=tf.cast((self.steps % self.config["delay_f0_energy_steps"] == 0), tf.float32),
                 training=True
             )
             log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
@@ -136,6 +139,9 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         """Evaluate model one epoch."""
         logging.info(f"(Steps: {self.steps}) Start evaluation.")
 
+        # force to use f0/energy embedding when evaluation.
+        self.model.is_use_f0_energy = tf.constant(1.0)
+
         # calculate loss for each batch
         for eval_steps_per_epoch, batch in enumerate(tqdm(self.eval_data_loader, desc="[eval]"), 1):
             # eval one step
@@ -158,6 +164,7 @@ class FastSpeech2Trainer(FastSpeechTrainer):
 
         # reset
         self.reset_states_eval()
+        self.model.is_use_f0_energy = tf.constant(0.0)
 
     @tf.function(experimental_relax_shapes=True,
                  input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
@@ -209,13 +216,14 @@ class FastSpeech2Trainer(FastSpeechTrainer):
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
     def predict(self, charactor, duration, f0, energy, mel):
         """Predict."""
-        mel_before, mel_after, _, _, _ = self.model.inference(
+        mel_before, mel_after, _, _, _ = self.model(
             charactor,
             attention_mask=tf.math.not_equal(charactor, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
-            speed_ratios=tf.constant(1.0),
-            f0_ratios=tf.constant(1.0),
-            energy_ratios=tf.constant(1.0)
+            duration_gts=duration,
+            f0_gts=f0,
+            energy_gts=energy,
+            training=False
         )
         return mel_before, mel_after
 

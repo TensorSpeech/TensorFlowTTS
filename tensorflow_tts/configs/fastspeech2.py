@@ -21,15 +21,19 @@ class FastSpeech2Config(FastSpeechConfig):
     """Initialize FastSpeech2 Config."""
 
     def __init__(self,
-                 max_f0_embeddings,
-                 max_energy_embeddings,
+                 f0_kernel_size,
+                 energy_kernel_size,
+                 f0_dropout_rate,
+                 energy_dropout_rate,
                  f0_energy_predictor_filters,
                  f0_energy_predictor_kernel_sizes,
                  f0_energy_predictor_dropout_probs,
                  ** kwargs):
         super().__init__(**kwargs)
-        self.max_f0_embeddings = max_f0_embeddings
-        self.max_energy_embeddings = max_energy_embeddings
+        self.f0_kernel_size = f0_kernel_size
+        self.energy_kernel_size = energy_kernel_size
+        self.f0_dropout_rate = f0_dropout_rate
+        self.energy_dropout_rate = energy_dropout_rate
         self.f0_energy_predictor_filters = f0_energy_predictor_filters
         self.f0_energy_predictor_kernel_sizes = f0_energy_predictor_kernel_sizes
         self.f0_energy_predictor_dropout_probs = f0_energy_predictor_dropout_probs

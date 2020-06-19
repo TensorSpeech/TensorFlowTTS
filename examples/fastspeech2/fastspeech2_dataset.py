@@ -21,12 +21,31 @@ import itertools
 import numpy as np
 
 import tensorflow as tf
-from tensorflow.python.ops import math_ops
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 
 from tensorflow_tts.utils import find_files
 from tensorflow_tts.utils import remove_outlier
+
+
+def average_by_duration(x, durs):
+    mel_len = durs.sum()
+    durs_cum = np.cumsum(np.pad(durs, (1, 0)))
+
+    # calculate charactor f0/energy
+    x_char = np.zeros((durs.shape[0],), dtype=np.float32)
+    for idx, start, end in zip(range(mel_len), durs_cum[:-1], durs_cum[1:]):
+        values = x[start:end][np.where(x[start:end] != 0.0)[0]]
+        x_char[idx] = np.mean(values) if len(values) > 0 else 0.0  # np.mean([]) = nan.
+
+    return x_char.astype(np.float32)
+
+
+@tf.function(input_signature=[tf.TensorSpec(None, tf.float32),
+                              tf.TensorSpec(None, tf.int32)])
+def tf_average_by_duration(x, durs):
+    outs = tf.numpy_function(average_by_duration, [x, durs], tf.float32)
+    return outs
 
 
 class CharactorDurationF0EnergyMelDataset(AbstractDataset):
@@ -171,6 +190,10 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
 
             f0 = self._norm_mean_std(f0, self.f0_stat[0], self.f0_stat[1])
             energy = self._norm_mean_std(energy, self.energy_stat[0], self.energy_stat[1])
+
+            # calculate charactor f0/energy
+            f0 = tf_average_by_duration(f0, duration)
+            energy = tf_average_by_duration(energy, duration)
 
             if self.return_utt_id:
                 items = utt_id, charactor, duration, f0, energy, mel
