@@ -207,7 +207,11 @@ def main():
                        fs=config["sampling_rate"],
                        f0_ceil=config["fmax"],
                        frame_period=1000 * config["hop_size"] / config["sampling_rate"])
-        f0 = f0[:len(mel)]
+
+        if len(f0) >= len(mel):
+            f0 = f0[:len(mel)]
+        else:
+            f0 = np.pad(f0, ((0, len(mel) - len(f0))))
 
         # extract energy
         S = librosa.magphase(x_stft)[0]
