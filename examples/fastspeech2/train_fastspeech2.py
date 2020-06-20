@@ -211,8 +211,8 @@ class FastSpeech2Trainer(FastSpeechTrainer):
     @tf.function(experimental_relax_shapes=True,
                  input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
                                   tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
+                                  tf.TensorSpec([None, None], dtype=tf.float32),
+                                  tf.TensorSpec([None, None], dtype=tf.float32),
                                   tf.TensorSpec([None, None, 80], dtype=tf.float32)])
     def predict(self, charactor, duration, f0, energy, mel):
         """Predict."""
