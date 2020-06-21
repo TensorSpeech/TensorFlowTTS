@@ -28,6 +28,8 @@ from TFGENZOO.flows.utils.util import split_feature
 
 
 class Squeeze2D(FlowComponent):
+    """Squeeze2D module."""
+
     def __init__(self, with_zaux: bool = False):
         self.with_zaux = with_zaux
         super().__init__()
@@ -38,10 +40,12 @@ class Squeeze2D(FlowComponent):
         config.update(config_update)
         return config
 
-    def forward(
-        self, x: tf.Tensor, zaux: tf.Tensor = None, mask: tf.Tensor = None, **kwargs
-    ):
-        """
+    def forward(self,
+                x: tf.Tensor,
+                zaux: tf.Tensor = None,
+                mask: tf.Tensor = None,
+                **kwargs):
+        """ Forward logic.
         Args:
             x     (tf.Tensor): input tensor [B, T, C]
             zaux  (tf.Tensor): pre-latent tensor [B, T, C'']
@@ -60,10 +64,12 @@ class Squeeze2D(FlowComponent):
         else:
             return z
 
-    def inverse(
-        self, z: tf.Tensor, zaux: tf.Tensor = None, mask: tf.Tensor = None, **kwargs
-    ):
-        """
+    def inverse(self,
+                z: tf.Tensor,
+                zaux: tf.Tensor = None,
+                mask: tf.Tensor = None,
+                **kwargs):
+        """ Inverse logic.
         Args:
             z    (tf.Tensor): input tensor [B, T // 2, C * 2]
             zaux (tf.Tensor): pre-latent tensor [B, T // 2, C'' * 2]
@@ -84,6 +90,8 @@ class Squeeze2D(FlowComponent):
 
 
 class Inv1x1Conv2DWithMask(FlowComponent):
+    """Inv1x1Conv2DWithMask module."""
+
     def __init__(self, **kwargs):
         super().__init__()
 
@@ -105,7 +113,7 @@ class Inv1x1Conv2DWithMask(FlowComponent):
         return config
 
     def forward(self, x: tf.Tensor, mask: tf.Tensor = None, **kwargs):
-        """
+        """ Forward logic.
         Args:
             x    (tf.Tensor): base input tensor [B, T, C]
             mask (tf.Tensor): mask input tensor [B, T]
@@ -145,6 +153,7 @@ class Inv1x1Conv2DWithMask(FlowComponent):
         return z, log_det_jacobian
 
     def inverse(self, z: tf.Tensor, mask: tf.Tensor = None, **kwargs):
+        """Inverse Logic."""
         _, t, _ = z.shape
         W = self.W + tf.eye(self.c) * 1e-5
         _W = tf.reshape(tf.linalg.inv(W), [1, self.c, self.c])
@@ -169,7 +178,7 @@ class Inv1x1Conv2DWithMask(FlowComponent):
 
 
 class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
-    """Conditional Affine Coupling Layer with mask
+    """Conditional Affine Coupling Layer with mask.
 
     Sources:
         https://github.com/masa-su/pixyz/blob/master/pixyz/flows/coupling.py
@@ -216,7 +225,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
         super().build(input_shape)
 
     def forward(self, x: tf.Tensor, cond: tf.Tensor, mask: tf.Tensor = None, **kwargs):
-        """
+        """ Forward logic.
         Args:
             x    (tf.Tensor): base input tensor [B, T, C]
             cond (tf.Tensor): conditional input tensor [B, T, C']
@@ -258,6 +267,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
             raise NotImplementedError()
 
     def inverse(self, z: tf.Tensor, cond: tf.Tensor, mask: tf.Tensor = None, **kwargs):
+        """Inverse Logic."""
         z1, z2 = tf.split(z, 2, axis=-1)
         x1 = z1
         h = self.scale_shift_net([x1, cond], **filter_kwargs(kwargs))
@@ -320,7 +330,7 @@ class GTU(tf.keras.layers.Layer):
         return config
 
     def call(self, y: tf.Tensor, c: tf.Tensor, **kwargs):
-        """
+        """ Call logic.
         Args:
 
             y (tf.Tensor): input contents tensor [B, T, C]
@@ -338,7 +348,7 @@ class GTU(tf.keras.layers.Layer):
 
 
 def CouplingBlock(x: tf.Tensor, cond: tf.Tensor, depth, **kwargs):
-    """
+    """ CouplingBlock module.
     Args:
 
         x (tf.Tensor): input contents tensor [B, T, C]
@@ -414,6 +424,8 @@ def CouplingBlock(x: tf.Tensor, cond: tf.Tensor, depth, **kwargs):
 
 
 class Conv1DZeros(tf.keras.layers.Layer):
+    """"Conv1DZeros module."""
+
     def __init__(
         self,
         width_scale: int = 2,
@@ -466,7 +478,7 @@ class Conv1DZeros(tf.keras.layers.Layer):
 
 
 class FactorOutWithMask(FactorOutBase):
-    r"""Basic Factor Out Layer
+    """Basic Factor Out Layer.
 
     This layer drops factor-outed Tensor z_i
 
@@ -558,13 +570,12 @@ class FactorOutWithMask(FactorOutBase):
         return x, zaux, ll
 
     def inverse(
-        self,
-        z: tf.Tensor,
-        zaux: tf.Tensor = None,
-        mask=None,
-        temparature: float = 0.2,
-        **kwargs
-    ):
+            self,
+            z: tf.Tensor,
+            zaux: tf.Tensor = None,
+            mask=None,
+            temparature: float = 0.2,
+            **kwargs):
         if zaux is not None:
             new_z = zaux[..., -self.split_size:]
             zaux = zaux[..., : -self.split_size]
@@ -585,7 +596,7 @@ def build_flow_step(
     conditional_input: tf.keras.layers.Input,
     scale_type: str = "safe_exp",
 ):
-    """utility function to construct step-of-flow
+    """utility function to construct step-of-flow.
 
     Sources:
 
@@ -656,6 +667,8 @@ def build_flow_step(
 
 
 class FlowTTSDecoder(tf.keras.Model):
+    """FlowTTSDecoder module."""
+
     def __init__(self, hparams: Dict, **kwargs):
         super().__init__()
         self.hparams = hparams
@@ -707,17 +720,16 @@ class FlowTTSDecoder(tf.keras.Model):
         ]
 
     def call(
-        self,
-        x: tf.Tensor,
-        cond: tf.Tensor,
-        zaux: tf.Tensor = None,
-        mask: tf.Tensor = None,
-        inverse: bool = False,
-        training: bool = True,
-        temparature: float = 1.0,
-        **kwargs
-    ):
-        """
+            self,
+            x: tf.Tensor,
+            cond: tf.Tensor,
+            zaux: tf.Tensor = None,
+            mask: tf.Tensor = None,
+            inverse: bool = False,
+            training: bool = True,
+            temparature: float = 1.0,
+            **kwargs):
+        """ Call logic.
         Args:
            x       (tf.Tensor): base input tensor [B, T, C]
            cond    (tf.Tensor): conditional input tensor [B, T, C']
@@ -759,7 +771,7 @@ class FlowTTSDecoder(tf.keras.Model):
         temparature: float,
         **kwargs
     ):
-        """inverse function
+        """inverse function.
         latent -> object
         """
         inverse_log_det_jacobian = tf.zeros(tf.shape(x)[0:1])
@@ -787,10 +799,8 @@ class FlowTTSDecoder(tf.keras.Model):
                 inverse_log_det_jacobian += ildj
         return x, inverse_log_det_jacobian
 
-    def forward(
-        self, x: tf.Tensor, cond: tf.Tensor, training: bool, mask: tf.Tensor, **kwargs
-    ):
-        """forward function
+    def forward(self, x: tf.Tensor, cond: tf.Tensor, training: bool, mask: tf.Tensor, **kwargs):
+        """forward function.
         object -> latent
         """
         zaux = None
