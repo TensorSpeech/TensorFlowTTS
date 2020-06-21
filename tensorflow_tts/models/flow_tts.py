@@ -17,8 +17,8 @@ from typing import Dict
 
 import tensorflow as tf
 from TFGENZOO.flows import AffineCouplingMask
-from TFGENZOO.flows.cond_affine_coupling import (ConditionalAffineCoupling,
-                                                 filter_kwargs)
+from TFGENZOO.flows.cond_affine_coupling import ConditionalAffineCoupling
+from TFGENZOO.flows.cond_affine_coupling import filter_kwargs
 from TFGENZOO.flows.flowbase import ConditionalFlowModule
 from TFGENZOO.flows.flowbase import FactorOutBase
 from TFGENZOO.flows.flowbase import FlowComponent
@@ -45,7 +45,7 @@ class Squeeze2D(FlowComponent):
                 zaux: tf.Tensor = None,
                 mask: tf.Tensor = None,
                 **kwargs):
-        """ Forward logic.
+        """Forward logic.
         Args:
             x     (tf.Tensor): input tensor [B, T, C]
             zaux  (tf.Tensor): pre-latent tensor [B, T, C'']
@@ -292,7 +292,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
 
 
 class GTU(tf.keras.layers.Layer):
-    """GTU layer proposed in Flow-TTS.
+    """GTU layer proposed in FlowTTS.
 
     Notes:
 
@@ -330,14 +330,12 @@ class GTU(tf.keras.layers.Layer):
         return config
 
     def call(self, y: tf.Tensor, c: tf.Tensor, **kwargs):
-        """ Call logic.
+        """Call logic.
         Args:
-
             y (tf.Tensor): input contents tensor [B, T, C]
             c (tf.Tensor): input conditional tensor [B, T, C'] where C' can be different with C
 
         Returns:
-
             tf.Tensor: [B, T, C]
         """
 
@@ -348,7 +346,7 @@ class GTU(tf.keras.layers.Layer):
 
 
 def CouplingBlock(x: tf.Tensor, cond: tf.Tensor, depth, **kwargs):
-    """ CouplingBlock module.
+    """CouplingBlock module.
     Args:
 
         x (tf.Tensor): input contents tensor [B, T, C]
@@ -533,7 +531,7 @@ class FactorOutWithMask(FactorOutBase):
         return split_feature(h, "cross")
 
     def calc_ll(self, z1: tf.Tensor, z2: tf.Tensor, mask_tensor: tf.Tensor = None):
-        """
+        """Calculate log likelihood.
         Args:
            z1 (tf.Tensor): [B, T, C // 2]
            z2 (tf.Tensor): [B, T, C // 2]
@@ -591,12 +589,11 @@ class FactorOutWithMask(FactorOutBase):
 
 
 def build_flow_step(
-    step_num: int,
-    coupling_depth: int,
-    conditional_input: tf.keras.layers.Input,
-    scale_type: str = "safe_exp",
-):
-    """utility function to construct step-of-flow.
+        step_num: int,
+        coupling_depth: int,
+        conditional_input: tf.keras.layers.Input,
+        scale_type: str = "safe_exp"):
+    """Utility function to construct step-of-flow.
 
     Sources:
 
@@ -729,7 +726,7 @@ class FlowTTSDecoder(tf.keras.Model):
             training: bool = True,
             temparature: float = 1.0,
             **kwargs):
-        """ Call logic.
+        """Call logic.
         Args:
            x       (tf.Tensor): base input tensor [B, T, C]
            cond    (tf.Tensor): conditional input tensor [B, T, C']
@@ -762,15 +759,14 @@ class FlowTTSDecoder(tf.keras.Model):
             return self.forward(x, cond=cond, training=training, mask=mask, **kwargs)
 
     def inverse(
-        self,
-        x: tf.Tensor,
-        cond: tf.Tensor,
-        zaux: tf.Tensor,
-        training: bool,
-        mask: tf.Tensor,
-        temparature: float,
-        **kwargs
-    ):
+            self,
+            x: tf.Tensor,
+            cond: tf.Tensor,
+            zaux: tf.Tensor,
+            training: bool,
+            mask: tf.Tensor,
+            temparature: float,
+            **kwargs):
         """inverse function.
         latent -> object
         """
@@ -800,7 +796,7 @@ class FlowTTSDecoder(tf.keras.Model):
         return x, inverse_log_det_jacobian
 
     def forward(self, x: tf.Tensor, cond: tf.Tensor, training: bool, mask: tf.Tensor, **kwargs):
-        """forward function.
+        """Forward function.
         object -> latent
         """
         zaux = None

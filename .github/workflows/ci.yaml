@@ -42,7 +42,7 @@ jobs:
           sudo apt-get install libsndfile1-dev
       - name: Flake8
         run: |
-          flake8 tensorflow_tts --ignore W605,F401,H102,W504,H238,D104,H306,H405,D205,E371,E731,D105,D102,D402,D401,E306,F811,W503,E704,D107,D103
+          flake8 tensorflow_tts --ignore D202,D300,D301,D412,D400,H101,H404,D414,D210,H401,D403,W605,F401,H102,W504,H238,D104,H306,H405,D205,E371,E731,D105,D102,D402,D401,E306,F811,W503,E704,D107,D103
       - name: Pytest
         run: |
           pytest test
