@@ -1,19 +1,29 @@
-#!/usr/bin/env python3
-
-from typing import Tuple, Dict
-
-
-import numpy as np
+# -*- coding: utf-8 -*-
+# Copyright 2020 Mokke Meguru (@MokkeMeguru) Minh Nguyen (@dathudeptrai)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Flow-TTS model."""
+from typing import Dict
 
 import tensorflow as tf
-from TFGENZOO.flows import AffineCouplingMask, FactorOutBase
+from TFGENZOO.flows import AffineCouplingMask
 from TFGENZOO.flows.cond_affine_coupling import (ConditionalAffineCoupling,
                                                  filter_kwargs)
-from TFGENZOO.flows.flowbase import (ConditionalFlowModule, FactorOutBase,
-                                     FlowComponent)
+from TFGENZOO.flows.flowbase import ConditionalFlowModule
+from TFGENZOO.flows.flowbase import FactorOutBase
+from TFGENZOO.flows.flowbase import FlowComponent
 from TFGENZOO.flows.inv1x1conv import regular_matrix_init
 from TFGENZOO.flows.utils import gaussianize
-from TFGENZOO.flows.utils.conv_zeros import Conv2DZeros
 from TFGENZOO.flows.utils.util import split_feature
 
 
@@ -194,6 +204,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
            |
            | scale > 0 because exp(x) > 0
     """
+
     def build(self, input_shape: tf.TensorShape):
         self.reduce_axis = list(range(len(input_shape)))[1:]
         if self.scale_shift_net is None:
@@ -271,13 +282,12 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
 
 
 class GTU(tf.keras.layers.Layer):
-    """GTU layer proposed in Flow-TTS
+    """GTU layer proposed in Flow-TTS.
 
     Notes:
 
         * formula
             .. math::
-
                 z = tanh(W_{f, k} \star y) \odot sigmoid(W_{g, k} \star c)
     """
 
@@ -401,8 +411,6 @@ def CouplingBlock(x: tf.Tensor, cond: tf.Tensor, depth, **kwargs):
     y = conv1x1_2(y)
     model = tf.keras.Model([x, c], y)
     return model
-
-
 
 
 class Conv1DZeros(tf.keras.layers.Layer):
@@ -539,7 +547,7 @@ class FactorOutWithMask(FactorOutBase):
             mask_tensor = None
         with tf.name_scope("split"):
             new_z = x[..., : self.split_size]
-            x = x[..., self.split_size :]
+            x = x[..., self.split_size:]
 
         ll = self.calc_ll(x, new_z, mask_tensor=mask_tensor)
 
@@ -558,7 +566,7 @@ class FactorOutWithMask(FactorOutBase):
         **kwargs
     ):
         if zaux is not None:
-            new_z = zaux[..., -self.split_size :]
+            new_z = zaux[..., -self.split_size:]
             zaux = zaux[..., : -self.split_size]
         else:
             # TODO: sampling test

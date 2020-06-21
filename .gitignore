@@ -21,10 +21,8 @@ coverage.xml*
 .vscode*
 .nfs*
 .ipynb_checkpoints
-datasets
+ljspeech
 *.h5
 *.npy
 ./*.wav
 *.yml
-Pipfile
-Pipfile.lock
