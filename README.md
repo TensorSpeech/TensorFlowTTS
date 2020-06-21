@@ -16,9 +16,10 @@
 <p>Real-Time State-of-the-art Speech Synthesis for Tensorflow 2
 </h2>
 
-:zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2-Tensorflow, Melgan-Tensorflow, Multiband-Melgan-Tensorflow, FastSpeech-Tensorflow based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems. 
+:zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems. 
 
 ## What's new
+- 2020/06/20 **(New!)** [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
 - 2020/06/07 **(New!)** [Multi-band MelGAN (MB MelGAN)](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported. 
 
 
@@ -60,6 +61,7 @@ TensorflowTTS currently  provides the following architectures:
 2. **Tacotron-2** released with the paper [Natural TTS Synthesis by Conditioning WaveNet on Mel Spectrogram Predictions](https://arxiv.org/abs/1712.05884) by Jonathan Shen, Ruoming Pang, Ron J. Weiss, Mike Schuster, Navdeep Jaitly, Zongheng Yang, Zhifeng Chen, Yu Zhang, Yuxuan Wang, RJ Skerry-Ryan, Rif A. Saurous, Yannis Agiomyrgiannakis, Yonghui Wu.
 3. **FastSpeech** released with the paper [FastSpeech: Fast, Robust and Controllable Text to Speech](https://arxiv.org/abs/1905.09263) by Yi Ren, Yangjun Ruan, Xu Tan, Tao Qin, Sheng Zhao, Zhou Zhao, Tie-Yan Liu.
 4. **Multi-band MelGAN** released with the paper [Multi-band MelGAN: Faster Waveform Generation for High-Quality Text-to-Speech](https://arxiv.org/abs/2005.05106) by Geng Yang, Shan Yang, Kai Liu, Peng Fang, Wei Chen, Lei Xie.
+5. **FastSpeech2** released with the paper [FastSpeech 2: Fast and High-Quality End-to-End Text to Speech](https://arxiv.org/abs/2006.04558) by Yi Ren, Chenxu Hu, Xu Tan, Tao Qin, Sheng Zhao, Zhou Zhao, Tie-Yan Liu.
 
 We are also implement some techniques to improve quality and convergence speed from following papers:
 
@@ -69,7 +71,7 @@ We are also implement some techniques to improve quality and convergence speed f
 
 
 # Audio Samples
-Here in an audio samples on valid set. [tacotron-2](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b)
+Here in an audio samples on valid set. [tacotron-2](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b), [fastspeech2](https://drive.google.com/drive/u/1/folders/1NG7oOfNuXSh7WyAoM1hI8P5BxDALY_mU)
 
 # Tutorial End-to-End
 
@@ -118,6 +120,12 @@ After preprocessing, a structure of project will become:
 |       |- raw-feats/
 |           |- LJ001-0001-raw-feats.npy
 |           |- ...
+|       |- raw-f0/
+|           |- LJ001-0001-raw-f0.npy
+|           |- ...
+|       |- raw-energies/
+|           |- LJ001-0001-raw-energy.npy
+|           |- ...
 |       |- norm-feats/
 |           |- LJ001-0001-norm-feats.npy
 |           |- ...
@@ -131,6 +139,12 @@ After preprocessing, a structure of project will become:
 |       |- raw-feats/
 |           |- LJ001-0009-raw-feats.npy
 |           |- ...
+|       |- raw-f0/
+|           |- LJ001-0001-raw-f0.npy
+|           |- ...
+|       |- raw-energies/
+|           |- LJ001-0001-raw-energy.npy
+|           |- ...
 |       |- norm-feats/
 |           |- LJ001-0009-norm-feats.npy
 |           |- ...
@@ -138,6 +152,8 @@ After preprocessing, a structure of project will become:
 |           |- LJ001-0009-wave.npy
 |           |- ...
 |   |- stats.npy/ 
+|   |- stats_f0.npy/ 
+|   |- stats_energy.npy/ 
 |   |- train_utt_ids.npy
 |   |- valid_utt_ids.npy
 |- examples/
@@ -147,7 +163,7 @@ After preprocessing, a structure of project will become:
 |   ...
 ```
 
-Where stats.npy contains mean/var of train melspectrogram (we can use mean/var to de-normalization to get melspectrogram raw), train_utt_ids/valid_utt_ids contains training and valid utt ids respectively. We use suffix (ids, raw-feats, norm-feats, wave) for each type of input. 
+Where stats.npy contains mean/var of train melspectrogram (we can use mean/var to de-normalization to get melspectrogram raw), stats_energy.npy is a min/max value of energy values over **Training** dataset, stats_f0 is a min/max value of F0 values, train_utt_ids/valid_utt_ids contains training and valid utt ids respectively. We use suffix (ids, raw-feats, norm-feats, wave) for each type of input.
 
 **IMPORTANT NOTES**:
 - This preprocessing step based-on [ESP-NET](https://github.com/espnet/espnet) so you can combine all models here with other models from espnet repo.
@@ -158,6 +174,7 @@ To know how to training model from scratch or fine-tune with other datasets/lang
 
 - For Tacotron-2 tutorial, pls see [example/tacotron2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron2)
 - For FastSpeech tutorial, pls see [example/fastspeech](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech)
+- For FastSpeech2 tutorial, pls see [example/fastspeech2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech2)
 - For MelGAN tutorial, pls see [example/melgan](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan)
 - For MelGAN + STFT Loss tutorial, pls see [example/melgan.stft](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan.stft)
 - For Multiband-MelGAN tutorial, pls see [example/multiband_melgan](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan)
