@@ -274,7 +274,7 @@ sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
 [dathudeptrai](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com
 
 # License
-This work is licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+Overrall, Almost models here are licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) for all countries in the world, except in **Viet Nam** this framework cannot be used for production in any way without permission from TensorflowTTS's Authors. There is an exception, Tacotron-2 can be used with any perpose. So, if you are VietNamese and want to use this framework for production, you **Must** contact our in andvance.
 
 # Acknowledgement
 We would like to thank [Tomoki Hayashi](https://github.com/kan-bayashi), who discussed with our much about Melgan, Multi-band melgan, Fastspeech and Tacotron. This framework based-on his great open-source [ParallelWaveGan](https://github.com/kan-bayashi/ParallelWaveGAN) project. 
