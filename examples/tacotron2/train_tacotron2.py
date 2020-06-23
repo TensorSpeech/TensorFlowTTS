@@ -403,10 +403,6 @@ def main():
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
     config["version"] = tensorflow_tts.__version__
-    with open(os.path.join(args.outdir, "config.yml"), "w") as f:
-        yaml.dump(config, f, Dumper=yaml.Dumper)
-    for key, value in config.items():
-        logging.info(f"{key} = {value}")
 
     # get dataset
     if config["remove_short_samples"]:
@@ -431,10 +427,19 @@ def main():
         mel_length_threshold=mel_length_threshold,
         return_utt_id=False,
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
-        use_fixed_shapes=config["use_fixed_shapes"],
-        max_char_length=config["max_char_length"],
-        max_mel_length=config["max_mel_length"]
-    ).create(
+        use_fixed_shapes=config["use_fixed_shapes"]
+    )
+
+    # update max_mel_length and max_char_length to config
+    config.update({"max_mel_length": int(train_dataset.max_mel_length)})
+    config.update({"max_char_length": int(train_dataset.max_char_length)})
+
+    with open(os.path.join(args.outdir, "config.yml"), "w") as f:
+        yaml.dump(config, f, Dumper=yaml.Dumper)
+    for key, value in config.items():
+        logging.info(f"{key} = {value}")
+
+    train_dataset = train_dataset.create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
         batch_size=config["batch_size"]
@@ -456,7 +461,8 @@ def main():
         batch_size=config["batch_size"]
     )
 
-    tacotron2 = TFTacotron2(config=Tacotron2Config(**config["tacotron2_params"]), training=True, name='tacotron2')
+    tacotron_config = Tacotron2Config(**config["tacotron2_params"])
+    tacotron2 = TFTacotron2(config=tacotron_config, training=True, name='tacotron2')
     tacotron2._build()
     tacotron2.summary()
 

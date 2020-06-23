@@ -16,7 +16,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/train_tacotron2.py \
   --dev-dir ./dump/valid/ \
   --outdir ./examples/tacotron2/exp/train.tacotron2.v1/ \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
-  --use-norm 1
+  --use-norm 1 \
   --mixed_precision 0 \
   --resume ""
 ```
@@ -27,8 +27,8 @@ To running inference on folder ids (charactor), run below command line:
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/decode_tacotron2.py \
   --rootdir ./dump/valid/ \
-  --outdir ./prediction/tacotron2-65k/ \
-  --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-65000.h5 \
+  --outdir ./prediction/tacotron2-120k/ \
+  --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-120000.h5 \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --batch-size 32
 ```
@@ -68,19 +68,12 @@ You also can download my extracted durations at 40k steps at [link](https://driv
 Here is an example show you how to use pretrained ljspeech to training with other languages. This does not guarantee a better model or faster convergence in all cases but it will improve if there is a correlation between target language and pretrained language. The only thing you need to do before finetune on other languages is re-define embedding layers. You can do it by following code:
 
 ```bash
-pretrained_config = ...
-tacotron2 = TFTacotron2(pretrained_config, training=True, name='tacotron2')
+tacotron_config = Tacotron2Config(**config["tacotron2_params"])
+tacotron_config.vocab_size = NEW_VOCAB_SIZE
+tacotron2 = TFTacotron2(config=tacotron_config, training=True, name='tacotron2')
 tacotron2._build()
 tacotron2.summary()
-tacotron2.load_weights(PRETRAINED_PATH)
-
-# re-define here
-pretrained_config.vocab_size = NEW_VOCAB_SIZE
-new_embedding_layers = TFTacotronEmbeddings(pretrained_config, name='embeddings')
-tacotron2.encoder.embeddings = new_embedding_layers
-# re-build model
-tacotron2._build()
-tacotron2.summary()
+tacotron2.load_weights("./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-120000.h5", by_name=True, skip_mismatch=True)
 
 ... # training as normal.
 ```
@@ -99,12 +92,11 @@ Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https:/
 * This implementation use guided attention by default to help a model learn diagonal alignment faster. After 15-20k, you can disble alignment loss.
 * Relu activation function is still a best compared with mish and others.
 * Support window masking for inference, solve problem with very long sentences.
-* 65k steps is enough to get a best checkpoint.
+* The model convergence at around 100k steps.
 * Scheduled teacher forcing is supported but training with teacher forcing give a best performance based on my experiments. You need to be aware of the importance of applying high dropout for prenet (both training and inference), this will reduce the effect of prev mel, so in an inference stage, a noise of prev mel prediction won't affect too much to a current decoder.
 * If an amplitude levels of synthesis audio is lower compared to original speech, you may need multiply mel predicted to global gain constant (eg 1.2).
 * Apply input_signature for tacotron make training slower, don't know why, so only use experimental_relax_shapes = True.
-* It's funny but training with fixed char_len (200) and mel_len (870) is 2x faster than dynamic shape even it's redundant.
-* Data loader calculate guided_attention matrix on the fly so maybe it's slow to compute and cache, consider to pre-calculate it and save into feature folder then load.
+* It's funny but training with fixed char_len (200) and mel_len (870) is 2x faster than dynamic shape even it's redundant. But i'm not sure because there is a man report that dynamic shape is faster, pls refer [comment](https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118), you may need to try both **use_fixed_shapes** is True and False to check by yourself 😅.
 
 ## Pretrained Models and Audio samples
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters | reduction factor|

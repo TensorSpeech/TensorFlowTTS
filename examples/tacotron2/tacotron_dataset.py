@@ -68,8 +68,6 @@ class CharactorMelDataset(AbstractDataset):
                  ga_pad_value=-1.0,
                  g=0.2,
                  use_fixed_shapes=False,
-                 max_char_length=190,
-                 max_mel_length=870,
                  ):
         """Initialize dataset.
 
@@ -162,8 +160,8 @@ class CharactorMelDataset(AbstractDataset):
         self.ga_pad_value = ga_pad_value
         self.g = g
         self.use_fixed_shapes = use_fixed_shapes
-        self.max_char_length = max_char_length
-        self.max_mel_length = max_mel_length
+        self.max_char_length = np.max(char_lengths) + 1  # +1 for eos
+        self.max_mel_length = np.max(mel_lengths) + self.reduction_factor - np.max(mel_lengths) % self.reduction_factor
 
     def get_args(self):
         return [self.utt_ids]
