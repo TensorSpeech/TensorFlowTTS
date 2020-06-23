@@ -51,13 +51,31 @@ class TFFastSpeechVariantPredictor(tf.keras.layers.Layer):
         self.conv_layers_sequence = tf.keras.Sequential(self.conv_layers)
         self.output_layer = tf.keras.layers.Dense(1)
 
+        if config.n_speakers > 1:
+            self.decoder_speaker_embeddings = tf.keras.layers.Embedding(
+                config.n_speakers,
+                config.hidden_size,
+                embeddings_initializer=get_initializer(config.initializer_range),
+                name="speaker_embeddings"
+            )
+            self.speaker_fc = tf.keras.layers.Dense(units=config.hidden_size, name='speaker_fc')
+
+        self.config = config
+
     def call(self, inputs, training=False):
         """Call logic."""
-        encoder_hidden_states, attention_mask = inputs
+        encoder_hidden_states, speaker_ids, attention_mask = inputs
         attention_mask = tf.cast(tf.expand_dims(attention_mask, 2), tf.float32)
 
+        if self.config.n_speakers > 1:
+            speaker_embeddings = self.decoder_speaker_embeddings(speaker_ids)
+            speaker_features = tf.math.softplus(self.speaker_fc(speaker_embeddings))
+            # extended speaker embeddings
+            extended_speaker_features = speaker_features[:, tf.newaxis, :]
+            encoder_hidden_states += extended_speaker_features
+
         # mask encoder hidden states
-        masked_encoder_hidden_states = encoder_hidden_states
+        masked_encoder_hidden_states = encoder_hidden_states * attention_mask
 
         # pass though first layer
         outputs = self.conv_layers_sequence(masked_encoder_hidden_states)
@@ -123,12 +141,13 @@ class TFFastSpeech2(TFFastSpeech):
 
         # energy predictor, here use last_encoder_hidden_states, u can use more hidden_states layers
         # rather than just use last_hidden_states of encoder for energy_predictor.
-        duration_outputs = self.duration_predictor([last_encoder_hidden_states, attention_mask])  # [batch_size, length]
+        duration_outputs = self.duration_predictor(
+            [last_encoder_hidden_states, speaker_ids, attention_mask])  # [batch_size, length]
 
         f0_outputs = self.f0_predictor(
-            [last_encoder_hidden_states, attention_mask], training=training)
+            [last_encoder_hidden_states, speaker_ids, attention_mask], training=training)
         energy_outputs = self.energy_predictor(
-            [last_encoder_hidden_states, attention_mask], training=training)
+            [last_encoder_hidden_states, speaker_ids, attention_mask], training=training)
 
         f0_embedding = self.f0_embeddings(tf.expand_dims(f0_gts, 2))  # [barch_size, mel_length, feature]
         energy_embedding = self.energy_embeddings(tf.expand_dims(energy_gts, 2))  # [barch_size, mel_length, feature]
@@ -185,16 +204,17 @@ class TFFastSpeech2(TFFastSpeech):
 
         # energy predictor, here use last_encoder_hidden_states, u can use more hidden_states layers
         # rather than just use last_hidden_states of encoder for energy_predictor.
-        duration_outputs = self.duration_predictor([last_encoder_hidden_states, attention_mask])  # [batch_size, length]
+        duration_outputs = self.duration_predictor(
+            [last_encoder_hidden_states, speaker_ids, attention_mask])  # [batch_size, length]
         duration_outputs = tf.math.exp(duration_outputs) - 1.0
         duration_outputs = tf.cast(tf.math.round(duration_outputs * speed_ratios), tf.int32)
 
         f0_outputs = self.f0_predictor(
-            [last_encoder_hidden_states, attention_mask], training=False)
+            [last_encoder_hidden_states, speaker_ids, attention_mask], training=False)
         f0_outputs *= f0_ratios
 
         energy_outputs = self.energy_predictor(
-            [last_encoder_hidden_states, attention_mask], training=False)
+            [last_encoder_hidden_states, speaker_ids, attention_mask], training=False)
         energy_outputs *= energy_ratios
 
         f0_embedding = self.f0_dropout(self.f0_embeddings(tf.expand_dims(f0_outputs, 2)), training=True)
