@@ -13,26 +13,129 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Flow-TTS model."""
+import numpy as np
+
 from typing import Dict
+from typing import Tuple
 
 import tensorflow as tf
+
+from tensorflow_tts.models.tacotron2 import TFTacotronEncoder
+from tensorflow_tts.models.fastspeech2 import TFFastSpeechVariantPredictor
+from tensorflow_tts.models.fastspeech import get_initializer
+from tensorflow_tts.models.fastspeech import TFFastSpeechSelfAttention
+
 from TFGENZOO.flows import AffineCouplingMask
 from TFGENZOO.flows.cond_affine_coupling import ConditionalAffineCoupling
 from TFGENZOO.flows.cond_affine_coupling import filter_kwargs
 from TFGENZOO.flows.flowbase import ConditionalFlowModule
 from TFGENZOO.flows.flowbase import FactorOutBase
 from TFGENZOO.flows.flowbase import FlowComponent
-from TFGENZOO.flows.inv1x1conv import regular_matrix_init
 from TFGENZOO.flows.utils import gaussianize
 from TFGENZOO.flows.utils.util import split_feature
+
+
+def regular_matrix_init(shape: Tuple[int, int], dtype=None):
+    """initialize with orthogonal matrix
+
+    Sources:
+        https://github.com/openai/glow/blob/master/model.py#L445-L451
+
+    Args:
+        shape: generated matrix's shape [C, C]
+        dtype:
+
+    Returns:
+       np.array: w_init, orthogonal matrix [C, C]
+
+    """
+    assert len(shape) == 2, "this initialization for 2D matrix"
+    assert shape[0] == shape[1], "this initialization for 2D matrix, C \times C"
+    c = shape[0]
+    w_init = np.linalg.qr(np.random.randn(c, c))[0].astype("float32")
+    if np.linalg.det(w_init) < 0:
+        w_init[:, 0] = -1 * w_init[:, 0]
+    return w_init
+
+
+class TFFlowTTSEncoder(TFTacotronEncoder):
+    """Flow-TTS Encoder."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+
+
+class TFFlowTTSLengthPredictor(TFFastSpeechVariantPredictor):
+    """Flow-TTS length predictor."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+
+    def call(self, inputs, training=False):
+        """Call logic."""
+        outputs = super().call(inputs, training=training)
+        outputs = tf.nn.relu(outputs)
+        outputs = tf.math.reduce_sum(outputs, axis=-1)  # [B]
+        return outputs
+
+
+class TFFlowTTSAttentionPositional(TFFastSpeechSelfAttention):
+    """Attention Positional module for flow-tts."""
+
+    def __init__(self, config, **kwargs):
+        """Init variables."""
+        super().__init__(config, **kwargs)
+        self.query = tf.keras.layers.Embedding(
+            config.max_position_embeddings,
+            config.hidden_size,
+            embeddings_initializer=get_initializer(config.initializer_range),
+            name="query"
+        )
+
+    def call(self, inputs, training=False):
+        """Call logic."""
+        hidden_states, decoder_positional, attention_mask = inputs
+
+        batch_size = tf.shape(hidden_states)[0]
+        mixed_key_layer = self.key(hidden_states)  # [B, char_length, F]
+        mixed_query_layer = self.query(decoder_positional)  # [B, mel_length, F]
+        mixed_value_layer = self.value(hidden_states)  # [B, char_length, F]
+
+        query_layer = self.transpose_for_scores(mixed_query_layer, batch_size)
+        key_layer = self.transpose_for_scores(mixed_key_layer, batch_size)
+        value_layer = self.transpose_for_scores(mixed_value_layer, batch_size)
+
+        attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)  # [B, n_head, mel_len, char_len]
+        dk = tf.cast(tf.shape(key_layer)[-1], tf.float32)  # scale attention_scores
+        attention_scores = attention_scores / tf.math.sqrt(dk)
+
+        if attention_mask is not None:
+            # extended_attention_masks for self attention encoder.
+            extended_attention_mask = attention_mask[:, tf.newaxis, tf.newaxis, :]
+            extended_attention_mask = tf.cast(extended_attention_mask, tf.float32)
+            extended_attention_mask = (1.0 - extended_attention_mask) * -1e9
+            attention_scores = attention_scores + extended_attention_mask
+
+        # Normalize the attention scores to probabilities.
+        attention_probs = tf.nn.softmax(attention_scores, axis=-1)
+        attention_probs = self.dropout(attention_probs, training=training)
+
+        context_layer = tf.matmul(attention_probs, value_layer)
+        context_layer = tf.transpose(context_layer, perm=[0, 2, 1, 3])
+        context_layer = tf.reshape(
+            context_layer, (batch_size, -1, self.all_head_size)
+        )  # [B, mel_len, F]
+
+        outputs = (context_layer, attention_probs) if self.output_attentions else (context_layer,)
+        return outputs
 
 
 class Squeeze2D(FlowComponent):
     """Squeeze2D module."""
 
-    def __init__(self, with_zaux: bool = False):
+    def __init__(self, with_zaux: bool = False, **kwargs):
         self.with_zaux = with_zaux
-        super().__init__()
+        super().__init__(**kwargs)
 
     def get_config(self):
         config = super().get_config()
@@ -42,61 +145,89 @@ class Squeeze2D(FlowComponent):
 
     def forward(self,
                 x: tf.Tensor,
+                n_squeeze: int = 2,
                 zaux: tf.Tensor = None,
                 mask: tf.Tensor = None,
                 **kwargs):
         """Forward logic.
         Args:
-            x     (tf.Tensor): input tensor [B, T, C]
-            zaux  (tf.Tensor): pre-latent tensor [B, T, C'']
-            mask  (tf.Tensor): mask tensor [B, T]
+            x         (tf.Tensor): input tensor [B, T, C]
+            n_squeeze       (int): n_queeze
+            zaux      (tf.Tensor): pre-latent tensor [B, T, C'']
+            mask      (tf.Tensor): mask tensor [B, T, 1]
         Returns:
-            tf.Tensor: reshaped input tensor [B, T // 2, C * 2]
-            tf.Tensor: reshaped pre-latent tensor [B, T // 2, C'' * 2]
-            tf.Tensor: reshaped mask tensor [B, T // 2]
+            tf.Tensor: reshaped input tensor [B, T // n_squeeze, C * n_squeeze]
+            tf.Tensor: reshaped mask tensor [B, T // n_squeeze]
+            tf.Tensor: reshaped pre-latent tensor [B, T // n_squeeze, C'' * n_squeeze]
         """
-        _, t, c = x.shape
-        z = tf.reshape(tf.reshape(x, [-1, t // 2, 2, c]), [-1, t // 2, c * 2])
+        b, t, c = x.shape
+
+        t = (t // n_squeeze) * n_squeeze
+        x = x[:, :t, :]  # [B, t_round, c]
+
+        z = tf.reshape(tf.reshape(x, [-1, t // n_squeeze, n_squeeze, c]),
+                       [-1, t // n_squeeze, c * n_squeeze])
+
+        if mask is not None:
+            z_mask = mask[:, n_squeeze - 1::n_squeeze, :]
+            z_mask = tf.cast(z_mask, x.dtype)
+        else:
+            z_mask = tf.ones((b, t // n_squeeze, 1), dtype=x.dtype)
+
         if zaux is not None:
             _, t, c = zaux.shape
-            zaux = tf.reshape(tf.reshape(zaux, [-1, t // 2, 2, c]), [-1, t // 2, c * 2])
-            return z, zaux
+            zaux = tf.reshape(tf.reshape(zaux, [-1, t // n_squeeze, n_squeeze, c]),
+                              [-1, t // n_squeeze, c * n_squeeze])
+            return z * z_mask, z_mask, zaux
         else:
-            return z
+            return z * z_mask, z_mask
 
     def inverse(self,
                 z: tf.Tensor,
+                n_squeeze: int = 2,
                 zaux: tf.Tensor = None,
                 mask: tf.Tensor = None,
                 **kwargs):
         """ Inverse logic.
         Args:
-            z    (tf.Tensor): input tensor [B, T // 2, C * 2]
-            zaux (tf.Tensor): pre-latent tensor [B, T // 2, C'' * 2]
-            mask (tf.Tensor): pre-latent tensor [B, T // 2]
+            z         (tf.Tensor): input tensor [B, T // 2, C * 2]
+            n_squeeze       (int): n_queeze
+            zaux      (tf.Tensor): pre-latent tensor [B, T // 2, C'' * 2]
+            mask      (tf.Tensor): pre-latent tensor [B, T // 2, 1]
         Returns:
             tf.Tensor: reshaped input tensor [B, T, C]
             tf.Tensor: reshaped pre-latent tensor [B, T, C'']
             tf.Tensor: mask tensor [B, T]
         """
-        _, t, c = z.shape
-        x = tf.reshape(tf.reshape(z, [-1, t, 2, c // 2]), [-1, t * 2, c // 2])
+        b, t, c = z.shape
+        x = tf.reshape(tf.reshape(z, [-1, t, n_squeeze, c // n_squeeze]),
+                       [-1, t * n_squeeze, c // n_squeeze])
+
+        if mask is not None:
+            x_mask = tf.expand_dims(mask, -1)  # [B, T, 1, 1]
+            x_mask = tf.tile(x_mask, [1, 1, 1, n_squeeze])
+            x_mask = tf.reshape(x_mask, (b, t * n_squeeze, 1))
+            x_mask = tf.cast(x_mask, dtype=x.dtype)
+        else:
+            x_mask = tf.ones((b, t * n_squeeze, 1), dtype=x.dtype)
+
         if zaux is not None:
             _, t, c = zaux.shape
-            zaux = tf.reshape(tf.reshape(zaux, [-1, t, 2, c // 2]), [-1, t * 2, c // 2])
-            return x, zaux
+            zaux = tf.reshape(tf.reshape(zaux, [-1, t, n_squeeze, c // n_squeeze]),
+                              [-1, t * n_squeeze, c // n_squeeze])
+            return x * x_mask, x_mask, zaux
         else:
-            return x
+            return x * x_mask, x_mask
 
 
 class Inv1x1Conv2DWithMask(FlowComponent):
     """Inv1x1Conv2DWithMask module."""
 
     def __init__(self, **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
 
     def build(self, input_shape: tf.TensorShape):
-        _, t, c = input_shape
+        _, _, c = input_shape
         self.c = c
         self.W = self.add_weight(
             name="W",
@@ -116,18 +247,10 @@ class Inv1x1Conv2DWithMask(FlowComponent):
         """ Forward logic.
         Args:
             x    (tf.Tensor): base input tensor [B, T, C]
-            mask (tf.Tensor): mask input tensor [B, T]
-
+            mask (tf.Tensor): maskW
         Returns:
             z    (tf.Tensor): latent variable tensor [B, T, C]
             ldj  (tf.Tensor): log det jacobian [B]
-
-        Notes:
-            * mask's example
-                | [[True, True, True, False],
-                |  [True, False, False, False],
-                |  [True, True, True, True],
-                |  [True, True, True, True]]
         """
         _, t, _ = x.shape
         W = self.W + tf.eye(self.c) * 1e-5
@@ -142,8 +265,8 @@ class Inv1x1Conv2DWithMask(FlowComponent):
 
         # expand as batch
         if mask is not None:
-            # mask -> mask_tensor: [B, T] -> [B, T, 1]
-            mask_tensor = tf.expand_dims(tf.cast(mask, tf.float32), [-1])
+            # mask -> mask_tensor: [B, T, 1] -> [B, T, 1]
+            mask_tensor = tf.cast(mask, x.dtype)
             z = z * mask_tensor
             log_det_jacobian = log_det_jacobian * tf.reduce_sum(
                 tf.cast(mask, tf.float32), axis=[-1]
@@ -164,8 +287,8 @@ class Inv1x1Conv2DWithMask(FlowComponent):
         )
 
         if mask is not None:
-            # mask -> mask_tensor: [B, T] -> [B, T, 1]
-            mask_tensor = tf.expand_dims(tf.cast(mask, tf.float32), [-1])
+            # mask -> mask_tensor: [B, T, 1] -> [B, T, 1]
+            mask_tensor = tf.cast(mask, x.dtype)
             x = x * mask_tensor
             inverse_log_det_jacobian = inverse_log_det_jacobian * tf.reduce_sum(
                 tf.cast(mask, tf.float32), axis=[-1]
@@ -234,13 +357,6 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
         Returns:
             z    (tf.Tensor): latent variable tensor [B, T, C]
             ldj  (tf.Tensor): log det jacobian [B]
-
-        Notes:
-            * mask's example
-                | [[True, True, True, False],
-                |  [True, False, False, False],
-                |  [True, True, True, True],
-                |  [True, True, True, True]]
         """
         x1, x2 = tf.split(x, 2, axis=-1)
         z1 = x1
@@ -252,9 +368,9 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
             scale = self.scale_func(log_scale)
 
             # apply mask into scale, shift
-            # mask -> mask_tensor: [B, T] -> [B, T, 1]
+            # mask -> mask_tensor: [B, T, 1] -> [B, T, 1]
             if mask is not None:
-                mask_tensor = tf.expand_dims(tf.cast(mask, tf.float32), [-1])
+                mask_tensor = tf.cast(mask, x.dtype)
                 scale *= mask_tensor
                 shift *= mask_tensor
             z2 = (x2 + shift) * scale
@@ -278,7 +394,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
             scale = self.scale_func(log_scale)
 
             if mask is not None:
-                mask_tensor = tf.expand_dims(tf.cast(mask, tf.float32), [-1])
+                mask_tensor = tf.cast(mask, x.dtype)
                 scale *= mask_tensor
                 shift *= mask_tensor
             x2 = (z2 / scale) - shift
@@ -292,14 +408,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
 
 
 class GTU(tf.keras.layers.Layer):
-    """GTU layer proposed in FlowTTS.
-
-    Notes:
-
-        * formula
-            .. math::
-                z = tanh(W_{f, k} \star y) \odot sigmoid(W_{g, k} \star c)
-    """
+    """Gated Tanh Unit module."""
 
     def __init__(self, **kwargs):
         super().__init__()
@@ -323,12 +432,6 @@ class GTU(tf.keras.layers.Layer):
 
         super().build(input_shape)
 
-    def get_config(self):
-        config = super().get_config()
-        config_update = {}
-        config.update(config_update)
-        return config
-
     def call(self, y: tf.Tensor, c: tf.Tensor, **kwargs):
         """Call logic.
         Args:
@@ -338,7 +441,6 @@ class GTU(tf.keras.layers.Layer):
         Returns:
             tf.Tensor: [B, T, C]
         """
-
         right = tf.nn.tanh(self.conv_first(y))
         left = tf.nn.sigmoid(self.conv_last(c))
         z = right * left
@@ -348,11 +450,9 @@ class GTU(tf.keras.layers.Layer):
 def CouplingBlock(x: tf.Tensor, cond: tf.Tensor, depth, **kwargs):
     """CouplingBlock module.
     Args:
-
         x (tf.Tensor): input contents tensor [B, T, C]
         c (tf.Tensor): input conditional tensor [B, T, C'] where C' can be different with C
     Returns:
-
         tf.keras.Model: CouplingBlock
                         reference: Flow-TTS
     Examples:
@@ -506,8 +606,8 @@ class FactorOutWithMask(FactorOutBase):
         self.split_size = input_shape[-1] // 2
         super().build(input_shape)
 
-    def __init__(self, with_zaux: bool = False, conditional: bool = False):
-        super().__init__()
+    def __init__(self, with_zaux: bool = False, conditional: bool = False, **kwargs):
+        super().__init__(**kwargs)
         self.with_zaux = with_zaux
         self.conditional = conditional
         if self.conditional:
@@ -552,7 +652,7 @@ class FactorOutWithMask(FactorOutBase):
 
     def forward(self, x: tf.Tensor, zaux: tf.Tensor = None, mask=None, **kwargs):
         if mask is not None:
-            mask_tensor = tf.expand_dims(tf.cast(mask, tf.float32), axis=[-1])
+            mask_tensor = tf.cast(mask, x.dtype)
         else:
             mask_tensor = None
         with tf.name_scope("split"):
@@ -663,7 +763,7 @@ def build_flow_step(
     return ConditionalFlowModule(cfml)
 
 
-class FlowTTSDecoder(tf.keras.Model):
+class TFFlowTTSDecoder(tf.keras.Model):
     """FlowTTSDecoder module."""
 
     def __init__(self, hparams: Dict, **kwargs):
@@ -819,3 +919,28 @@ class FlowTTSDecoder(tf.keras.Model):
                 x, ldj = flow(x, cond=cond, training=training, mask=mask)
                 log_det_jacobian += ldj
         return x, log_det_jacobian, zaux, log_likelihood
+
+
+if __name__ == "__main__":
+    hparams = {
+        "conditional_width": 128,  # conditional inputs's C' in [B, T, C']
+        "flow_step_depth": 4,
+        "last_flow_step_depth": 2,
+        "conditional_depth": 256,
+        "scale_type": "exp",
+        "conditional_factor_out": True,
+    }
+    model = TFFlowTTSDecoder(hparams)
+    x = tf.random.normal([64, 32, 64])
+    cond = tf.random.normal([64, 32, 128])
+    mask = tf.sequence_mask(tf.ones([64]) * 30, maxlen=32)
+    model(x, cond=cond, mask=mask, inverse=False)
+    model.summary()
+
+    @tf.function
+    def my_func(x, cond, mask):
+        return model(x, cond=cond, mask=mask, inverse=False)
+
+    x, log_det_jacobian, zaux, log_likelihood = my_func(x, cond, mask)
+
+    print(x.shape)
