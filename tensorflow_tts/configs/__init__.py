@@ -9,3 +9,5 @@ from tensorflow_tts.configs.tacotron2 import Tacotron2Config
 
 from tensorflow_tts.configs.mb_melgan import MultiBandMelGANGeneratorConfig
 from tensorflow_tts.configs.mb_melgan import MultiBandMelGANDiscriminatorConfig
+
+from tensorflow_tts.configs.flowtts import FlowTTSConfig

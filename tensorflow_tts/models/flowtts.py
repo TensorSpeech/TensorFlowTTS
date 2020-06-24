@@ -20,6 +20,8 @@ from typing import Tuple
 
 import tensorflow as tf
 
+from tensorflow_tts.configs import FlowTTSConfig
+
 from tensorflow_tts.models.tacotron2 import TFTacotronEncoder
 from tensorflow_tts.models.fastspeech2 import TFFastSpeechVariantPredictor
 from tensorflow_tts.models.fastspeech import get_initializer
@@ -269,7 +271,7 @@ class Inv1x1Conv2DWithMask(FlowComponent):
             mask_tensor = tf.cast(mask, x.dtype)
             z = z * mask_tensor
             log_det_jacobian = log_det_jacobian * tf.reduce_sum(
-                tf.cast(mask, tf.float32), axis=[-1]
+                tf.cast(mask, tf.float32), axis=[-2, -1]
             )
         else:
             log_det_jacobian = tf.broadcast_to(log_det_jacobian * t, tf.shape(x)[0:1])
@@ -291,7 +293,7 @@ class Inv1x1Conv2DWithMask(FlowComponent):
             mask_tensor = tf.cast(mask, x.dtype)
             x = x * mask_tensor
             inverse_log_det_jacobian = inverse_log_det_jacobian * tf.reduce_sum(
-                tf.cast(mask, tf.float32), axis=[-1]
+                tf.cast(mask, tf.float32), axis=[-2, -1]
             )
         else:
             inverse_log_det_jacobian = tf.broadcast_to(
@@ -310,7 +312,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
         * forward formula
             | [x1, x2] = split(x)
             | log_scale, shift = NN([x1, c])
-            | scale = exp(log_scale)
+            | scale = exp(log_scale)`
             | z1 = x1
             | z2 = (x2 + shift) * scale
             | z = concat([z1, z2])
@@ -322,7 +324,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
             | scale = exp(log_scale)
             | x1 = z1
             | x2 = z2 / scale - shift
-            | z = concat([x1, x2])
+            | x = concat([x1, x2])
             | InverseLogDetJacobian = - sum(log(scale))
 
         * implementation notes
@@ -725,7 +727,7 @@ def build_flow_step(
         #    FLow-TTS's Figure 1 (b)
 
         # Inv1x1Conv
-        inv1x1 = Inv1x1Conv2DWithMask()
+        inv1x1 = Inv1x1Conv2DWithMask(name="inv_conv1x1_._{}".format(i))
 
         # CouplingBlock
         couplingBlockTemplate = CouplingBlockTemplate
@@ -766,45 +768,45 @@ def build_flow_step(
 class TFFlowTTSDecoder(tf.keras.Model):
     """FlowTTSDecoder module."""
 
-    def __init__(self, hparams: Dict, **kwargs):
+    def __init__(self, config, **kwargs):
         super().__init__()
-        self.hparams = hparams
+        self.config = config
         self.build_model()
 
     def build_model(self):
         conditionalInput = tf.keras.layers.Input(
-            [None, self.hparams["conditional_width"]]
+            [None, self.config.hidden_size * self.config.n_squeeze]
         )
 
-        squeeze = Squeeze2D()
+        squeeze = Squeeze2D(name="squeeze")
 
         flow_step_1 = build_flow_step(
-            step_num=self.hparams["flow_step_depth"],
-            coupling_depth=self.hparams["conditional_depth"],
+            step_num=self.config.flow_step_depth,
+            coupling_depth=self.config.hidden_size,
             conditional_input=conditionalInput,
-            scale_type=self.hparams["scale_type"],
+            scale_type=self.config.scale_type,
         )
 
         factor_out_1 = FactorOutWithMask(
-            with_zaux=False, conditional=self.hparams["conditional_factor_out"]
+            with_zaux=False, conditional=self.config.conditional_factor_out
         )
 
         flow_step_2 = build_flow_step(
-            step_num=self.hparams["flow_step_depth"],
-            coupling_depth=self.hparams["conditional_depth"],
+            step_num=self.config.flow_step_depth,
+            coupling_depth=self.config.hidden_size,
             conditional_input=conditionalInput,
-            scale_type=self.hparams["scale_type"],
+            scale_type=self.config.scale_type,
         )
 
         factor_out_2 = FactorOutWithMask(
-            with_zaux=True, conditional=self.hparams["conditional_factor_out"]
+            with_zaux=True, conditional=self.config.conditional_factor_out
         )
 
         flow_step_3 = build_flow_step(
-            step_num=self.hparams["last_flow_step_depth"],
-            coupling_depth=self.hparams["conditional_depth"],
+            step_num=self.config.last_flow_step_depth,
+            coupling_depth=self.config.hidden_size,
             conditional_input=conditionalInput,
-            scale_type=self.hparams["scale_type"],
+            scale_type=self.config.scale_type,
         )
 
         self.flows = [
@@ -874,13 +876,7 @@ class TFFlowTTSDecoder(tf.keras.Model):
 
         for flow in reversed(self.flows):
             if isinstance(flow, Squeeze2D):
-                x, zaux = flow(x, zaux=zaux, mask=mask, inverse=True)
-                if mask is not None:
-                    _, t = mask.shape
-                    mask = tf.reshape(
-                        tf.tile(tf.expand_dims(mask, -1), [1, 1, 2]), [-1, t * 2]
-                    )
-
+                x, mask, zaux = flow(x, zaux=zaux, mask=mask, inverse=True)
             elif isinstance(flow, FactorOutBase):
                 if flow.with_zaux:
                     x, zaux = flow(
@@ -905,11 +901,9 @@ class TFFlowTTSDecoder(tf.keras.Model):
         for flow in self.flows:
             if isinstance(flow, Squeeze2D):
                 if flow.with_zaux:
-                    x, zaux = flow(x, zaux=zaux)
+                    x, mask, zaux = flow(x, zaux=zaux)
                 else:
-                    x = flow(x)
-                _, t = mask.shape
-                mask = tf.reshape(mask, [-1, t // 2, 2])[..., 0]
+                    x, mask = flow(x)
             elif isinstance(flow, FactorOutBase):
                 if x is None:
                     raise Exception()
@@ -921,26 +915,74 @@ class TFFlowTTSDecoder(tf.keras.Model):
         return x, log_det_jacobian, zaux, log_likelihood
 
 
+class TFFlowTTS(tf.keras.Model):
+    """Flow-TTS modules."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(**kwargs)
+        self.encoder = TFFlowTTSEncoder(config=config, name="encoder")
+        self.length_predictor = TFFlowTTSLengthPredictor(config, name="length_predictor")
+        self.attention_positional = TFFlowTTSAttentionPositional(config, name="attention_positional")
+        self.decoder = TFFlowTTSDecoder(config=config, name="decoder")
+
+        self.config = config
+
+    def _squeeze_feats(self, x, n_squeeze):
+        _, t, c = x.shape
+
+        t = (t // n_squeeze) * n_squeeze
+        x = x[:, :t, :]  # [B, t_round, c]
+
+        x = tf.reshape(tf.reshape(x, [-1, t // n_squeeze, n_squeeze, c]),
+                       [-1, t // n_squeeze, c * n_squeeze])
+        return x
+
+    def call(self,
+             input_ids,
+             attention_mask,
+             speaker_ids,
+             mel_gts,
+             mel_lengths,
+             training=False):
+        """Call logic."""
+        # Encoder Step.
+        encoder_hidden_states = self.encoder([input_ids, speaker_ids, attention_mask], training=training)
+
+        # predict mel lengths
+        mel_length_predictions = self.length_predictor(
+            [encoder_hidden_states, attention_mask], training=training)
+
+        # calculate conditional feature for flow.
+        decoder_pos = tf.range(1, tf.shape(mel_gts)[1] + 1, dtype=tf.int32)
+        mask = tf.sequence_mask(
+            mel_lengths, maxlen=tf.reduce_max(mel_lengths), dtype=decoder_pos.dtype)
+        masked_decoder_pos = tf.expand_dims(decoder_pos, 0) * mask
+        conditional_feats = self.attention_positional(
+            [encoder_hidden_states, masked_decoder_pos, attention_mask], training=training)[0]
+
+        # mask and squeeze conditional feature.
+        conditional_feats *= tf.cast(tf.expand_dims(mask, -1), dtype=conditional_feats.dtype)
+        squeeze_condition_feats = self._squeeze_feats(conditional_feats, self.config.n_squeeze)
+
+        z, log_det_jacobian, zaux, log_likelihood = self.decoder(
+            mel_gts, cond=squeeze_condition_feats, mask=mask[:, :, None], inverse=False
+        )
+
+        return z, log_det_jacobian, zaux, log_likelihood, mel_length_predictions
+
+
 if __name__ == "__main__":
-    hparams = {
-        "conditional_width": 128,  # conditional inputs's C' in [B, T, C']
-        "flow_step_depth": 4,
-        "last_flow_step_depth": 2,
-        "conditional_depth": 256,
-        "scale_type": "exp",
-        "conditional_factor_out": True,
-    }
-    model = TFFlowTTSDecoder(hparams)
-    x = tf.random.normal([64, 32, 64])
-    cond = tf.random.normal([64, 32, 128])
-    mask = tf.sequence_mask(tf.ones([64]) * 30, maxlen=32)
-    model(x, cond=cond, mask=mask, inverse=False)
-    model.summary()
+    flowtts_config = FlowTTSConfig()
+    flowtts = TFFlowTTS(config=flowtts_config, name="flow_tts")
 
-    @tf.function
-    def my_func(x, cond, mask):
-        return model(x, cond=cond, mask=mask, inverse=False)
+    mel_gts = tf.random.normal([1, 32, 64])
 
-    x, log_det_jacobian, zaux, log_likelihood = my_func(x, cond, mask)
+    outputs = flowtts(
+        input_ids=tf.constant([[1, 2, 3, 4, 5]], dtype=tf.int32),
+        attention_mask=tf.constant([[1, 1, 1, 1, 1]], dtype=tf.int32),
+        speaker_ids=tf.constant([0], dtype=tf.int32),
+        mel_gts=mel_gts,
+        mel_lengths=tf.constant([32], dtype=tf.int32),
+    )
 
-    print(x.shape)
+    flowtts.summary()
