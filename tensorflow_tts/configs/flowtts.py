@@ -44,7 +44,7 @@ class FlowTTSConfig(object):
             num_attention_heads=2,
             hidden_size=384,
             attention_probs_dropout_prob=0.1,
-            n_squeeze=2,
+            n_squeeze=8,
             flow_step_depth=4,
             last_flow_step_depth=2,
             scale_type="exp",

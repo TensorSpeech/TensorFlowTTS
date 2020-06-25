@@ -147,7 +147,7 @@ class Squeeze2D(FlowComponent):
 
     def forward(self,
                 x: tf.Tensor,
-                n_squeeze: int = 2,
+                n_squeeze: int = 4,
                 zaux: tf.Tensor = None,
                 mask: tf.Tensor = None,
                 **kwargs):
@@ -186,7 +186,7 @@ class Squeeze2D(FlowComponent):
 
     def inverse(self,
                 z: tf.Tensor,
-                n_squeeze: int = 2,
+                n_squeeze: int = 4,
                 zaux: tf.Tensor = None,
                 mask: tf.Tensor = None,
                 **kwargs):
@@ -396,7 +396,7 @@ class ConditionalAffineCouplingWithMask(ConditionalAffineCoupling):
             scale = self.scale_func(log_scale)
 
             if mask is not None:
-                mask_tensor = tf.cast(mask, x.dtype)
+                mask_tensor = tf.cast(mask, z.dtype)
                 scale *= mask_tensor
                 shift *= mask_tensor
             x2 = (z2 / scale) - shift
@@ -579,7 +579,6 @@ class Conv1DZeros(tf.keras.layers.Layer):
 
 class FactorOutWithMask(FactorOutBase):
     """Basic Factor Out Layer.
-
     This layer drops factor-outed Tensor z_i
 
     Note:
@@ -876,7 +875,7 @@ class TFFlowTTSDecoder(tf.keras.Model):
 
         for flow in reversed(self.flows):
             if isinstance(flow, Squeeze2D):
-                x, mask, zaux = flow(x, zaux=zaux, mask=mask, inverse=True)
+                x, mask, zaux = flow(x, n_squeeze=self.config.n_squeeze, zaux=zaux, mask=mask, inverse=True)
             elif isinstance(flow, FactorOutBase):
                 if flow.with_zaux:
                     x, zaux = flow(
@@ -901,9 +900,9 @@ class TFFlowTTSDecoder(tf.keras.Model):
         for flow in self.flows:
             if isinstance(flow, Squeeze2D):
                 if flow.with_zaux:
-                    x, mask, zaux = flow(x, zaux=zaux)
+                    x, mask, zaux = flow(x, n_squeeze=self.config.n_squeeze, zaux=zaux)
                 else:
-                    x, mask = flow(x)
+                    x, mask = flow(x, n_squeeze=self.config.n_squeeze)
             elif isinstance(flow, FactorOutBase):
                 if x is None:
                     raise Exception()
@@ -970,6 +969,10 @@ class TFFlowTTS(tf.keras.Model):
 
         return z, log_det_jacobian, zaux, log_likelihood, mel_length_predictions
 
+    def inference(self):
+        # TODO (@MokkeMeguru)
+        return
+
 
 if __name__ == "__main__":
     flowtts_config = FlowTTSConfig()
@@ -977,12 +980,13 @@ if __name__ == "__main__":
 
     mel_gts = tf.random.normal([1, 32, 64])
 
-    outputs = flowtts(
+    # forward steps.
+    z, log_det_jacobian, zaux, log_likelihood, mel_length_predictions = flowtts(
         input_ids=tf.constant([[1, 2, 3, 4, 5]], dtype=tf.int32),
         attention_mask=tf.constant([[1, 1, 1, 1, 1]], dtype=tf.int32),
         speaker_ids=tf.constant([0], dtype=tf.int32),
         mel_gts=mel_gts,
-        mel_lengths=tf.constant([32], dtype=tf.int32),
+        mel_lengths=tf.constant([mel_gts.shape[1]], dtype=tf.int32),
     )
 
     flowtts.summary()
