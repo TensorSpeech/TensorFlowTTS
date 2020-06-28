@@ -15,3 +15,5 @@ from tensorflow_tts.utils.cleaners import english_cleaners
 from tensorflow_tts.utils.number_norm import normalize_numbers
 
 from tensorflow_tts.utils.outliers import remove_outlier
+
+from tensorflow_tts.utils.griffin_lim import TFGriffinLim
