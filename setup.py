@@ -36,7 +36,8 @@ requirements = {
         "unidecode>=1.1.1",
         "inflect>=4.1.0",
         "scikit-learn>=0.22.0",
-        "pyworld>=0.2.10"
+        "pyworld>=0.2.10",
+        "numba<=0.48",  # Fix No module named "numba.decorators"
     ],
     "setup": [
         "numpy",
@@ -45,8 +46,8 @@ requirements = {
     "test": [
         "pytest>=3.3.0",
         "hacking>=1.1.0",
-        "flake8>=3.7.8",
-        "flake8-docstrings>=1.3.1",
+        "flake8<=3.8.3",
+        "flake8-docstrings<=1.5.0",
     ]
 }
 
