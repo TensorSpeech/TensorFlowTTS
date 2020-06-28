@@ -27,6 +27,7 @@ class FastSpeechConfig(object):
             hidden_size=384,
             num_hidden_layers=6,
             num_attention_heads=2,
+            attention_head_size=192,
             intermediate_size=1536,
             intermediate_kernel_size=3,
             num_duration_conv_layers=2,
@@ -53,6 +54,7 @@ class FastSpeechConfig(object):
         self.hidden_size = hidden_size
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
+        self.attention_head_size = attention_head_size
         self.hidden_act = hidden_act
         self.intermediate_size = intermediate_size
         self.intermediate_kernel_size = intermediate_kernel_size

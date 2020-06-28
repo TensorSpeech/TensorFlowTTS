@@ -165,8 +165,7 @@ class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
             )
         self.output_attentions = config.output_attentions
         self.num_attention_heads = config.num_attention_heads
-        self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
-        self.all_head_size = self.num_attention_heads * self.attention_head_size
+        self.all_head_size = self.num_attention_heads * config.attention_head_size
 
         self.query = tf.keras.layers.Dense(
             self.all_head_size, kernel_initializer=get_initializer(config.initializer_range), name="query"
@@ -179,10 +178,11 @@ class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
         )
 
         self.dropout = tf.keras.layers.Dropout(config.attention_probs_dropout_prob)
+        self.config = config
 
     def transpose_for_scores(self, x, batch_size):
         """Transpose to calculate attention scores."""
-        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.attention_head_size))
+        x = tf.reshape(x, (batch_size, -1, self.num_attention_heads, self.config.attention_head_size))
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
     def call(self, inputs, training=False):
