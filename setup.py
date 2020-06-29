@@ -40,16 +40,13 @@ requirements = {
         "pyworld>=0.2.10",
         "numba<=0.48",  # Fix No module named "numba.decorators"
     ],
-    "setup": [
-        "numpy",
-        "pytest-runner",
-    ],
+    "setup": ["numpy", "pytest-runner",],
     "test": [
         "pytest>=3.3.0",
         "hacking>=1.1.0",
         "flake8<=3.8.3",
         "flake8-docstrings<=1.5.0",
-    ]
+    ],
 }
 
 # TODO(@dathudeptrai) update console_scripts.

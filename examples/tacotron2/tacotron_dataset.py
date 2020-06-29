@@ -51,22 +51,23 @@ def guided_attention(char_len, mel_len, max_char_len, max_mel_len, g=0.2):
 class CharactorMelDataset(AbstractDataset):
     """Tensorflow Charactor Mel dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 charactor_query="*-ids.npy",
-                 mel_query="*-norm-feats.npy",
-                 charactor_load_fn=np.load,
-                 mel_load_fn=np.load,
-                 mel_length_threshold=None,
-                 return_utt_id=False,
-                 return_guided_attention=True,
-                 reduction_factor=1,
-                 mel_pad_value=0.0,
-                 char_pad_value=0,
-                 ga_pad_value=-1.0,
-                 g=0.2,
-                 use_fixed_shapes=False,
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        charactor_query="*-ids.npy",
+        mel_query="*-norm-feats.npy",
+        charactor_load_fn=np.load,
+        mel_load_fn=np.load,
+        mel_length_threshold=None,
+        return_utt_id=False,
+        return_guided_attention=True,
+        reduction_factor=1,
+        mel_pad_value=0.0,
+        char_pad_value=0,
+        ga_pad_value=-1.0,
+        g=0.2,
+        use_fixed_shapes=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -171,7 +172,11 @@ class CharactorMelDataset(AbstractDataset):
         self.g = g
         self.use_fixed_shapes = use_fixed_shapes
         self.max_char_length = np.max(char_lengths) + 1  # +1 for eos
-        self.max_mel_length = np.max(mel_lengths) + self.reduction_factor - np.max(mel_lengths) % self.reduction_factor
+        self.max_mel_length = (
+            np.max(mel_lengths)
+            + self.reduction_factor
+            - np.max(mel_lengths) % self.reduction_factor
+        )
 
     def get_args(self):
         return [self.utt_ids]

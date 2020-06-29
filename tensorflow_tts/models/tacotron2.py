@@ -244,7 +244,7 @@ class TrainingSampler(Sampler):
         self.mel_lengths = mel_lengths
         self.set_batch_size(tf.shape(targets)[0])
         self.targets = targets[
-            :, self._reduction_factor - 1:: self._reduction_factor, :
+            :, self._reduction_factor - 1 :: self._reduction_factor, :
         ]
         self.max_lengths = tf.tile([tf.shape(self.targets)[1]], [self._batch_size])
 
@@ -278,7 +278,7 @@ class TrainingSampler(Sampler):
         finished = time + 1 >= self.max_lengths
         next_inputs = (
             self._ratio * self.targets[:, time, :]
-            + (1.0 - self._ratio) * outputs[:, -self.config.n_mels:]
+            + (1.0 - self._ratio) * outputs[:, -self.config.n_mels :]
         )
         next_state = state
         return (finished, next_inputs, next_state)
@@ -300,7 +300,7 @@ class TestingSampler(TrainingSampler):
         stop_token_prediction = tf.nn.sigmoid(stop_token_prediction)
         finished = tf.cast(tf.round(stop_token_prediction), tf.bool)
         finished = tf.reduce_all(finished)
-        next_inputs = outputs[:, -self.config.n_mels:]
+        next_inputs = outputs[:, -self.config.n_mels :]
         next_state = state
         return (finished, next_inputs, next_state)
 
@@ -810,8 +810,8 @@ class TFTacotron2(tf.keras.Model):
         experimental_relax_shapes=True,
         input_signature=[
             tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, ], dtype=tf.int32),
-            tf.TensorSpec([None, ], dtype=tf.int32),
+            tf.TensorSpec([None,], dtype=tf.int32),
+            tf.TensorSpec([None,], dtype=tf.int32),
         ],
     )
     def inference(self, input_ids, input_lengths, speaker_ids):
