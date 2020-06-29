@@ -368,9 +368,10 @@ class TFFlowTTS(tf.keras.Model):
         self.config = config
 
     def _squeeze_feats(self, x, n_squeeze):
-        _, t, c = x.shape
+        t = tf.shape(x)[1]
+        c = tf.shape(x)[2]
 
-        t = (t // n_squeeze) * n_squeeze
+        t = tf.math.floordiv(t, n_squeeze) * n_squeeze
         x = x[:, :t, :]  # [B, t_round, c]
 
         x = tf.reshape(
@@ -378,6 +379,19 @@ class TFFlowTTS(tf.keras.Model):
             [-1, t // n_squeeze, c * n_squeeze],
         )
         return x
+
+    def _build(self):
+        mel_gts = tf.random.normal([1, 32, 80])
+
+        # forward steps.
+        outputs = self(
+            input_ids=tf.constant([[1, 2, 3, 4, 5]], dtype=tf.int32),
+            attention_mask=tf.constant([[1, 1, 1, 1, 1]], dtype=tf.int32),
+            speaker_ids=tf.constant([0], dtype=tf.int32),
+            mel_gts=mel_gts,
+            mel_lengths=tf.constant([mel_gts.shape[1]], dtype=tf.int32),
+        )
+        return outputs
 
     def call(
         self,
@@ -391,12 +405,12 @@ class TFFlowTTS(tf.keras.Model):
         """Call logic."""
         # Encoder Step.
         encoder_hidden_states = self.encoder(
-            [input_ids, speaker_ids, attention_mask], training=training
+            [input_ids, speaker_ids, tf.cast(attention_mask, tf.bool)], training=training
         )
 
         # predict mel lengths
         mel_length_predictions = self.length_predictor(
-            [encoder_hidden_states, attention_mask], training=training
+            [encoder_hidden_states, speaker_ids, attention_mask], training=training
         )
 
         # calculate conditional feature for flow.
@@ -422,59 +436,62 @@ class TFFlowTTS(tf.keras.Model):
             mel_gts, cond=squeeze_condition_feats, mask=mask[:, :, None], inverse=False
         )
 
-        # here is debug
-        tf.print("-----------------")
-        tf.print("reconstruction")
-        rev_x, ildj = self.decoder(
-            z, zaux=zaux, cond=squeeze_condition_feats, mask=mask, inverse=True
-        )
-        tf.print(rev_x.shape, mel_gts.shape)
-        tf.print("reconstruction diff", tf.reduce_mean(rev_x - mel_gts))
-        tf.print("ildj + ldj", tf.reduce_sum(log_det_jacobian + ildj))
-
-        tf.print("-----------------")
-        tf.print("conditional generation")
-        rev_x, ildj = self.decoder(
-            z, cond=squeeze_condition_feats, mask=mask, inverse=True
-        )
-        tf.print(rev_x.shape, mel_gts.shape)
-        tf.print("reconstruction diff", tf.reduce_mean(rev_x - mel_gts))
-
-        tf.print("-----------------")
-        tf.print("generation")
-        z = tf.random.normal(z.shape)
-        rev_x, ildj = self.decoder(
-            z, cond=squeeze_condition_feats, mask=mask, inverse=True
-        )
-        tf.print(rev_x.shape, mel_gts.shape)
-        tf.print("-----------------")
         return z, log_det_jacobian, zaux, log_likelihood, mel_length_predictions, mask
 
-    def inference(self):
-        # TODO (@MokkeMeguru)
-        return
+    @tf.function(experimental_relax_shapes=True,
+                 input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32),
+                                  tf.TensorSpec(shape=[None, None], dtype=tf.int32),
+                                  tf.TensorSpec(shape=[None, ], dtype=tf.int32)])
+    def inference(self,
+                  input_ids,
+                  attention_mask,
+                  speaker_ids):
+        """Call logic."""
+        # Encoder Step.
+        encoder_hidden_states = self.encoder(
+            [input_ids, speaker_ids, tf.cast(attention_mask, tf.bool)], training=False
+        )
+
+        # predict mel lengths
+        mel_length_predictions = self.length_predictor(
+            [encoder_hidden_states, speaker_ids, attention_mask], training=False
+        )
+
+        # calculate conditional feature for flow.
+        decoder_pos = tf.range(1, tf.reduce_max(mel_length_predictions) + 1, dtype=tf.int32)
+        mask = tf.sequence_mask(
+            mel_length_predictions, maxlen=tf.reduce_max(mel_length_predictions), dtype=decoder_pos.dtype
+        )
+        masked_decoder_pos = tf.expand_dims(decoder_pos, 0) * mask
+        conditional_feats = self.attention_positional(
+            [encoder_hidden_states, masked_decoder_pos, attention_mask],
+            training=False,
+        )[0]
+        # mask and squeeze conditional feature.
+        conditional_feats *= tf.cast(
+            tf.expand_dims(mask, -1), dtype=conditional_feats.dtype
+        )
+        squeeze_condition_feats = self._squeeze_feats(
+            conditional_feats, self.config.n_squeeze
+        )
+
+        z = tf.random.normal(tf.shape(squeeze_condition_feats)[:-1] + [80 * 2])
+        rev_x, ildj = self.decoder(
+            z, cond=squeeze_condition_feats, mask=mask, inverse=True
+        )
+
+        return rev_x, ildj
 
 
 if __name__ == "__main__":
     flowtts_config = FlowTTSConfig()
     flowtts = TFFlowTTS(config=flowtts_config, name="flow_tts")
 
-    mel_gts = tf.random.normal([1, 32, 64])
+    outputs = flowtts._build()
+    flowtts.summary()
 
-    # forward steps.
-    (
-        z,
-        log_det_jacobian,
-        zaux,
-        log_likelihood,
-        mel_length_predictions,
-        output_mask,
-    ) = flowtts(
+    outputs = flowtts.inference(
         input_ids=tf.constant([[1, 2, 3, 4, 5]], dtype=tf.int32),
         attention_mask=tf.constant([[1, 1, 1, 1, 1]], dtype=tf.int32),
         speaker_ids=tf.constant([0], dtype=tf.int32),
-        mel_gts=mel_gts,
-        mel_lengths=tf.constant([mel_gts.shape[1]], dtype=tf.int32),
     )
-
-    flowtts.summary()

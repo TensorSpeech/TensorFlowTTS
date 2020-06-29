@@ -1,4 +1,3 @@
- -*- coding: utf-8 -*-
 # Copyright 2020 The FastSpeech2 Authors and Minh Nguyen (@dathudeptrai)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +57,7 @@ class TFFastSpeechVariantPredictor(tf.keras.layers.Layer):
                 embeddings_initializer=get_initializer(config.initializer_range),
                 name="speaker_embeddings"
             )
-            self.speaker_fc = tf.keras.layers.Dense(units=config.hidden_size, name='speaker_fc')
+            self.speaker_fc = tf.keras.layers.Dense(units=config.encoder_lstm_units * 2, name='speaker_fc')
 
         self.config = config
 
