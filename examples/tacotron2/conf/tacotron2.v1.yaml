@@ -49,9 +49,8 @@ remove_short_samples: true # Whether to remove samples the length of which are l
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
 mel_length_threshold: 32   # remove all targets has mel_length <= 32 
 is_shuffle: true           # shuffle dataset after each epoch.
-use_fixed_shapes: true     # use_fixed_shapes for training (2x speed-up).
-max_char_length: 190       # maximum charactor length for fixed shape (only for ljspeech).   
-max_mel_length: 870        # maximum mel length for fixed shape (only for ljspeech).
+use_fixed_shapes: true     # use_fixed_shapes for training (2x speed-up)
+                           # refer (https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118)
 
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
