@@ -17,13 +17,13 @@ if LooseVersion(sys.version) < LooseVersion("3.6"):
 if LooseVersion(pip.__version__) < LooseVersion("19"):
     raise RuntimeError(
         "pip>=19.0.0 is required, but your pip version is {}. "
-        "Try again after \"pip install -U pip\"".format(pip.__version__)
+        'Try again after "pip install -U pip"'.format(pip.__version__)
     )
 
 # TODO(@dathudeptrai) update requirement if needed.
 requirements = {
     "install": [
-        "TFGENZOO==1.2.0",
+        "TFGENZOO==1.2.4.post3",
         "tensorflow-gpu>=2.2.0",
         "tensorflow-addons>=0.9.1",
         "setuptools>=38.5.1",
@@ -37,18 +37,15 @@ requirements = {
         "unidecode>=1.1.1",
         "inflect>=4.1.0",
         "scikit-learn>=0.22.0",
-        "pyworld>=0.2.10"
+        "pyworld>=0.2.10",
     ],
-    "setup": [
-        "numpy",
-        "pytest-runner",
-    ],
+    "setup": ["numpy", "pytest-runner",],
     "test": [
         "pytest>=3.3.0",
         "hacking>=1.1.0",
         "flake8==3.7.8",
         "flake8-docstrings>=1.3.1",
-    ]
+    ],
 }
 
 # TODO(@dathudeptrai) update console_scripts.
@@ -63,32 +60,33 @@ entry_points = {
 install_requires = requirements["install"]
 setup_requires = requirements["setup"]
 tests_require = requirements["test"]
-extras_require = {k: v for k, v in requirements.items()
-                  if k not in ["install", "setup"]}
+extras_require = {
+    k: v for k, v in requirements.items() if k not in ["install", "setup"]
+}
 
 dirname = os.path.dirname(__file__)
-setup(name="TensorflowTTS",
-      version="0.0",
-      url="https://github.com/dathudeptrai/TensorflowTTS",
-      author="Minh Nguyen Quan Anh, Eren Gölge",
-      author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com",
-      description="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
-      long_description=open(os.path.join(dirname, "README.md"),
-                            encoding="utf-8").read(),
-      long_description_content_type="text/markdown",
-      license="Apache-2.0",
-      packages=find_packages(include=["tensorflow_tts*"]),
-      install_requires=install_requires,
-      setup_requires=setup_requires,
-      tests_require=tests_require,
-      extras_require=extras_require,
-      entry_points=entry_points,
-      classifiers=[
-          "Programming Language :: Python :: 3.6",
-          "Programming Language :: Python :: 3.7",
-          "Intended Audience :: Science/Research",
-          "Operating System :: POSIX :: Linux",
-          "License :: OSI Approved :: Apache-2.0 License",
-          "Topic :: Software Development :: Libraries :: Python Modules"
-      ],
-      )
+setup(
+    name="TensorflowTTS",
+    version="0.0",
+    url="https://github.com/dathudeptrai/TensorflowTTS",
+    author="Minh Nguyen Quan Anh, Eren Gölge",
+    author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com",
+    description="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
+    long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
+    license="Apache-2.0",
+    packages=find_packages(include=["tensorflow_tts*"]),
+    install_requires=install_requires,
+    setup_requires=setup_requires,
+    tests_require=tests_require,
+    extras_require=extras_require,
+    entry_points=entry_points,
+    classifiers=[
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Intended Audience :: Science/Research",
+        "Operating System :: POSIX :: Linux",
+        "License :: OSI Approved :: Apache-2.0 License",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+    ],
+)
