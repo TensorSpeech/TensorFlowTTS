@@ -1,0 +1,11 @@
+version: '2.3'
+services:
+  tensorflowtts:
+    build: .
+    volumes:
+      - .:/workspace
+    runtime: nvidia
+    tty: true
+    command: /bin/bash
+    environment:
+      - CUDA_VISIBLE_DEVICES
