@@ -28,16 +28,17 @@ from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 class AudioMelDataset(AbstractDataset):
     """Tensorflow Audio Mel dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 audio_query="*-wave.npy",
-                 mel_query="*-raw-feats.npy",
-                 audio_load_fn=np.load,
-                 mel_load_fn=np.load,
-                 audio_length_threshold=None,
-                 mel_length_threshold=None,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        audio_query="*-wave.npy",
+        mel_query="*-raw-feats.npy",
+        audio_load_fn=np.load,
+        mel_load_fn=np.load,
+        audio_length_threshold=None,
+        mel_length_threshold=None,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -58,25 +59,38 @@ class AudioMelDataset(AbstractDataset):
         # filter by threshold
         if audio_length_threshold is not None:
             audio_lengths = [audio_load_fn(f).shape[0] for f in audio_files]
-            idxs = [idx for idx in range(len(audio_files)) if audio_lengths[idx] > audio_length_threshold]
+            idxs = [
+                idx
+                for idx in range(len(audio_files))
+                if audio_lengths[idx] > audio_length_threshold
+            ]
             if len(audio_files) != len(idxs):
-                logging.warning(f"Some files are filtered by audio length threshold "
-                                f"({len(audio_files)} -> {len(idxs)}).")
+                logging.warning(
+                    f"Some files are filtered by audio length threshold "
+                    f"({len(audio_files)} -> {len(idxs)})."
+                )
             audio_files = [audio_files[idx] for idx in idxs]
             mel_files = [mel_files[idx] for idx in idxs]
         if mel_length_threshold is not None:
             mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
-            idxs = [idx for idx in range(len(mel_files)) if mel_lengths[idx] > mel_length_threshold]
+            idxs = [
+                idx
+                for idx in range(len(mel_files))
+                if mel_lengths[idx] > mel_length_threshold
+            ]
             if len(mel_files) != len(idxs):
-                logging.warning(f"Some files are filtered by mel length threshold "
-                                f"({len(mel_files)} -> {len(idxs)}).")
+                logging.warning(
+                    f"Some files are filtered by mel length threshold "
+                    f"({len(mel_files)} -> {len(idxs)})."
+                )
             audio_files = [audio_files[idx] for idx in idxs]
             mel_files = [mel_files[idx] for idx in idxs]
 
         # assert the number of files
         assert len(audio_files) != 0, f"Not found any audio files in ${root_dir}."
-        assert len(audio_files) == len(mel_files), \
-            f"Number of audio and mel files are different ({len(audio_files)} vs {len(mel_files)})."
+        assert len(audio_files) == len(
+            mel_files
+        ), f"Number of audio and mel files are different ({len(audio_files)} vs {len(mel_files)})."
 
         if ".npy" in audio_query:
             suffix = audio_query[1:]

@@ -33,38 +33,59 @@ def main():
     """Running decode tacotron-2 mel-spectrogram."""
     parser = argparse.ArgumentParser(
         description="Decode mel-spectrogram from folder ids with trained Tacotron-2 "
-                    "(See detail in tensorflow_tts/example/tacotron2/decode_tacotron2.py).")
-    parser.add_argument("--rootdir", default=None, type=str, required=True,
-                        help="directory including ids/durations files.")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to save generated speech.")
-    parser.add_argument("--checkpoint", type=str, required=True,
-                        help="checkpoint file to be loaded.")
-    parser.add_argument("--use-norm", default=1, type=int,
-                        help="usr norm-mels for train or raw.")
-    parser.add_argument("--batch-size", default=8, type=int,
-                        help="batch size.")
-    parser.add_argument("--win-front", default=3, type=int,
-                        help="win-front.")
-    parser.add_argument("--win-back", default=3, type=int,
-                        help="win-front.")
-    parser.add_argument("--config", default=None, type=str, required=True,
-                        help="yaml format configuration file. if not explicitly provided, "
-                             "it will be searched in the checkpoint directory. (default=None)")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
+        "(See detail in tensorflow_tts/example/tacotron2/decode_tacotron2.py)."
+    )
+    parser.add_argument(
+        "--rootdir",
+        default=None,
+        type=str,
+        required=True,
+        help="directory including ids/durations files.",
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="directory to save generated speech."
+    )
+    parser.add_argument(
+        "--checkpoint", type=str, required=True, help="checkpoint file to be loaded."
+    )
+    parser.add_argument(
+        "--use-norm", default=1, type=int, help="usr norm-mels for train or raw."
+    )
+    parser.add_argument("--batch-size", default=8, type=int, help="batch size.")
+    parser.add_argument("--win-front", default=3, type=int, help="win-front.")
+    parser.add_argument("--win-back", default=3, type=int, help="win-front.")
+    parser.add_argument(
+        "--config",
+        default=None,
+        type=str,
+        required=True,
+        help="yaml format configuration file. if not explicitly provided, "
+        "it will be searched in the checkpoint directory. (default=None)",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
     args = parser.parse_args()
 
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.WARN,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
         logging.warning("Skip DEBUG/INFO messages")
 
     # check directory existence
@@ -91,14 +112,16 @@ def main():
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
-        return_utt_id=True
+        return_utt_id=True,
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
     # define model and load checkpoint
-    tacotron2 = TFTacotron2(config=Tacotron2Config(**config["tacotron2_params"]),
-                            training=False,  # disble teacher forcing mode.
-                            name='tacotron2')
+    tacotron2 = TFTacotron2(
+        config=Tacotron2Config(**config["tacotron2_params"]),
+        training=False,  # disble teacher forcing mode.
+        name="tacotron2",
+    )
     tacotron2._build()  # build model to be able load_weights.
     tacotron2.load_weights(args.checkpoint)
 
@@ -110,7 +133,12 @@ def main():
         utt_id = utt_id.numpy()
 
         # tacotron2 inference.
-        mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2.inference(
+        (
+            mel_outputs,
+            post_mel_outputs,
+            stop_outputs,
+            alignment_historys,
+        ) = tacotron2.inference(
             charactor,
             char_length,
             speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
@@ -121,14 +149,19 @@ def main():
 
         for i, post_mel_output in enumerate(post_mel_outputs):
             stop_token = tf.math.round(tf.nn.sigmoid(stop_outputs[i]))  # [T]
-            real_length = tf.math.reduce_sum(tf.cast(tf.math.equal(stop_token, 0.0), tf.int32), -1)
+            real_length = tf.math.reduce_sum(
+                tf.cast(tf.math.equal(stop_token, 0.0), tf.int32), -1
+            )
             post_mel_output = post_mel_output[:real_length, :]
 
             saved_name = utt_id[i].decode("utf-8")
 
             # save D to folder.
-            np.save(os.path.join(args.outdir, f"{saved_name}-norm-feats.npy"),
-                    post_mel_output.astype(np.float32), allow_pickle=False)
+            np.save(
+                os.path.join(args.outdir, f"{saved_name}-norm-feats.npy"),
+                post_mel_output.astype(np.float32),
+                allow_pickle=False,
+            )
 
 
 if __name__ == "__main__":

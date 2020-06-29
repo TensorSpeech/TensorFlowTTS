@@ -28,7 +28,9 @@ from tensorflow_tts.models import TFPQMF
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    level=logging.DEBUG,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+)
 
 
 def make_multi_band_melgan_generator_args(**kwargs):
@@ -46,17 +48,19 @@ def make_multi_band_melgan_generator_args(**kwargs):
         subbands=4,
         tabs=62,
         cutoff_ratio=0.15,
-        beta=9.0
+        beta=9.0,
     )
     defaults.update(kwargs)
     return defaults
 
 
 @pytest.mark.parametrize(
-    "dict_g", [
+    "dict_g",
+    [
         {"subbands": 4, "upsample_scales": [2, 4, 8], "stacks": 4, "out_channels": 4},
-        {"subbands": 4, "upsample_scales": [4, 4, 4], "stacks": 5, "out_channels": 4}
-    ])
+        {"subbands": 4, "upsample_scales": [4, 4, 4], "stacks": 5, "out_channels": 4},
+    ],
+)
 def test_multi_band_melgan(dict_g):
     args_g = make_multi_band_melgan_generator_args(**dict_g)
     args_g = MultiBandMelGANGeneratorConfig(**args_g)

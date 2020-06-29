@@ -29,16 +29,12 @@ from tensorflow_tts.models.flowtts import Inv1x1Conv2DWithMask
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    level=logging.DEBUG,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+)
 
 
-@pytest.mark.parametrize(
-    "length, n_squeeze", [
-        (256, 2),
-        (256, 3),
-        (300, 5),
-        (500, 7)
-    ])
+@pytest.mark.parametrize("length, n_squeeze", [(256, 2), (256, 3), (300, 5), (500, 7)])
 def test_squeeze_with_mask(length, n_squeeze):
     x = tf.random.uniform(shape=[4, length, 80], dtype=tf.float32)
     mask = tf.sequence_mask([128, 128, 200, 240], maxlen=length, dtype=tf.bool)
@@ -51,16 +47,11 @@ def test_squeeze_with_mask(length, n_squeeze):
     # inverse
     x_inverse, _ = squeeze_layer.inverse(z, n_squeeze=n_squeeze, mask=z_mask)
     x = x * tf.cast(mask[:, :, :], dtype=x.dtype)
-    x = x[:, :x.shape[1] // n_squeeze * n_squeeze, :]
+    x = x[:, : x.shape[1] // n_squeeze * n_squeeze, :]
     assert tf.less(tf.math.reduce_mean(x - x_inverse), 0.005)
 
 
-@pytest.mark.parametrize(
-    "max_length", [
-        (256),
-        (512),
-        (240),
-    ])
+@pytest.mark.parametrize("max_length", [(256), (512), (240),])
 def test_inv_conv1x1_with_mask(max_length):
     x = tf.random.uniform(shape=[4, max_length, 80], dtype=tf.float32)
     mask = tf.sequence_mask([128, 128, 200, 240], maxlen=max_length, dtype=tf.bool)

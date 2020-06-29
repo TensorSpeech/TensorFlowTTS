@@ -32,7 +32,9 @@ class TFSpectralConvergence(tf.keras.layers.Layer):
         Returns:
             Tensor: Spectral convergence loss value.
         """
-        return tf.norm(y_mag - x_mag, ord="fro", axis=(-2, -1)) / tf.norm(y_mag, ord="fro", axis=(-2, -1))
+        return tf.norm(y_mag - x_mag, ord="fro", axis=(-2, -1)) / tf.norm(
+            y_mag, ord="fro", axis=(-2, -1)
+        )
 
 
 class TFLogSTFTMagnitude(tf.keras.layers.Layer):
@@ -74,14 +76,22 @@ class TFSTFT(tf.keras.layers.Layer):
             Tensor: Spectral convergence loss value (pre-reduce).
             Tensor: Log STFT magnitude loss value (pre-reduce).
         """
-        x_mag = tf.abs(tf.signal.stft(signals=x,
-                                      frame_length=self.frame_length,
-                                      frame_step=self.frame_step,
-                                      fft_length=self.fft_length))
-        y_mag = tf.abs(tf.signal.stft(signals=y,
-                                      frame_length=self.frame_length,
-                                      frame_step=self.frame_step,
-                                      fft_length=self.fft_length))
+        x_mag = tf.abs(
+            tf.signal.stft(
+                signals=x,
+                frame_length=self.frame_length,
+                frame_step=self.frame_step,
+                fft_length=self.fft_length,
+            )
+        )
+        y_mag = tf.abs(
+            tf.signal.stft(
+                signals=y,
+                frame_length=self.frame_length,
+                frame_step=self.frame_step,
+                fft_length=self.fft_length,
+            )
+        )
 
         # add small number to prevent nan value.
         # compatible with pytorch version.
@@ -97,10 +107,12 @@ class TFSTFT(tf.keras.layers.Layer):
 class TFMultiResolutionSTFT(tf.keras.layers.Layer):
     """Multi resolution STFT loss module."""
 
-    def __init__(self,
-                 fft_lengths=[1024, 2048, 512],
-                 frame_lengths=[600, 1200, 240],
-                 frame_steps=[120, 240, 50],):
+    def __init__(
+        self,
+        fft_lengths=[1024, 2048, 512],
+        frame_lengths=[600, 1200, 240],
+        frame_steps=[120, 240, 50],
+    ):
         """Initialize Multi resolution STFT loss module.
         Args:
             frame_lengths (list): List of FFT sizes.
@@ -110,7 +122,9 @@ class TFMultiResolutionSTFT(tf.keras.layers.Layer):
         super().__init__()
         assert len(frame_lengths) == len(frame_steps) == len(fft_lengths)
         self.stft_losses = []
-        for frame_length, frame_step, fft_length in zip(frame_lengths, frame_steps, fft_lengths):
+        for frame_length, frame_step, fft_length in zip(
+            frame_lengths, frame_steps, fft_lengths
+        ):
             self.stft_losses.append(TFSTFT(frame_length, frame_step, fft_length))
 
     def call(self, y, x):

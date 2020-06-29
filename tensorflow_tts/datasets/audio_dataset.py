@@ -28,13 +28,14 @@ from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 class AudioDataset(AbstractDataset):
     """Tensorflow compatible audio dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 audio_query="*-wave.npy",
-                 audio_load_fn=np.load,
-                 audio_length_threshold=None,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        audio_query="*-wave.npy",
+        audio_load_fn=np.load,
+        audio_length_threshold=None,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -51,10 +52,16 @@ class AudioDataset(AbstractDataset):
 
         # filter by threshold
         if audio_length_threshold is not None:
-            idxs = [idx for idx in range(len(audio_files)) if audio_lengths[idx] > audio_length_threshold]
+            idxs = [
+                idx
+                for idx in range(len(audio_files))
+                if audio_lengths[idx] > audio_length_threshold
+            ]
             if len(audio_files) != len(idxs):
-                logging.warning(f"Some files are filtered by mel length threshold "
-                                f"({len(audio_files)} -> {len(idxs)}).")
+                logging.warning(
+                    f"Some files are filtered by mel length threshold "
+                    f"({len(audio_files)} -> {len(idxs)})."
+                )
             audio_files = [audio_files[idx] for idx in idxs]
 
         # assert the number of files
@@ -91,19 +98,18 @@ class AudioDataset(AbstractDataset):
             output_types = (tf.dtypes.string, *output_types)
         return output_types
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -111,10 +117,12 @@ class AudioDataset(AbstractDataset):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
         # define padded_shapes.
-        padded_shapes = ([None, ], [])
+        padded_shapes = ([None,], [])
         if self.return_utt_id:
             padded_shapes = ([], *padded_shapes)
 

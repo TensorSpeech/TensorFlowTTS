@@ -34,34 +34,57 @@ def main():
     """Run melgan decoding from folder."""
     parser = argparse.ArgumentParser(
         description="Generate Audio from melspectrogram with trained melgan "
-                    "(See detail in example/melgan/decode_melgan.py).")
-    parser.add_argument("--rootdir", default=None, type=str, required=True,
-                        help="directory including ids/durations files.")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to save generated speech.")
-    parser.add_argument("--checkpoint", type=str, required=True,
-                        help="checkpoint file to be loaded.")
-    parser.add_argument("--use-norm", type=int, default=1,
-                        help="Use norm or raw melspectrogram.")
-    parser.add_argument("--batch-size", type=int, default=8,
-                        help="batch_size.")
-    parser.add_argument("--config", default=None, type=str, required=True,
-                        help="yaml format configuration file. if not explicitly provided, "
-                             "it will be searched in the checkpoint directory. (default=None)")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
+        "(See detail in example/melgan/decode_melgan.py)."
+    )
+    parser.add_argument(
+        "--rootdir",
+        default=None,
+        type=str,
+        required=True,
+        help="directory including ids/durations files.",
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="directory to save generated speech."
+    )
+    parser.add_argument(
+        "--checkpoint", type=str, required=True, help="checkpoint file to be loaded."
+    )
+    parser.add_argument(
+        "--use-norm", type=int, default=1, help="Use norm or raw melspectrogram."
+    )
+    parser.add_argument("--batch-size", type=int, default=8, help="batch_size.")
+    parser.add_argument(
+        "--config",
+        default=None,
+        type=str,
+        required=True,
+        help="yaml format configuration file. if not explicitly provided, "
+        "it will be searched in the checkpoint directory. (default=None)",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
     args = parser.parse_args()
 
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.WARN,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
         logging.warning("Skip DEBUG/INFO messages")
 
     # check directory existence
@@ -84,16 +107,21 @@ def main():
         root_dir=args.rootdir,
         mel_query=mel_query,
         mel_load_fn=mel_load_fn,
-        return_utt_id=True
+        return_utt_id=True,
     )
     dataset = dataset.create(batch_size=args.batch_size)
 
     # define model and load checkpoint
-    mb_melgan = TFMelGANGenerator(config=MultiBandMelGANGeneratorConfig(**config["generator_params"]), name='melgan')
+    mb_melgan = TFMelGANGenerator(
+        config=MultiBandMelGANGeneratorConfig(**config["generator_params"]),
+        name="melgan",
+    )
     mb_melgan._build()
     mb_melgan.load_weights(args.checkpoint)
 
-    pqmf = TFPQMF(config=MultiBandMelGANGeneratorConfig(**config["generator_params"]), name='pqmf')
+    pqmf = TFPQMF(
+        config=MultiBandMelGANGeneratorConfig(**config["generator_params"]), name="pqmf"
+    )
 
     for data in tqdm(dataset, desc="[Decoding]"):
         utt_ids, mels, mel_lengths = data
@@ -108,9 +136,12 @@ def main():
         # save to outdir
         for i, audio in enumerate(generated_audios):
             utt_id = utt_ids[i].numpy().decode("utf-8")
-            sf.write(os.path.join(args.outdir, f"{utt_id}.wav"),
-                     audio[:mel_lengths[i].numpy() * config["hop_size"]],
-                     config["sampling_rate"], "PCM_16")
+            sf.write(
+                os.path.join(args.outdir, f"{utt_id}.wav"),
+                audio[: mel_lengths[i].numpy() * config["hop_size"]],
+                config["sampling_rate"],
+                "PCM_16",
+            )
 
 
 if __name__ == "__main__":

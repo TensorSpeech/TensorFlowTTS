@@ -57,20 +57,30 @@ class WeightNormalization(tf.keras.layers.Wrapper):
         """
         if not isinstance(layer, tf.keras.layers.Layer):
             raise ValueError(
-                'Please initialize `WeightNorm` layer with a `tf.keras.layers.Layer` '
-                'instance. You passed: {input}'.format(input=layer))
+                "Please initialize `WeightNorm` layer with a `tf.keras.layers.Layer` "
+                "instance. You passed: {input}".format(input=layer)
+            )
 
         layer_type = type(layer).__name__
-        if layer_type not in ['Dense', 'Conv2D', 'Conv2DTranspose', "Conv1D", "GroupConv1D"]:
-            warnings.warn('`WeightNorm` is tested only for `Dense`, `Conv2D`, `Conv1D`, `GroupConv1D`, '
-                          '`GroupConv2D`, and `Conv2DTranspose` layers. You passed a layer of type `{}`'
-                          .format(layer_type))
+        if layer_type not in [
+            "Dense",
+            "Conv2D",
+            "Conv2DTranspose",
+            "Conv1D",
+            "GroupConv1D",
+        ]:
+            warnings.warn(
+                "`WeightNorm` is tested only for `Dense`, `Conv2D`, `Conv1D`, `GroupConv1D`, "
+                "`GroupConv2D`, and `Conv2DTranspose` layers. You passed a layer of type `{}`".format(
+                    layer_type
+                )
+            )
 
         super().__init__(layer, **kwargs)
 
         self.data_init = data_init
-        self._track_trackable(layer, name='layer')
-        self.filter_axis = -2 if layer_type == 'Conv2DTranspose' else -1
+        self._track_trackable(layer, name="layer")
+        self.filter_axis = -2 if layer_type == "Conv2DTranspose" else -1
 
     def _compute_weights(self):
         """Generate weights with normalization."""
@@ -79,12 +89,14 @@ class WeightNormalization(tf.keras.layers.Wrapper):
         new_axis = -self.filter_axis - 3
 
         self.layer.kernel = tf.nn.l2_normalize(
-            self.v, axis=self.kernel_norm_axes) * tf.expand_dims(self.g, new_axis)
+            self.v, axis=self.kernel_norm_axes
+        ) * tf.expand_dims(self.g, new_axis)
 
     def _init_norm(self):
         """Set the norm of the weight vector."""
         kernel_norm = tf.sqrt(
-            tf.reduce_sum(tf.square(self.v), axis=self.kernel_norm_axes))
+            tf.reduce_sum(tf.square(self.v), axis=self.kernel_norm_axes)
+        )
         self.g.assign(kernel_norm)
 
     def _data_dep_init(self, inputs):
@@ -107,7 +119,7 @@ class WeightNormalization(tf.keras.layers.Wrapper):
         x_init = self.layer(inputs)
         norm_axes_out = list(range(x_init.shape.rank - 1))
         m_init, v_init = tf.nn.moments(x_init, norm_axes_out)
-        scale_init = 1. / tf.sqrt(v_init + 1e-10)
+        scale_init = 1.0 / tf.sqrt(v_init + 1e-10)
 
         self.g.assign(self.g * scale_init)
         if use_bias:
@@ -125,9 +137,11 @@ class WeightNormalization(tf.keras.layers.Wrapper):
         if not self.layer.built:
             self.layer.build(input_shape)
 
-            if not hasattr(self.layer, 'kernel'):
-                raise ValueError('`WeightNorm` must wrap a layer that'
-                                 ' contains a `kernel` for weights')
+            if not hasattr(self.layer, "kernel"):
+                raise ValueError(
+                    "`WeightNorm` must wrap a layer that"
+                    " contains a `kernel` for weights"
+                )
 
             self.kernel_norm_axes = list(range(self.layer.kernel.shape.ndims))
             self.kernel_norm_axes.pop(self.filter_axis)
@@ -137,15 +151,15 @@ class WeightNormalization(tf.keras.layers.Wrapper):
             # to avoid a duplicate `kernel` variable after `build` is called
             self.layer.kernel = None
             self.g = self.add_weight(
-                name='g',
+                name="g",
                 shape=(int(self.v.shape[self.filter_axis]),),
-                initializer='ones',
+                initializer="ones",
                 dtype=self.v.dtype,
-                trainable=True)
+                trainable=True,
+            )
             self.initialized = self.add_weight(
-                name='initialized',
-                dtype=tf.bool,
-                trainable=False)
+                name="initialized", dtype=tf.bool, trainable=False
+            )
             self.initialized.assign(False)
 
         super().build()
@@ -166,5 +180,4 @@ class WeightNormalization(tf.keras.layers.Wrapper):
         return output
 
     def compute_output_shape(self, input_shape):
-        return tf.TensorShape(
-            self.layer.compute_output_shape(input_shape).as_list())
+        return tf.TensorShape(self.layer.compute_output_shape(input_shape).as_list())
