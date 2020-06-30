@@ -23,7 +23,7 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 # TODO(@dathudeptrai) update requirement if needed.
 requirements = {
     "install": [
-        "TFGENZOO==1.2.4.post5",
+        "TFGENZOO==1.2.4.post6",
         "tensorflow-gpu>=2.2.0",
         "tensorflow-addons>=0.9.1",
         "setuptools>=38.5.1",
