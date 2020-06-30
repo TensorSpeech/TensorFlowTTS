@@ -45,40 +45,60 @@ def main():
     """Running extract tacotron-2 durations."""
     parser = argparse.ArgumentParser(
         description="Extract durations from charactor with trained Tacotron-2 "
-                    "(See detail in tensorflow_tts/example/tacotron-2/extract_duration.py).")
-    parser.add_argument("--rootdir", default=None, type=str, required=True,
-                        help="directory including ids/durations files.")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to save generated speech.")
-    parser.add_argument("--checkpoint", type=str, required=True,
-                        help="checkpoint file to be loaded.")
-    parser.add_argument("--use-norm", default=1, type=int,
-                        help="usr norm-mels for train or raw.")
-    parser.add_argument("--batch-size", default=8, type=int,
-                        help="batch size.")
-    parser.add_argument("--win-front", default=2, type=int,
-                        help="win-front.")
-    parser.add_argument("--win-back", default=2, type=int,
-                        help="win-front.")
-    parser.add_argument("--save-alignment", default=0, type=int,
-                        help="save-alignment.")
-    parser.add_argument("--config", default=None, type=str, required=True,
-                        help="yaml format configuration file. if not explicitly provided, "
-                             "it will be searched in the checkpoint directory. (default=None)")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
+        "(See detail in tensorflow_tts/example/tacotron-2/extract_duration.py)."
+    )
+    parser.add_argument(
+        "--rootdir",
+        default=None,
+        type=str,
+        required=True,
+        help="directory including ids/durations files.",
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="directory to save generated speech."
+    )
+    parser.add_argument(
+        "--checkpoint", type=str, required=True, help="checkpoint file to be loaded."
+    )
+    parser.add_argument(
+        "--use-norm", default=1, type=int, help="usr norm-mels for train or raw."
+    )
+    parser.add_argument("--batch-size", default=8, type=int, help="batch size.")
+    parser.add_argument("--win-front", default=2, type=int, help="win-front.")
+    parser.add_argument("--win-back", default=2, type=int, help="win-front.")
+    parser.add_argument("--save-alignment", default=0, type=int, help="save-alignment.")
+    parser.add_argument(
+        "--config",
+        default=None,
+        type=str,
+        required=True,
+        help="yaml format configuration file. if not explicitly provided, "
+        "it will be searched in the checkpoint directory. (default=None)",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
     args = parser.parse_args()
 
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.WARN,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
         logging.warning("Skip DEBUG/INFO messages")
 
     # check directory existence
@@ -106,14 +126,16 @@ def main():
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
         return_utt_id=True,
-        return_guided_attention=False
+        return_guided_attention=False,
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
     # define model and load checkpoint
-    tacotron2 = TFTacotron2(config=Tacotron2Config(**config["tacotron2_params"]),
-                            training=True,  # enable teacher forcing mode.
-                            name='tacotron2')
+    tacotron2 = TFTacotron2(
+        config=Tacotron2Config(**config["tacotron2_params"]),
+        training=True,  # enable teacher forcing mode.
+        name="tacotron2",
+    )
     tacotron2._build()  # build model to be able load_weights.
     tacotron2.load_weights(args.checkpoint)
 
@@ -131,14 +153,16 @@ def main():
             use_window_mask=True,
             win_front=args.win_front,
             win_back=args.win_back,
-            training=True
+            training=True,
         )
 
         # convert to numpy
         alignment_historys = alignment_historys.numpy()
 
         for i, alignment in enumerate(alignment_historys):
-            real_char_length = char_length[i].numpy() - 1  # minus 1 because char have eos tokens.
+            real_char_length = (
+                char_length[i].numpy() - 1
+            )  # minus 1 because char have eos tokens.
             real_mel_length = mel_length[i].numpy()
             alignment = alignment[:real_char_length, :real_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
@@ -146,31 +170,34 @@ def main():
             saved_name = utt_id[i].decode("utf-8")
 
             # check a length compatible
-            assert len(d) == real_char_length, \
-                f"different between len_char and len_durations, {len(d)} and {real_char_length}"
+            assert (
+                len(d) == real_char_length
+            ), f"different between len_char and len_durations, {len(d)} and {real_char_length}"
 
-            assert np.sum(d) == real_mel_length, \
-                f"different between sum_durations and len_mel, {np.sum(d)} and {real_mel_length}"
+            assert (
+                np.sum(d) == real_mel_length
+            ), f"different between sum_durations and len_mel, {np.sum(d)} and {real_mel_length}"
 
             # save D to folder.
-            np.save(os.path.join(args.outdir, f"{saved_name}-durations.npy"),
-                    d.astype(np.int32), allow_pickle=False)
+            np.save(
+                os.path.join(args.outdir, f"{saved_name}-durations.npy"),
+                d.astype(np.int32),
+                allow_pickle=False,
+            )
 
             # save alignment to debug.
             if args.save_alignment == 1:
                 figname = os.path.join(args.outdir, f"{saved_name}_alignment.png")
                 fig = plt.figure(figsize=(8, 6))
                 ax = fig.add_subplot(111)
-                ax.set_title(f'Alignment of {saved_name}')
+                ax.set_title(f"Alignment of {saved_name}")
                 im = ax.imshow(
-                    alignment,
-                    aspect='auto',
-                    origin='lower',
-                    interpolation='none')
+                    alignment, aspect="auto", origin="lower", interpolation="none"
+                )
                 fig.colorbar(im, ax=ax)
-                xlabel = 'Decoder timestep'
+                xlabel = "Decoder timestep"
                 plt.xlabel(xlabel)
-                plt.ylabel('Encoder timestep')
+                plt.ylabel("Encoder timestep")
                 plt.tight_layout()
                 plt.savefig(figname)
                 plt.close()

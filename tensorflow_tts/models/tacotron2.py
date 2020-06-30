@@ -58,28 +58,36 @@ def mish(x):
 
 
 ACT2FN = {
-    "identity": tf.keras.layers.Activation('linear'),
-    "tanh": tf.keras.layers.Activation('tanh'),
+    "identity": tf.keras.layers.Activation("linear"),
+    "tanh": tf.keras.layers.Activation("tanh"),
     "gelu": tf.keras.layers.Activation(gelu),
     "relu": tf.keras.activations.relu,
     "swish": tf.keras.layers.Activation(swish),
     "gelu_new": tf.keras.layers.Activation(gelu_new),
-    "mish": tf.keras.layers.Activation(mish)
+    "mish": tf.keras.layers.Activation(mish),
 }
 
 
 class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
     """Tacotron-2 Convolutional Batchnorm module."""
 
-    def __init__(self, filters, kernel_size, dropout_rate, activation=None, name_idx=None):
+    def __init__(
+        self, filters, kernel_size, dropout_rate, activation=None, name_idx=None
+    ):
         super().__init__()
-        self.conv1d = tf.keras.layers.Conv1D(filters,
-                                             kernel_size,
-                                             kernel_initializer=get_initializer(0.02),
-                                             padding='same',
-                                             name='conv_._{}'.format(name_idx))
-        self.norm = tf.keras.layers.BatchNormalization(axis=-1, name='batch_norm_._{}'.format(name_idx))
-        self.dropout = tf.keras.layers.Dropout(rate=dropout_rate, name='dropout_._{}'.format(name_idx))
+        self.conv1d = tf.keras.layers.Conv1D(
+            filters,
+            kernel_size,
+            kernel_initializer=get_initializer(0.02),
+            padding="same",
+            name="conv_._{}".format(name_idx),
+        )
+        self.norm = tf.keras.layers.BatchNormalization(
+            axis=-1, name="batch_norm_._{}".format(name_idx)
+        )
+        self.dropout = tf.keras.layers.Dropout(
+            rate=dropout_rate, name="dropout_._{}".format(name_idx)
+        )
         self.act = ACT2FN[activation]
 
     def call(self, inputs, training=False):
@@ -106,11 +114,15 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
                 config.n_speakers,
                 config.embedding_hidden_size,
                 embeddings_initializer=get_initializer(self.initializer_range),
-                name="speaker_embeddings"
+                name="speaker_embeddings",
             )
-            self.speaker_fc = tf.keras.layers.Dense(units=config.embedding_hidden_size, name='speaker_fc')
+            self.speaker_fc = tf.keras.layers.Dense(
+                units=config.embedding_hidden_size, name="speaker_fc"
+            )
 
-        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name="LayerNorm")
+        self.LayerNorm = tf.keras.layers.LayerNormalization(
+            epsilon=config.layer_norm_eps, name="LayerNorm"
+        )
         self.dropout = tf.keras.layers.Dropout(config.embedding_dropout_prob)
 
     def build(self, input_shape):
@@ -169,7 +181,8 @@ class TFTacotronEncoderConvs(tf.keras.layers.Layer):
                 kernel_size=config.encoder_conv_kernel_sizes,
                 activation=config.encoder_conv_activation,
                 dropout_rate=config.encoder_conv_dropout_rate,
-                name_idx=i)
+                name_idx=i,
+            )
             self.conv_batch_norm.append(conv)
 
     def call(self, inputs, training=False):
@@ -186,11 +199,13 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
-        self.embeddings = TFTacotronEmbeddings(config, name='embeddings')
-        self.convbn = TFTacotronEncoderConvs(config, name='conv_batch_norm')
+        self.embeddings = TFTacotronEmbeddings(config, name="embeddings")
+        self.convbn = TFTacotronEncoderConvs(config, name="conv_batch_norm")
         self.bilstm = tf.keras.layers.Bidirectional(
-            tf.keras.layers.LSTM(units=config.encoder_lstm_units, return_sequences=True),
-            name='bilstm'
+            tf.keras.layers.LSTM(
+                units=config.encoder_lstm_units, return_sequences=True
+            ),
+            name="bilstm",
         )
 
     def call(self, inputs, training=False):
@@ -213,9 +228,9 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
 class TrainingSampler(Sampler):
     """Training sampler for Seq2Seq training."""
 
-    def __init__(self,
-                 config,
-                 ):
+    def __init__(
+        self, config,
+    ):
         super().__init__()
         self.config = config
         # create schedule factor.
@@ -228,7 +243,9 @@ class TrainingSampler(Sampler):
         """Setup ground-truth mel outputs for decoder."""
         self.mel_lengths = mel_lengths
         self.set_batch_size(tf.shape(targets)[0])
-        self.targets = targets[:, self._reduction_factor - 1::self._reduction_factor, :]
+        self.targets = targets[
+            :, self._reduction_factor - 1 :: self._reduction_factor, :
+        ]
         self.max_lengths = tf.tile([tf.shape(self.targets)[1]], [self._batch_size])
 
     @property
@@ -249,16 +266,20 @@ class TrainingSampler(Sampler):
 
     def initialize(self):
         """Return (Finished, next_inputs)."""
-        return (tf.tile([False], [self._batch_size]),
-                tf.tile([[0.0]], [self._batch_size, self.config.n_mels]))
+        return (
+            tf.tile([False], [self._batch_size]),
+            tf.tile([[0.0]], [self._batch_size, self.config.n_mels]),
+        )
 
     def sample(self, time, outputs, state):
         return tf.tile([0], [self._batch_size])
 
     def next_inputs(self, time, outputs, state, sample_ids, **kwargs):
-        finished = (time + 1 >= self.max_lengths)
-        next_inputs = self._ratio * self.targets[:, time, :] + \
-            (1.0 - self._ratio) * outputs[:, -self.config.n_mels:]
+        finished = time + 1 >= self.max_lengths
+        next_inputs = (
+            self._ratio * self.targets[:, time, :]
+            + (1.0 - self._ratio) * outputs[:, -self.config.n_mels :]
+        )
         next_state = state
         return (finished, next_inputs, next_state)
 
@@ -269,9 +290,9 @@ class TrainingSampler(Sampler):
 class TestingSampler(TrainingSampler):
     """Testing sampler for Seq2Seq training."""
 
-    def __init__(self,
-                 config,
-                 ):
+    def __init__(
+        self, config,
+    ):
         super().__init__(config)
 
     def next_inputs(self, time, outputs, state, sample_ids, **kwargs):
@@ -279,7 +300,7 @@ class TestingSampler(TrainingSampler):
         stop_token_prediction = tf.nn.sigmoid(stop_token_prediction)
         finished = tf.cast(tf.round(stop_token_prediction), tf.bool)
         finished = tf.reduce_all(finished)
-        next_inputs = outputs[:, -self.config.n_mels:]
+        next_inputs = outputs[:, -self.config.n_mels :]
         next_state = state
         return (finished, next_inputs, next_state)
 
@@ -287,12 +308,14 @@ class TestingSampler(TrainingSampler):
 class TFTacotronLocationSensitiveAttention(BahdanauAttention):
     """Tacotron-2 Location Sensitive Attention module."""
 
-    def __init__(self,
-                 config,
-                 memory,
-                 mask_encoder=True,
-                 memory_sequence_length=None,
-                 is_cumulate=True):
+    def __init__(
+        self,
+        config,
+        memory,
+        mask_encoder=True,
+        memory_sequence_length=None,
+        is_cumulate=True,
+    ):
         """Init variables."""
         memory_length = memory_sequence_length if (mask_encoder is True) else None
         super().__init__(
@@ -300,20 +323,20 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
             memory=memory,
             memory_sequence_length=memory_length,
             probability_fn="softmax",
-            name="LocationSensitiveAttention"
+            name="LocationSensitiveAttention",
         )
         self.location_convolution = tf.keras.layers.Conv1D(
             filters=config.attention_filters,
             kernel_size=config.attention_kernel,
-            padding='same',
+            padding="same",
             use_bias=False,
-            name='location_conv'
+            name="location_conv",
         )
-        self.location_layer = tf.keras.layers.Dense(units=config.attention_dim,
-                                                    use_bias=False,
-                                                    name='location_layer')
+        self.location_layer = tf.keras.layers.Dense(
+            units=config.attention_dim, use_bias=False, name="location_layer"
+        )
 
-        self.v = tf.keras.layers.Dense(1, use_bias=True, name='scores_attention')
+        self.v = tf.keras.layers.Dense(1, use_bias=True, name="scores_attention")
         self.config = config
         self.is_cumulate = is_cumulate
         self.use_window = False
@@ -323,7 +346,9 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         self.win_back = tf.constant(win_back, tf.int32)
 
         self._indices = tf.expand_dims(tf.range(tf.shape(self.keys)[1]), 0)
-        self._indices = tf.tile(self._indices, [tf.shape(self.keys)[0], 1])  # [batch_size, max_time]
+        self._indices = tf.tile(
+            self._indices, [tf.shape(self.keys)[0], 1]
+        )  # [batch_size, max_time]
 
         self.use_window = True
 
@@ -350,9 +375,9 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
         f = self.location_convolution(expanded_alignments)
         processed_location_features = self.location_layer(f)
 
-        energy = self._location_sensitive_score(processed_query,
-                                                processed_location_features,
-                                                self.keys)
+        energy = self._location_sensitive_score(
+            processed_query, processed_location_features, self.keys
+        )
 
         # mask energy on inference steps.
         if self.use_window is True:
@@ -381,7 +406,9 @@ class TFTacotronLocationSensitiveAttention(BahdanauAttention):
 
     def get_initial_context(self, batch_size):
         """Get initial attention."""
-        return tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
+        return tf.zeros(
+            shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32
+        )
 
 
 class TFTacotronPrenet(tf.keras.layers.Layer):
@@ -391,12 +418,16 @@ class TFTacotronPrenet(tf.keras.layers.Layer):
         """Init variables."""
         super().__init__(**kwargs)
         self.prenet_dense = [
-            tf.keras.layers.Dense(units=config.prenet_units,
-                                  activation=ACT2FN[config.prenet_activation],
-                                  name='dense_._{}'.format(i))
+            tf.keras.layers.Dense(
+                units=config.prenet_units,
+                activation=ACT2FN[config.prenet_activation],
+                name="dense_._{}".format(i),
+            )
             for i in range(config.n_prenet_layers)
         ]
-        self.dropout = tf.keras.layers.Dropout(rate=config.prenet_dropout_rate, name='dropout')
+        self.dropout = tf.keras.layers.Dropout(
+            rate=config.prenet_dropout_rate, name="dropout"
+        )
 
     def call(self, inputs, training=False):
         """Call logic."""
@@ -419,8 +450,8 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
                 filters=config.postnet_conv_filters,
                 kernel_size=config.postnet_conv_kernel_sizes,
                 dropout_rate=config.postnet_dropout_rate,
-                activation='identity' if i + 1 == config.n_conv_postnet else 'tanh',
-                name_idx=i
+                activation="identity" if i + 1 == config.n_conv_postnet else "tanh",
+                name_idx=i,
             )
             self.conv_batch_norm.append(conv)
 
@@ -433,17 +464,21 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
 
 
 TFTacotronDecoderCellState = collections.namedtuple(
-    'TFTacotronDecoderCellState',
-    ['attention_lstm_state',
-     'decoder_lstms_state',
-     'context',
-     'time',
-     'state',
-     'alignment_history',
-     'max_alignments'])
+    "TFTacotronDecoderCellState",
+    [
+        "attention_lstm_state",
+        "decoder_lstms_state",
+        "context",
+        "time",
+        "state",
+        "alignment_history",
+        "max_alignments",
+    ],
+)
 
 TFDecoderOutput = collections.namedtuple(
-    "TFDecoderOutput", ("mel_output", "token_output", "sample_id"))
+    "TFDecoderOutput", ("mel_output", "token_output", "sample_id")
+)
 
 
 class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
@@ -453,37 +488,43 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         """Init variables."""
         super().__init__(**kwargs)
         self.training = training
-        self.prenet = TFTacotronPrenet(config, name='prenet')
+        self.prenet = TFTacotronPrenet(config, name="prenet")
 
         # define lstm cell on decoder.
         # TODO(@dathudeptrai) switch to zone-out lstm.
-        self.attention_lstm = tf.keras.layers.LSTMCell(units=config.decoder_lstm_units,
-                                                       name='attention_lstm_cell')
+        self.attention_lstm = tf.keras.layers.LSTMCell(
+            units=config.decoder_lstm_units, name="attention_lstm_cell"
+        )
         lstm_cells = []
         for i in range(config.n_lstm_decoder):
-            lstm_cell = tf.keras.layers.LSTMCell(units=config.decoder_lstm_units,
-                                                 name='lstm_cell_._{}'.format(i))
+            lstm_cell = tf.keras.layers.LSTMCell(
+                units=config.decoder_lstm_units, name="lstm_cell_._{}".format(i)
+            )
             lstm_cells.append(lstm_cell)
-        self.decoder_lstms = tf.keras.layers.StackedRNNCells(lstm_cells,
-                                                             name='decoder_lstms')
+        self.decoder_lstms = tf.keras.layers.StackedRNNCells(
+            lstm_cells, name="decoder_lstms"
+        )
 
         # define attention layer.
-        if config.attention_type == 'lsa':
+        if config.attention_type == "lsa":
             # create location-sensitive attention.
             self.attention_layer = TFTacotronLocationSensitiveAttention(
                 config,
                 memory=None,
                 mask_encoder=True,
                 memory_sequence_length=None,
-                is_cumulate=True
+                is_cumulate=True,
             )
         else:
             raise ValueError("Only lsa (location-sensitive attention) is supported")
 
         # frame, stop projection layer.
         self.frame_projection = tf.keras.layers.Dense(
-            units=config.n_mels * config.reduction_factor, name='frame_projection')
-        self.stop_projection = tf.keras.layers.Dense(units=config.reduction_factor, name='stop_projection')
+            units=config.n_mels * config.reduction_factor, name="frame_projection"
+        )
+        self.stop_projection = tf.keras.layers.Dense(
+            units=config.reduction_factor, name="stop_projection"
+        )
 
         self.config = config
 
@@ -510,11 +551,21 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
 
     def get_initial_state(self, batch_size):
         """Get initial states."""
-        initial_attention_lstm_cell_states = self.attention_lstm.get_initial_state(None, batch_size, dtype=tf.float32)
-        initial_decoder_lstms_cell_states = self.decoder_lstms.get_initial_state(None, batch_size, dtype=tf.float32)
-        initial_context = tf.zeros(shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32)
-        initial_state = self.attention_layer.get_initial_state(batch_size, size=self.alignment_size)
-        initial_alignment_history = tf.TensorArray(dtype=tf.float32, size=0, dynamic_size=True)
+        initial_attention_lstm_cell_states = self.attention_lstm.get_initial_state(
+            None, batch_size, dtype=tf.float32
+        )
+        initial_decoder_lstms_cell_states = self.decoder_lstms.get_initial_state(
+            None, batch_size, dtype=tf.float32
+        )
+        initial_context = tf.zeros(
+            shape=[batch_size, self.config.encoder_lstm_units * 2], dtype=tf.float32
+        )
+        initial_state = self.attention_layer.get_initial_state(
+            batch_size, size=self.alignment_size
+        )
+        initial_alignment_history = tf.TensorArray(
+            dtype=tf.float32, size=0, dynamic_size=True
+        )
         return TFTacotronDecoderCellState(
             attention_lstm_state=initial_attention_lstm_cell_states,
             decoder_lstms_state=initial_decoder_lstms_cell_states,
@@ -530,30 +581,30 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
         decoder_input = inputs
 
         # 1. apply prenet for decoder_input.
-        prenet_out = self.prenet(decoder_input, training=self.training)  # [batch_size, dim]
+        prenet_out = self.prenet(
+            decoder_input, training=self.training
+        )  # [batch_size, dim]
 
         # 2. concat prenet_out and prev context vector
         # then use it as input of attention lstm layer.
         attention_lstm_input = tf.concat([prenet_out, states.context], axis=-1)
         attention_lstm_output, next_attention_lstm_state = self.attention_lstm(
-            attention_lstm_input, states.attention_lstm_state)
+            attention_lstm_input, states.attention_lstm_state
+        )
 
         # 3. compute context, alignment and cumulative alignment.
         prev_state = states.state
         prev_alignment_history = states.alignment_history
         prev_max_alignments = states.max_alignments
         context, alignments, state = self.attention_layer(
-            [attention_lstm_output,
-             prev_state,
-             prev_max_alignments],
-            training=self.training
+            [attention_lstm_output, prev_state, prev_max_alignments],
+            training=self.training,
         )
 
         # 4. run decoder lstm(s)
         decoder_lstms_input = tf.concat([attention_lstm_output, context], axis=-1)
         decoder_lstms_output, next_decoder_lstms_state = self.decoder_lstms(
-            decoder_lstms_input,
-            states.decoder_lstms_state
+            decoder_lstms_input, states.decoder_lstms_state
         )
 
         # 5. compute frame feature and stop token.
@@ -574,7 +625,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
             context=context,
             state=state,
             alignment_history=alignment_history,
-            max_alignments=tf.argmax(alignments, -1, output_type=tf.int32)
+            max_alignments=tf.argmax(alignments, -1, output_type=tf.int32),
         )
 
         return (decoder_outputs, stop_tokens), new_states
@@ -583,10 +634,7 @@ class TFTacotronDecoderCell(tf.keras.layers.AbstractRNNCell):
 class TFTacotronDecoder(Decoder):
     """Tacotron-2 Decoder."""
 
-    def __init__(self,
-                 decoder_cell,
-                 decoder_sampler,
-                 output_layer=None):
+    def __init__(self, decoder_cell, decoder_sampler, output_layer=None):
         """Initial variables."""
         self.cell = decoder_cell
         self.sampler = decoder_sampler
@@ -602,25 +650,24 @@ class TFTacotronDecoder(Decoder):
     def output_size(self):
         return TFDecoderOutput(
             mel_output=tf.nest.map_structure(
-                lambda shape: tf.TensorShape(shape), self.cell.output_size),
+                lambda shape: tf.TensorShape(shape), self.cell.output_size
+            ),
             token_output=tf.TensorShape(self.sampler.reduction_factor),
-            sample_id=self.sampler.sample_ids_shape
+            sample_id=self.sampler.sample_ids_shape,
         )
 
     @property
     def output_dtype(self):
-        return TFDecoderOutput(
-            tf.float32,
-            tf.float32,
-            self.sampler.sample_ids_dtype
-        )
+        return TFDecoderOutput(tf.float32, tf.float32, self.sampler.sample_ids_dtype)
 
     @property
     def batch_size(self):
         return self.sampler._batch_size
 
     def step(self, time, inputs, state, training=False):
-        (mel_outputs, stop_tokens), cell_state = self.cell(inputs, state, training=training)
+        (mel_outputs, stop_tokens), cell_state = self.cell(
+            inputs, state, training=training
+        )
         if self.output_layer is not None:
             mel_outputs = self.output_layer(mel_outputs)
         sample_ids = self.sampler.sample(
@@ -631,7 +678,7 @@ class TFTacotronDecoder(Decoder):
             outputs=mel_outputs,
             state=cell_state,
             sample_ids=sample_ids,
-            stop_token_prediction=stop_tokens
+            stop_token_prediction=stop_tokens,
         )
 
         outputs = TFDecoderOutput(mel_outputs, stop_tokens, sample_ids)
@@ -644,15 +691,18 @@ class TFTacotron2(tf.keras.Model):
     def __init__(self, config, training, **kwargs):
         """Initalize tacotron-2 layers."""
         super().__init__(self, **kwargs)
-        self.encoder = TFTacotronEncoder(config, name='encoder')
-        self.decoder_cell = TFTacotronDecoderCell(config, training=training, name='decoder_cell')
+        self.encoder = TFTacotronEncoder(config, name="encoder")
+        self.decoder_cell = TFTacotronDecoderCell(
+            config, training=training, name="decoder_cell"
+        )
         self.decoder = TFTacotronDecoder(
             self.decoder_cell,
-            TrainingSampler(config) if training is True else TestingSampler(config)
+            TrainingSampler(config) if training is True else TestingSampler(config),
         )
-        self.postnet = TFTacotronPostnet(config, name='post_net')
-        self.post_projection = tf.keras.layers.Dense(units=config.n_mels,
-                                                     name='residual_projection')
+        self.postnet = TFTacotronPostnet(config, name="post_net")
+        self.post_projection = tf.keras.layers.Dense(
+            units=config.n_mels, name="residual_projection"
+        )
 
         self.config = config
         self.use_window_mask = False
@@ -674,28 +724,42 @@ class TFTacotron2(tf.keras.Model):
         speaker_ids = np.array([0])
         mel_outputs = np.random.normal(size=(1, 50, 80)).astype(np.float32)
         mel_lengths = np.array([50])
-        self(input_ids, input_lengths, speaker_ids, mel_outputs, mel_lengths, 10, training=True)
+        self(
+            input_ids,
+            input_lengths,
+            speaker_ids,
+            mel_outputs,
+            mel_lengths,
+            10,
+            training=True,
+        )
 
     @tf.function(experimental_relax_shapes=True)
-    def call(self,
-             input_ids,
-             input_lengths,
-             speaker_ids,
-             mel_outputs,
-             mel_lengths,
-             maximum_iterations=2000,
-             use_window_mask=False,
-             win_front=2,
-             win_back=3,
-             training=False):
+    def call(
+        self,
+        input_ids,
+        input_lengths,
+        speaker_ids,
+        mel_outputs,
+        mel_lengths,
+        maximum_iterations=2000,
+        use_window_mask=False,
+        win_front=2,
+        win_back=3,
+        training=False,
+    ):
         """Call logic."""
         # create input-mask based on input_lengths
-        input_mask = tf.sequence_mask(input_lengths,
-                                      maxlen=tf.reduce_max(input_lengths),
-                                      name='input_sequence_masks')
+        input_mask = tf.sequence_mask(
+            input_lengths,
+            maxlen=tf.reduce_max(input_lengths),
+            name="input_sequence_masks",
+        )
 
         # Encoder Step.
-        encoder_hidden_states = self.encoder([input_ids, speaker_ids, input_mask], training=training)
+        encoder_hidden_states = self.encoder(
+            [input_ids, speaker_ids, input_mask], training=training
+        )
 
         batch_size = tf.shape(encoder_hidden_states)[0]
         alignment_size = tf.shape(encoder_hidden_states)[1]
@@ -712,18 +776,23 @@ class TFTacotron2(tf.keras.Model):
         )
         self.decoder.cell.attention_layer.setup_memory(
             memory=encoder_hidden_states,
-            memory_sequence_length=input_lengths  # use for mask attention.
+            memory_sequence_length=input_lengths,  # use for mask attention.
         )
         if use_window_mask:
-            self.decoder.cell.attention_layer.setup_window(win_front=win_front, win_back=win_back)
+            self.decoder.cell.attention_layer.setup_window(
+                win_front=win_front, win_back=win_back
+            )
 
         # run decode step.
-        (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
-            self.decoder,
-            maximum_iterations=maximum_iterations
-        )
+        (
+            (frames_prediction, stop_token_prediction, _),
+            final_decoder_state,
+            _,
+        ) = dynamic_decode(self.decoder, maximum_iterations=maximum_iterations)
 
-        decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
+        decoder_output = tf.reshape(
+            frames_prediction, [batch_size, -1, self.config.n_mels]
+        )
         stop_token_prediction = tf.reshape(stop_token_prediction, [batch_size, -1])
 
         residual = self.postnet(decoder_output, training=training)
@@ -731,26 +800,33 @@ class TFTacotron2(tf.keras.Model):
 
         mel_outputs = decoder_output + residual_projection
 
-        alignment_history = tf.transpose(final_decoder_state.alignment_history.stack(), [1, 2, 0])
+        alignment_history = tf.transpose(
+            final_decoder_state.alignment_history.stack(), [1, 2, 0]
+        )
 
         return decoder_output, mel_outputs, stop_token_prediction, alignment_history
 
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, ], dtype=tf.int32),
-                                  tf.TensorSpec([None, ], dtype=tf.int32)])
-    def inference(self,
-                  input_ids,
-                  input_lengths,
-                  speaker_ids):
+    @tf.function(
+        experimental_relax_shapes=True,
+        input_signature=[
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None,], dtype=tf.int32),
+            tf.TensorSpec([None,], dtype=tf.int32),
+        ],
+    )
+    def inference(self, input_ids, input_lengths, speaker_ids):
         """Call logic."""
         # create input-mask based on input_lengths
-        input_mask = tf.sequence_mask(input_lengths,
-                                      maxlen=tf.reduce_max(input_lengths),
-                                      name='input_sequence_masks')
+        input_mask = tf.sequence_mask(
+            input_lengths,
+            maxlen=tf.reduce_max(input_lengths),
+            name="input_sequence_masks",
+        )
 
         # Encoder Step.
-        encoder_hidden_states = self.encoder([input_ids, speaker_ids, input_mask], training=False)
+        encoder_hidden_states = self.encoder(
+            [input_ids, speaker_ids, input_mask], training=False
+        )
 
         batch_size = tf.shape(encoder_hidden_states)[0]
         alignment_size = tf.shape(encoder_hidden_states)[1]
@@ -768,18 +844,23 @@ class TFTacotron2(tf.keras.Model):
         )
         self.decoder.cell.attention_layer.setup_memory(
             memory=encoder_hidden_states,
-            memory_sequence_length=input_lengths  # use for mask attention.
+            memory_sequence_length=input_lengths,  # use for mask attention.
         )
         if self.use_window_mask:
-            self.decoder.cell.attention_layer.setup_window(win_front=self.win_front, win_back=self.win_back)
+            self.decoder.cell.attention_layer.setup_window(
+                win_front=self.win_front, win_back=self.win_back
+            )
 
         # run decode step.
-        (frames_prediction, stop_token_prediction, _), final_decoder_state, _ = dynamic_decode(
-            self.decoder,
-            maximum_iterations=self.maximum_iterations
-        )
+        (
+            (frames_prediction, stop_token_prediction, _),
+            final_decoder_state,
+            _,
+        ) = dynamic_decode(self.decoder, maximum_iterations=self.maximum_iterations)
 
-        decoder_output = tf.reshape(frames_prediction, [batch_size, -1, self.config.n_mels])
+        decoder_output = tf.reshape(
+            frames_prediction, [batch_size, -1, self.config.n_mels]
+        )
         stop_token_prediction = tf.reshape(stop_token_prediction, [batch_size, -1])
 
         residual = self.postnet(decoder_output, training=False)
@@ -787,6 +868,8 @@ class TFTacotron2(tf.keras.Model):
 
         mel_outputs = decoder_output + residual_projection
 
-        alignment_history = tf.transpose(final_decoder_state.alignment_history.stack(), [1, 2, 0])
+        alignment_history = tf.transpose(
+            final_decoder_state.alignment_history.stack(), [1, 2, 0]
+        )
 
         return decoder_output, mel_outputs, stop_token_prediction, alignment_history

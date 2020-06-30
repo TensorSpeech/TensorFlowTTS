@@ -24,18 +24,18 @@ from tensorflow_tts.configs import FastSpeechConfig
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
-
-
-@pytest.mark.parametrize(
-    "num_hidden_layers,n_speakers", [
-        (2, 1), (3, 2), (4, 3)
-    ]
+    level=logging.DEBUG,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
 )
-def test_fastspeech_trainable(num_hidden_layers, n_speakers):
-    config = FastSpeechConfig(num_hidden_layers=num_hidden_layers, n_speakers=n_speakers)
 
-    fastspeech = TFFastSpeech(config, name='fastspeech')
+
+@pytest.mark.parametrize("num_hidden_layers,n_speakers", [(2, 1), (3, 2), (4, 3)])
+def test_fastspeech_trainable(num_hidden_layers, n_speakers):
+    config = FastSpeechConfig(
+        num_hidden_layers=num_hidden_layers, n_speakers=n_speakers
+    )
+
+    fastspeech = TFFastSpeech(config, name="fastspeech")
     optimizer = tf.keras.optimizers.Adam(lr=0.001)
 
     # fake inputs
@@ -50,8 +50,11 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
     def one_step_training():
         with tf.GradientTape() as tape:
             mel_outputs_before, _, duration_outputs = fastspeech(
-                input_ids, attention_mask, speaker_ids, duration_gts, training=True)
-            duration_loss = tf.keras.losses.MeanSquaredError()(duration_gts, duration_outputs)
+                input_ids, attention_mask, speaker_ids, duration_gts, training=True
+            )
+            duration_loss = tf.keras.losses.MeanSquaredError()(
+                duration_gts, duration_outputs
+            )
             mel_loss = tf.keras.losses.MeanSquaredError()(mel_gts, mel_outputs_before)
             loss = duration_loss + mel_loss
         gradients = tape.gradient(loss, fastspeech.trainable_variables)
@@ -60,6 +63,7 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
         tf.print(loss)
 
     import time
+
     for i in range(2):
         if i == 1:
             start = time.time()

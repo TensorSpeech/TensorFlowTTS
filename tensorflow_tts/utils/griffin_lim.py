@@ -42,27 +42,35 @@ class TFGriffinLim(tf.keras.layers.Layer):
     @tf.function
     def _build_mel_basis(self):
         """Build mel basis."""
-        return librosa.filters.mel(self.config["sampling_rate"],
-                                   self.config["fft_size"],
-                                   n_mels=self.config["num_mels"],
-                                   fmin=self.config["fmin"],
-                                   fmax=self.config["fmax"])
+        return librosa.filters.mel(
+            self.config["sampling_rate"],
+            self.config["fft_size"],
+            n_mels=self.config["num_mels"],
+            fmin=self.config["fmin"],
+            fmax=self.config["fmax"],
+        )
 
     @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.float32)])
     def _mel_to_linear(self, mel_spectrogram):
         """Convert mel to linear spectrogram."""
         _inv_mel_basis = tf.linalg.pinv(self._build_mel_basis())
-        return tf.math.maximum(1e-10, tf.matmul(_inv_mel_basis, tf.transpose(mel_spectrogram, (1, 0))))
+        return tf.math.maximum(
+            1e-10, tf.matmul(_inv_mel_basis, tf.transpose(mel_spectrogram, (1, 0)))
+        )
 
-    @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.complex64)])
+    @tf.function(
+        input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.complex64)]
+    )
     def _invert_spectrogram(self, spectrogram):
         """Invert Spectrogram."""
         spectrogram = tf.expand_dims(spectrogram, 0)
         inversed = tf.signal.inverse_stft(
             spectrogram,
-            self.config["fft_size"] if self.config["win_length"] is None else self.config["win_length"],
-            self.config["hop_size"],
             self.config["fft_size"]
+            if self.config["win_length"] is None
+            else self.config["win_length"],
+            self.config["hop_size"],
+            self.config["fft_size"],
         )
         return tf.squeeze(inversed, 0)
 
@@ -78,11 +86,15 @@ class TFGriffinLim(tf.keras.layers.Layer):
             best = self._invert_spectrogram(spectrogram)
             estimate = tf.signal.stft(
                 best,
-                self.config["fft_size"] if self.config["win_length"] is None else self.config["win_length"],
-                self.config["hop_size"],
                 self.config["fft_size"]
+                if self.config["win_length"] is None
+                else self.config["win_length"],
+                self.config["hop_size"],
+                self.config["fft_size"],
             )
-            phase = estimate / tf.cast(tf.maximum(1e-10, tf.abs(estimate)), tf.complex64)
+            phase = estimate / tf.cast(
+                tf.maximum(1e-10, tf.abs(estimate)), tf.complex64
+            )
             best = spectrogram * phase
 
         y = tf.math.real(self._invert_spectrogram(best))

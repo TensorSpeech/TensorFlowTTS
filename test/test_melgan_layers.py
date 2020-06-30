@@ -27,25 +27,24 @@ from tensorflow_tts.models.melgan import TFResidualStack
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    level=logging.DEBUG,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+)
 
 
-@pytest.mark.parametrize(
-    "padding_size", [
-        (3),
-        (5)
-    ])
+@pytest.mark.parametrize("padding_size", [(3), (5)])
 def test_padding(padding_size):
     fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
     out = TFReflectionPad1d(padding_size=padding_size)(fake_input_1d)
-    assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000 + 2 * padding_size, 256])
+    assert np.array_equal(
+        tf.keras.backend.int_shape(out), [4, 8000 + 2 * padding_size, 256]
+    )
 
 
 @pytest.mark.parametrize(
-    "filters,kernel_size,strides,padding,is_weight_norm", [
-        (512, 40, 8, "same", False),
-        (768, 15, 8, "same", True)
-    ])
+    "filters,kernel_size,strides,padding,is_weight_norm",
+    [(512, 40, 8, "same", False), (768, 15, 8, "same", True)],
+)
 def test_convtranpose1d(filters, kernel_size, strides, padding, is_weight_norm):
     fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
     conv1d_transpose = TFConvTranspose1d(
@@ -54,33 +53,38 @@ def test_convtranpose1d(filters, kernel_size, strides, padding, is_weight_norm):
         strides=strides,
         padding=padding,
         is_weight_norm=is_weight_norm,
-        initializer_seed=42
+        initializer_seed=42,
     )
     out = conv1d_transpose(fake_input_1d)
     assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000 * strides, filters])
 
 
 @pytest.mark.parametrize(
-    "kernel_size,filters,dilation_rate,use_bias,nonlinear_activation,nonlinear_activation_params,is_weight_norm", [
+    "kernel_size,filters,dilation_rate,use_bias,nonlinear_activation,nonlinear_activation_params,is_weight_norm",
+    [
         (3, 256, 1, True, "LeakyReLU", {"alpha": 0.3}, True),
-        (3, 256, 3, True, "ReLU", {}, False)
-    ]
+        (3, 256, 3, True, "ReLU", {}, False),
+    ],
 )
-def test_residualblock(kernel_size,
-                       filters,
-                       dilation_rate,
-                       use_bias,
-                       nonlinear_activation,
-                       nonlinear_activation_params,
-                       is_weight_norm):
+def test_residualblock(
+    kernel_size,
+    filters,
+    dilation_rate,
+    use_bias,
+    nonlinear_activation,
+    nonlinear_activation_params,
+    is_weight_norm,
+):
     fake_input_1d = tf.random.normal(shape=[4, 8000, 256], dtype=tf.float32)
-    residual_block = TFResidualStack(kernel_size=kernel_size,
-                                     filters=filters,
-                                     dilation_rate=dilation_rate,
-                                     use_bias=use_bias,
-                                     nonlinear_activation=nonlinear_activation,
-                                     nonlinear_activation_params=nonlinear_activation_params,
-                                     is_weight_norm=is_weight_norm,
-                                     initializer_seed=42)
+    residual_block = TFResidualStack(
+        kernel_size=kernel_size,
+        filters=filters,
+        dilation_rate=dilation_rate,
+        use_bias=use_bias,
+        nonlinear_activation=nonlinear_activation,
+        nonlinear_activation_params=nonlinear_activation_params,
+        is_weight_norm=is_weight_norm,
+        initializer_seed=42,
+    )
     out = residual_block(fake_input_1d)
     assert np.array_equal(tf.keras.backend.int_shape(out), [4, 8000, filters])

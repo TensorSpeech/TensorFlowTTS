@@ -30,17 +30,18 @@ from tensorflow_tts.utils import find_files
 class CharactorDurationMelDataset(AbstractDataset):
     """Tensorflow Charactor Mel dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 charactor_query="*-ids.npy",
-                 mel_query="*-norm-feats.npy",
-                 duration_query="*-durations.npy",
-                 charactor_load_fn=np.load,
-                 mel_load_fn=np.load,
-                 duration_load_fn=np.load,
-                 mel_length_threshold=None,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        charactor_query="*-ids.npy",
+        mel_query="*-norm-feats.npy",
+        duration_query="*-durations.npy",
+        charactor_load_fn=np.load,
+        mel_load_fn=np.load,
+        duration_load_fn=np.load,
+        mel_length_threshold=None,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -63,10 +64,16 @@ class CharactorDurationMelDataset(AbstractDataset):
         if mel_length_threshold is not None:
             mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
 
-            idxs = [idx for idx in range(len(mel_files)) if mel_lengths[idx] > mel_length_threshold]
+            idxs = [
+                idx
+                for idx in range(len(mel_files))
+                if mel_lengths[idx] > mel_length_threshold
+            ]
             if len(mel_files) != len(idxs):
-                logging.warning(f"Some files are filtered by mel length threshold "
-                                f"({len(mel_files)} -> {len(idxs)}).")
+                logging.warning(
+                    f"Some files are filtered by mel length threshold "
+                    f"({len(mel_files)} -> {len(idxs)})."
+                )
             mel_files = [mel_files[idx] for idx in idxs]
             charactor_files = [charactor_files[idx] for idx in idxs]
             duration_files = [duration_files[idx] for idx in idxs]
@@ -82,8 +89,13 @@ class CharactorDurationMelDataset(AbstractDataset):
             mel_lengths = np.array(mel_lengths)[idx_sort]
 
             # group
-            idx_lengths = [[idx, length] for idx, length in zip(np.arange(len(mel_lengths)), mel_lengths)]
-            groups = [list(g) for _, g in itertools.groupby(idx_lengths, lambda a: a[1])]
+            idx_lengths = [
+                [idx, length]
+                for idx, length in zip(np.arange(len(mel_lengths)), mel_lengths)
+            ]
+            groups = [
+                list(g) for _, g in itertools.groupby(idx_lengths, lambda a: a[1])
+            ]
 
             # group shuffle
             random.shuffle(groups)
@@ -102,8 +114,9 @@ class CharactorDurationMelDataset(AbstractDataset):
 
         # assert the number of files
         assert len(mel_files) != 0, f"Not found any mels files in ${root_dir}."
-        assert len(mel_files) == len(charactor_files) == len(duration_files), \
-            f"Number of charactor, mel and duration files are different \
+        assert (
+            len(mel_files) == len(charactor_files) == len(duration_files)
+        ), f"Number of charactor, mel and duration files are different \
                 ({len(mel_files)} vs {len(charactor_files)} vs {len(duration_files)})."
 
         if ".npy" in charactor_query:
@@ -137,19 +150,18 @@ class CharactorDurationMelDataset(AbstractDataset):
                 items = charactor, duration, mel
             yield items
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -157,9 +169,13 @@ class CharactorDurationMelDataset(AbstractDataset):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
-        datasets = datasets.padded_batch(batch_size, padded_shapes=([None], [None], [None, None]))
+        datasets = datasets.padded_batch(
+            batch_size, padded_shapes=([None], [None], [None, None])
+        )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
 
@@ -179,14 +195,15 @@ class CharactorDurationMelDataset(AbstractDataset):
 class CharactorDurationDataset(AbstractDataset):
     """Tensorflow Charactor dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 charactor_query="*-ids.npy",
-                 duration_query="*-durations.npy",
-                 charactor_load_fn=np.load,
-                 duration_load_fn=np.load,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        charactor_query="*-ids.npy",
+        duration_query="*-durations.npy",
+        charactor_load_fn=np.load,
+        duration_load_fn=np.load,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -203,10 +220,13 @@ class CharactorDurationDataset(AbstractDataset):
         duration_files = sorted(find_files(root_dir, duration_query))
 
         # assert the number of files
-        assert len(charactor_files) != 0 or len(duration_files) != 0, \
-            f"Not found any char or duration files in ${root_dir}."
+        assert (
+            len(charactor_files) != 0 or len(duration_files) != 0
+        ), f"Not found any char or duration files in ${root_dir}."
 
-        assert len(charactor_files) == len(duration_files), "number of charactor and duration files are different."
+        assert len(charactor_files) == len(
+            duration_files
+        ), "number of charactor and duration files are different."
 
         if ".npy" in charactor_query:
             suffix = charactor_query[1:]
@@ -235,19 +255,18 @@ class CharactorDurationDataset(AbstractDataset):
                 items = charactor, duration
             yield items
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -255,7 +274,9 @@ class CharactorDurationDataset(AbstractDataset):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
         padded_shapes = ([None], [None])
         if self.return_utt_id:
@@ -281,12 +302,13 @@ class CharactorDurationDataset(AbstractDataset):
 class CharactorDataset(AbstractDataset):
     """Tensorflow Charactor dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 charactor_query="*-ids.npy",
-                 charactor_load_fn=np.load,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        charactor_query="*-ids.npy",
+        charactor_load_fn=np.load,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -300,8 +322,9 @@ class CharactorDataset(AbstractDataset):
         charactor_files = sorted(find_files(root_dir, charactor_query))
 
         # assert the number of files
-        assert len(charactor_files) != 0, \
-            f"Not found any char or duration files in ${root_dir}."
+        assert (
+            len(charactor_files) != 0
+        ), f"Not found any char or duration files in ${root_dir}."
         if ".npy" in charactor_query:
             suffix = charactor_query[1:]
             utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
@@ -325,19 +348,18 @@ class CharactorDataset(AbstractDataset):
                 items = charactor
             yield items
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -345,9 +367,11 @@ class CharactorDataset(AbstractDataset):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
-        padded_shapes = ([None], )
+        padded_shapes = ([None],)
         if self.return_utt_id:
             padded_shapes = ([], *padded_shapes)
 
@@ -356,7 +380,7 @@ class CharactorDataset(AbstractDataset):
         return datasets
 
     def get_output_dtypes(self):
-        output_types = (tf.int32, )
+        output_types = (tf.int32,)
         if self.return_utt_id:
             output_types = (tf.dtypes.string, *output_types)
         return output_types

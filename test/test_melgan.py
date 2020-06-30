@@ -28,7 +28,9 @@ from tensorflow_tts.configs import MelGANDiscriminatorConfig
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+    level=logging.DEBUG,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+)
 
 
 def make_melgan_generator_args(**kwargs):
@@ -42,7 +44,7 @@ def make_melgan_generator_args(**kwargs):
         stacks=3,
         nonlinear_activation="LeakyReLU",
         nonlinear_activation_params={"alpha": 0.2},
-        padding_type="REFLECT"
+        padding_type="REFLECT",
     )
     defaults.update(kwargs)
     return defaults
@@ -52,11 +54,8 @@ def make_melgan_discriminator_args(**kwargs):
     defaults = dict(
         out_channels=1,
         scales=3,
-        downsample_pooling='AveragePooling1D',
-        downsample_pooling_params={
-            "pool_size": 4,
-            "strides": 2,
-        },
+        downsample_pooling="AveragePooling1D",
+        downsample_pooling_params={"pool_size": 4, "strides": 2,},
         kernel_sizes=[5, 3],
         filters=16,
         max_downsample_filters=1024,
@@ -64,14 +63,15 @@ def make_melgan_discriminator_args(**kwargs):
         downsample_scales=[4, 4, 4, 4],
         nonlinear_activation="LeakyReLU",
         nonlinear_activation_params={"alpha": 0.2},
-        padding_type="REFLECT"
+        padding_type="REFLECT",
     )
     defaults.update(kwargs)
     return defaults
 
 
 @pytest.mark.parametrize(
-    "dict_g, dict_d, dict_loss", [
+    "dict_g, dict_d, dict_loss",
+    [
         ({}, {}, {}),
         ({"kernel_size": 3}, {}, {}),
         ({"filters": 1024}, {}, {}),
@@ -79,8 +79,9 @@ def make_melgan_discriminator_args(**kwargs):
         ({"stack_kernel_size": 5, "stacks": 2}, {}, {}),
         ({"upsample_scales": [4, 4, 4, 4]}, {}, {}),
         ({"upsample_scales": [8, 8, 2, 2]}, {}, {}),
-        ({"filters": 1024, "upsample_scales": [8, 8, 2, 2]}, {}, {})
-    ])
+        ({"filters": 1024, "upsample_scales": [8, 8, 2, 2]}, {}, {}),
+    ],
+)
 def test_melgan_trainable(dict_g, dict_d, dict_loss):
     batch_size = 4
     batch_length = 4096

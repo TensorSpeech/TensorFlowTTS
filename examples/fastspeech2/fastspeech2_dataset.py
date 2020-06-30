@@ -41,8 +41,9 @@ def average_by_duration(x, durs):
     return x_char.astype(np.float32)
 
 
-@tf.function(input_signature=[tf.TensorSpec(None, tf.float32),
-                              tf.TensorSpec(None, tf.int32)])
+@tf.function(
+    input_signature=[tf.TensorSpec(None, tf.float32), tf.TensorSpec(None, tf.int32)]
+)
 def tf_average_by_duration(x, durs):
     outs = tf.numpy_function(average_by_duration, [x, durs], tf.float32)
     return outs
@@ -51,25 +52,26 @@ def tf_average_by_duration(x, durs):
 class CharactorDurationF0EnergyMelDataset(AbstractDataset):
     """Tensorflow Charactor Duration F0 Energy Mel dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 charactor_query="*-ids.npy",
-                 mel_query="*-norm-feats.npy",
-                 duration_query="*-durations.npy",
-                 f0_query="*-raw-f0.npy",
-                 energy_query="*-raw-energy.npy",
-                 f0_stat="./dump/stats_f0.npy",
-                 energy_stat="./dump/stats_energy.npy",
-                 max_f0_embeddings=256,
-                 max_energy_embeddings=256,
-                 charactor_load_fn=np.load,
-                 mel_load_fn=np.load,
-                 duration_load_fn=np.load,
-                 f0_load_fn=np.load,
-                 energy_load_fn=np.load,
-                 mel_length_threshold=None,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        charactor_query="*-ids.npy",
+        mel_query="*-norm-feats.npy",
+        duration_query="*-durations.npy",
+        f0_query="*-raw-f0.npy",
+        energy_query="*-raw-energy.npy",
+        f0_stat="./dump/stats_f0.npy",
+        energy_stat="./dump/stats_energy.npy",
+        max_f0_embeddings=256,
+        max_energy_embeddings=256,
+        charactor_load_fn=np.load,
+        mel_load_fn=np.load,
+        duration_load_fn=np.load,
+        f0_load_fn=np.load,
+        energy_load_fn=np.load,
+        mel_length_threshold=None,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -94,10 +96,16 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         if mel_length_threshold is not None:
             mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
 
-            idxs = [idx for idx in range(len(mel_files)) if mel_lengths[idx] > mel_length_threshold]
+            idxs = [
+                idx
+                for idx in range(len(mel_files))
+                if mel_lengths[idx] > mel_length_threshold
+            ]
             if len(mel_files) != len(idxs):
-                logging.warning(f"Some files are filtered by mel length threshold "
-                                f"({len(mel_files)} -> {len(idxs)}).")
+                logging.warning(
+                    f"Some files are filtered by mel length threshold "
+                    f"({len(mel_files)} -> {len(idxs)})."
+                )
             mel_files = [mel_files[idx] for idx in idxs]
             charactor_files = [charactor_files[idx] for idx in idxs]
             duration_files = [duration_files[idx] for idx in idxs]
@@ -117,8 +125,13 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             mel_lengths = np.array(mel_lengths)[idx_sort]
 
             # group
-            idx_lengths = [[idx, length] for idx, length in zip(np.arange(len(mel_lengths)), mel_lengths)]
-            groups = [list(g) for _, g in itertools.groupby(idx_lengths, lambda a: a[1])]
+            idx_lengths = [
+                [idx, length]
+                for idx, length in zip(np.arange(len(mel_lengths)), mel_lengths)
+            ]
+            groups = [
+                list(g) for _, g in itertools.groupby(idx_lengths, lambda a: a[1])
+            ]
 
             # group shuffle
             random.shuffle(groups)
@@ -139,8 +152,13 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
 
         # assert the number of files
         assert len(mel_files) != 0, f"Not found any mels files in ${root_dir}."
-        assert len(mel_files) == len(charactor_files) == len(duration_files) == len(f0_files) == len(energy_files), \
-            f"Number of charactor, mel, duration, f0 and energy files are different"
+        assert (
+            len(mel_files)
+            == len(charactor_files)
+            == len(duration_files)
+            == len(f0_files)
+            == len(energy_files)
+        ), f"Number of charactor, mel, duration, f0 and energy files are different"
 
         if ".npy" in charactor_query:
             suffix = charactor_query[1:]
@@ -189,7 +207,9 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             energy = self.energy_load_fn(energy_file)
 
             f0 = self._norm_mean_std(f0, self.f0_stat[0], self.f0_stat[1])
-            energy = self._norm_mean_std(energy, self.energy_stat[0], self.energy_stat[1])
+            energy = self._norm_mean_std(
+                energy, self.energy_stat[0], self.energy_stat[1]
+            )
 
             # calculate charactor f0/energy
             f0 = tf_average_by_duration(f0, duration)
@@ -201,19 +221,18 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
                 items = charactor, duration, f0, energy, mel
             yield items
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -221,15 +240,13 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
-        datasets = datasets.padded_batch(batch_size,
-                                         padded_shapes=(
-                                             [None],
-                                             [None],
-                                             [None],
-                                             [None],
-                                             [None, None]))
+        datasets = datasets.padded_batch(
+            batch_size, padded_shapes=([None], [None], [None], [None], [None, None])
+        )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
 
