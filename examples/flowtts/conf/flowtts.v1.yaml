@@ -1,0 +1,75 @@
+# This is the hyperparameter configuration file for Flow-TTS v1.
+# Please make sure this is adjusted for the LJSpeech dataset. If you want to
+# apply to the other dataset, you might need to carefully change some parameters.
+# This configuration performs 200k iters but 65k iters is enough to get a good models.
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+hop_size: 256            # Hop size.
+format: "npy"
+
+
+###########################################################
+#              NETWORK ARCHITECTURE SETTING               #
+###########################################################
+flowtts_params:
+    embedding_hidden_size: 512
+    initializer_range: 0.02
+    embedding_dropout_prob: 0.1
+    n_speakers: 1
+    n_conv_encoder: 3
+    encoder_conv_filters: 512
+    encoder_conv_kernel_sizes: 5
+    encoder_conv_activation: "mish"
+    encoder_conv_dropout_rate: 0.5
+    encoder_lstm_units: 256
+    f0_energy_predictor_filters: 256
+    f0_energy_predictor_kernel_sizes: 3
+    f0_energy_predictor_dropout_probs: 0.5
+    num_duration_conv_layers: 2
+    max_position_embeddings: 2048
+    output_attentions: True
+    output_hidden_states: False
+    num_attention_heads: 2
+    hidden_size: 384
+    attention_probs_dropout_prob: 0.1
+    n_squeeze: 8
+    flow_step_depth: 4
+    last_flow_step_depth: 2
+    scale_type: "exp"
+    conditional_factor_out: True
+
+###########################################################
+#                  DATA LOADER SETTING                    #
+###########################################################
+batch_size: 32             # Batch size.
+remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
+allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
+mel_length_threshold: 32   # remove all targets has mel_length <= 32 
+is_shuffle: true           # shuffle dataset after each epoch.
+use_fixed_shapes: False     # use_fixed_shapes for training (2x speed-up)
+                           # refer (https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118)
+
+###########################################################
+#             OPTIMIZER & SCHEDULER SETTING               #
+###########################################################
+optimizer_params:
+    initial_learning_rate: 0.001
+    end_learning_rate: 0.00001
+    decay_steps: 150000          # < train_max_steps is recommend.
+    warmup_proportion: 0.02
+    weight_decay: 0.001
+    
+    
+###########################################################
+#                    INTERVAL SETTING                     #
+###########################################################
+train_max_steps: 200000                 # Number of training steps.
+save_interval_steps: 3               # Interval steps to save checkpoint.
+eval_interval_steps: 2                # Interval steps to evaluate the network.
+log_interval_steps: 1                 # Interval steps to record the training log.
+###########################################################
+#                     OTHER SETTING                       #
+###########################################################
+num_save_intermediate_results: 1  # Number of results to be saved as intermediate results.

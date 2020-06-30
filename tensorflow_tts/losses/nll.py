@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import tensorflow as tf
-from TFGENZOO.flows.utils import gausiann_likelihood
+from TFGENZOO.flows.utils import gaussian_likelihood
 
 
 def nll(z: tf.Tensor, mask: tf.Tensor):
@@ -24,5 +24,5 @@ def nll(z: tf.Tensor, mask: tf.Tensor):
     Returns:
        tf.Tensor: nll [B, T, C]
     """
-    ll = gausiann_likelihood(tf.zeros(tf.shape(z)), tf.zeros(tf.shape(z)), z)
+    ll = gaussian_likelihood(tf.zeros(tf.shape(z)), tf.zeros(tf.shape(z)), z)
     return ll * tf.cast(mask, z.dtype)

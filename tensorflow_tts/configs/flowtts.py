@@ -39,7 +39,7 @@ class FlowTTSConfig(object):
         f0_energy_predictor_dropout_probs=0.5,
         num_duration_conv_layers=2,
         max_position_embeddings=2048,
-        output_attentions=False,
+        output_attentions=True,
         output_hidden_states=False,
         num_attention_heads=2,
         hidden_size=384,

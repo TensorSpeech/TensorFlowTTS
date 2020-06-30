@@ -9,3 +9,5 @@ from tensorflow_tts.models.fastspeech2 import TFFastSpeech2
 from tensorflow_tts.models.tacotron2 import TFTacotron2
 
 from tensorflow_tts.models.mb_melgan import TFPQMF
+
+from tensorflow_tts.models.flowtts import TFFlowTTS

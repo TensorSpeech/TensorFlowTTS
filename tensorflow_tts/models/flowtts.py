@@ -377,7 +377,7 @@ class TFFlowTTS(tf.keras.Model):
         mel_gts = tf.random.normal([1, 35, 80])
 
         # forward steps.
-        z, log_det_jacobian, zaux, log_likelihood, mel_length_predictions, mask = self(
+        outputs = self(
             input_ids=tf.constant([[1, 2, 3, 4, 5]], dtype=tf.int32),
             attention_mask=tf.constant([[1, 1, 1, 1, 1]], dtype=tf.int32),
             speaker_ids=tf.constant([0], dtype=tf.int32),
@@ -386,16 +386,8 @@ class TFFlowTTS(tf.keras.Model):
             training=False,
         )
         # set last_dimention.
-        self.last_dimention = z.shape[-1]
-        return (
-            z,
-            log_det_jacobian,
-            zaux,
-            log_likelihood,
-            mel_length_predictions,
-            mask,
-            mel_gts,
-        )
+        self.last_dimention = outputs[0].shape[-1]
+        return outputs
 
     def call(
         self,
@@ -424,10 +416,10 @@ class TFFlowTTS(tf.keras.Model):
             mel_lengths, maxlen=tf.reduce_max(mel_lengths), dtype=decoder_pos.dtype
         )
         masked_decoder_pos = tf.expand_dims(decoder_pos, 0) * mask
-        conditional_feats = self.attention_positional(
+        conditional_feats, attention_probs = self.attention_positional(
             [encoder_hidden_states, masked_decoder_pos, attention_mask],
             training=training,
-        )[0]
+        )
 
         # mask and squeeze conditional feature.
         conditional_feats *= tf.cast(
@@ -441,7 +433,15 @@ class TFFlowTTS(tf.keras.Model):
             mel_gts, cond=squeeze_condition_feats, mask=mask[:, :, None], inverse=False
         )
 
-        return z, log_det_jacobian, zaux, log_likelihood, mel_length_predictions, mask
+        return (
+            z,
+            log_det_jacobian,
+            zaux,
+            log_likelihood,
+            mel_length_predictions,
+            mask,
+            attention_probs,
+        )
 
     # @tf.function(experimental_relax_shapes=True,
     #              input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32),
