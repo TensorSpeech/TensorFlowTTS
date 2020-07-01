@@ -14,7 +14,7 @@ format: "npy"
 #              NETWORK ARCHITECTURE SETTING               #
 ###########################################################
 tacotron2_params:
-    dataset: ljspeech
+    dataset: baker
     embedding_hidden_size: 512
     initializer_range: 0.02
     embedding_dropout_prob: 0.1

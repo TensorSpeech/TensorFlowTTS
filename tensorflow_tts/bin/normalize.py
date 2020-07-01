@@ -101,12 +101,12 @@ def main():
         utt_id, mel, _ = items
 
         # convert to numpy
-        utt_id = utt_id[0].numpy().decode("utf-8")
+        utt_id = utt_id[0].numpy().decode('utf-8')
         mel = mel[0].numpy()
 
         # normalize
         mel = scaler.transform(mel)
-
+ 
         # save
         if config["format"] == "npy":
             if utt_id in train_utt_ids:
