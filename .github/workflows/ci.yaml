@@ -40,9 +40,10 @@ jobs:
           pip install -q -e .[test]
           pip install typing_extensions
           sudo apt-get install libsndfile1-dev
-      - name: Flake8
+          python -m pip install black
+      - name: black
         run: |
-          flake8 tensorflow_tts --ignore F401,H102,W504,H238,D104,H306,H405,D205,E371,E731,D105,D102,D402,D401,E306,F811,W503,E704,D107,D103
+          python -m black . 
       - name: Pytest
         run: |
           pytest test
