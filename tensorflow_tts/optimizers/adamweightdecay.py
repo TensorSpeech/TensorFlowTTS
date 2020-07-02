@@ -118,10 +118,10 @@ class AdamWeightDecay(tf.keras.optimizers.Adam):
             )
         return tf.no_op()
 
-    def apply_gradients(self, grads_and_vars, clip_norm=0.5, name=None):
+    def apply_gradients(self, grads_and_vars, clip_norm=0.5, **kwargs):
         grads, tvars = list(zip(*grads_and_vars))
         (grads, _) = tf.clip_by_global_norm(grads, clip_norm=clip_norm)
-        return super(AdamWeightDecay, self).apply_gradients(zip(grads, tvars))
+        return super(AdamWeightDecay, self).apply_gradients(zip(grads, tvars), **kwargs)
 
     def _get_lr(self, var_device, var_dtype, apply_state):
         """Retrieves the learning rate with the given state."""
