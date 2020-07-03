@@ -118,9 +118,6 @@ class TFFastSpeech2(TFFastSpeech):
         )
         self.energy_dropout = tf.keras.layers.Dropout(config.energy_dropout_rate)
 
-        # set flag to use f0/energy embedding.
-        self.is_use_f0_energy = tf.constant(0.0)
-
     def _build(self):
         """Dummy input for building model."""
         # fake inputs
@@ -180,11 +177,7 @@ class TFFastSpeech2(TFFastSpeech):
         energy_embedding = self.energy_dropout(energy_embedding, training=True)
 
         # sum features
-        last_encoder_hidden_states = (
-            last_encoder_hidden_states
-            + self.is_use_f0_energy * f0_embedding
-            + self.is_use_f0_energy * energy_embedding
-        )
+        last_encoder_hidden_states += f0_embedding + energy_embedding
 
         length_regulator_outputs, encoder_masks = self.length_regulator(
             [last_encoder_hidden_states, duration_gts], training=training
