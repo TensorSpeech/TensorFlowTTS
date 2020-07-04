@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from tensorflow_addons.utils.types import Number
+from tensorflow_addons.utils.types import TensorLike
 from tensorflow_addons.seq2seq.decoder import (
     BaseDecoder, _prepend_batch, _transpose_batch_time
 )
