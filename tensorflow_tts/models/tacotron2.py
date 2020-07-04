@@ -22,8 +22,11 @@ import tensorflow as tf
 
 from tensorflow_addons.seq2seq import Sampler
 from tensorflow_addons.seq2seq import BahdanauAttention
-from tensorflow_addons.seq2seq import dynamic_decode
+# TODO: once https://github.com/tensorflow/addons/pull/1964 is fixed,
+#  uncomment this line.
+# from tensorflow_addons.seq2seq import dynamic_decode
 from tensorflow_addons.seq2seq import Decoder
+from tensorflow_tts.utils.decoder import dynamic_decode
 
 
 def get_initializer(initializer_range=0.02):
