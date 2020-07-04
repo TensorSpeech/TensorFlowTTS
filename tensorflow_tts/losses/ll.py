@@ -16,9 +16,8 @@ import tensorflow as tf
 from TFGENZOO.flows.utils import gaussian_likelihood
 
 
-def nll(z: tf.Tensor, mask: tf.Tensor):
+def ll(z: tf.Tensor, mask: tf.Tensor):
     """negative log likelihood for z
-
     Args:
        z (tf.Tensor): base latent variable [B, T, C]
     Returns:

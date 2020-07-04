@@ -32,7 +32,7 @@ from examples.tacotron2.tacotron_dataset import CharactorMelDataset
 
 from tensorflow_tts.configs import FlowTTSConfig
 from tensorflow_tts.models import TFFlowTTS
-from tensorflow_tts.losses import nll
+from tensorflow_tts.losses import ll
 
 from tensorflow_tts.optimizers import WarmUp
 from tensorflow_tts.optimizers import AdamWeightDecay
@@ -58,7 +58,7 @@ class FlowTTSTrainer(Seq2SeqBasedTrainer):
             is_mixed_precision=is_mixed_precision,
         )
         # define metrics to aggregates data and use tf.summary logs them
-        self.list_metrics_name = ["nll_loss", "ldj_loss", "length_loss"]
+        self.list_metrics_name = ["nll_loss", "ldj", "length_loss"]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
         self.reset_states_eval()
@@ -89,7 +89,7 @@ class FlowTTSTrainer(Seq2SeqBasedTrainer):
 
     def compile(self, model, optimizer):
         super().compile(model, optimizer)
-        self.nll = nll
+        self.ll = ll
         self.mse = tf.keras.losses.MeanSquaredError()
 
     def _train_step(self, batch):
@@ -126,13 +126,13 @@ class FlowTTSTrainer(Seq2SeqBasedTrainer):
             # calculate all losses.
             length_loss = self.mse(
                 tf.math.log(tf.cast(mel_length, dtype=tf.float32) + 1.0),
-                tf.math.log(mel_length_predictions + 1.0),
+                mel_length_predictions + 1,
             )
 
-            nll = tf.reduce_sum(self.nll(z, mask)) - 1.0 * tf.reduce_sum(log_likelihood)
-            ldj = -1.0 * tf.reduce_sum(log_det_jacobian)
+            nll = -1.0 * tf.reduce_sum(self.ll(z, mask), axis=[-2, -1]) - log_likelihood
+            ldj = -1.0 * log_det_jacobian
 
-            loss = length_loss + nll + ldj
+            loss = nll + ldj + length_loss
 
             if self.is_mixed_precision:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
@@ -150,7 +150,7 @@ class FlowTTSTrainer(Seq2SeqBasedTrainer):
 
         # accumulate loss into metrics
         self.train_metrics["nll_loss"].update_state(nll)
-        self.train_metrics["ldj_loss"].update_state(ldj)
+        self.train_metrics["ldj"].update_state(log_det_jacobian)
         self.train_metrics["length_loss"].update_state(length_loss)
 
     def _eval_epoch(self):
@@ -209,15 +209,14 @@ class FlowTTSTrainer(Seq2SeqBasedTrainer):
         # calculate all losses.
         length_loss = self.mse(
             tf.math.log(tf.cast(mel_length, dtype=tf.float32) + 1.0),
-            tf.math.log(mel_length_predictions + 1.0),
+            mel_length_predictions + 1,
         )
 
-        nll = tf.reduce_sum(self.nll(z, mask)) - 1.0 * tf.reduce_sum(log_likelihood)
-        ldj = -1.0 * tf.reduce_sum(log_det_jacobian)
+        nll = -1.0 * tf.reduce_sum(self.ll(z, mask), axis=[-2, -1]) - log_likelihood
 
         # accumulate loss into metrics
         self.eval_metrics["nll_loss"].update_state(nll)
-        self.eval_metrics["ldj_loss"].update_state(ldj)
+        self.eval_metrics["ldj"].update_state(log_det_jacobian)
         self.eval_metrics["length_loss"].update_state(length_loss)
 
     def _check_log_interval(self):
