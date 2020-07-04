@@ -12,6 +12,8 @@ from tensorflow_tts.utils.cleaners import basic_cleaners
 from tensorflow_tts.utils.cleaners import transliteration_cleaners
 from tensorflow_tts.utils.cleaners import english_cleaners
 
+from tensorflow_tts.utils.decoder import dynamic_decode
+
 from tensorflow_tts.utils.number_norm import normalize_numbers
 
 from tensorflow_tts.utils.outliers import remove_outlier
