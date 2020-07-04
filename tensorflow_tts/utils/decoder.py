@@ -22,7 +22,6 @@ from tensorflow.python.ops import control_flow_util
 from tensorflow_addons.seq2seq import Decoder
 
 
-@typechecked
 def dynamic_decode(
     decoder: Union[Decoder, BaseDecoder],
     output_time_major: bool = False,
