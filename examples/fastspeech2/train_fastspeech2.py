@@ -14,29 +14,22 @@
 # limitations under the License.
 """Train FastSpeech2."""
 
+from tensorflow_tts.optimizers import AdamWeightDecay
+from tensorflow_tts.optimizers import WarmUp
+from tensorflow_tts.models import TFFastSpeech2
+from tensorflow_tts.configs import FastSpeech2Config
+from examples.fastspeech2.fastspeech2_dataset import CharactorDurationF0EnergyMelDataset
+from examples.fastspeech.train_fastspeech import FastSpeechTrainer
+from tqdm import tqdm
+import tensorflow_tts
+import yaml
+import tensorflow as tf
+import numpy as np
 import argparse
 import logging
 import os
 import sys
 sys.path.append(".")
-
-import numpy as np
-import tensorflow as tf
-import yaml
-
-import tensorflow_tts
-
-from tqdm import tqdm
-
-from examples.fastspeech.train_fastspeech import FastSpeechTrainer
-from examples.fastspeech2.fastspeech2_dataset import CharactorDurationF0EnergyMelDataset
-
-from tensorflow_tts.configs import FastSpeech2Config
-
-from tensorflow_tts.models import TFFastSpeech2
-
-from tensorflow_tts.optimizers import WarmUp
-from tensorflow_tts.optimizers import AdamWeightDecay
 
 
 class FastSpeech2Trainer(FastSpeechTrainer):
@@ -88,12 +81,6 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         self.steps += 1
         self.tqdm.update(1)
         self._check_train_finish()
-        self._apply_delay_using_f0_energy()
-
-    def _apply_delay_using_f0_energy(self):
-        self.model.is_use_f0_energy = tf.cast(
-            (self.steps % self.config["delay_f0_energy_steps"] == 0), tf.float32
-        )
 
     @tf.function(
         experimental_relax_shapes=True,
@@ -157,9 +144,6 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         """Evaluate model one epoch."""
         logging.info(f"(Steps: {self.steps}) Start evaluation.")
 
-        # force to use f0/energy embedding when evaluation.
-        self.model.is_use_f0_energy = tf.constant(1.0)
-
         # calculate loss for each batch
         for eval_steps_per_epoch, batch in enumerate(
             tqdm(self.eval_data_loader, desc="[eval]"), 1
@@ -188,7 +172,6 @@ class FastSpeech2Trainer(FastSpeechTrainer):
 
         # reset
         self.reset_states_eval()
-        self.model.is_use_f0_energy = tf.constant(0.0)
 
     @tf.function(
         experimental_relax_shapes=True,
