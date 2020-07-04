@@ -26,7 +26,7 @@ from tensorflow_addons.seq2seq import BahdanauAttention
 #  uncomment this line.
 # from tensorflow_addons.seq2seq import dynamic_decode
 from tensorflow_addons.seq2seq import Decoder
-from tensorflow_tts.utils.decoder import dynamic_decode
+from tensorflow_tts.utils import dynamic_decode
 
 
 def get_initializer(initializer_range=0.02):
