@@ -573,7 +573,7 @@ class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):
 class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
     """FastSpeech lengthregulator module."""
 
-    def __init__(self, config, enable_tflite_convertible = False, **kwargs):
+    def __init__(self, config, enable_tflite_convertible=False, **kwargs):
         """Init variables."""
         super().__init__(**kwargs)
         self.config = config
@@ -614,7 +614,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
             )
             repeat_encoder_hidden_states = tf.expand_dims(
                 tf.pad(repeat_encoder_hidden_states, [[0, pad_size], [0, 0]]), 0
-            )  # [1, max_durations, hidden_size] 
+            )  # [1, max_durations, hidden_size]
 
             outputs = repeat_encoder_hidden_states
             encoder_masks = masks
@@ -695,7 +695,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
 class TFFastSpeech(tf.keras.Model):
     """TF Fastspeech module."""
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, enable_tflite_convertible=False, **kwargs):
         """Init layers for fastspeech."""
         super().__init__(**kwargs)
         self.embeddings = TFFastSpeechEmbeddings(config, name="embeddings")
@@ -704,11 +704,15 @@ class TFFastSpeech(tf.keras.Model):
             config, name="duration_predictor"
         )
         self.length_regulator = TFFastSpeechLengthRegulator(
-            config, name="length_regulator"
+            config,
+            enable_tflite_convertible=enable_tflite_convertible,
+            name="length_regulator"
         )
         self.decoder = TFFastSpeechDecoder(config, name="decoder")
         self.mel_dense = tf.keras.layers.Dense(units=config.num_mels, name="mel_before")
         self.postnet = TFTacotronPostnet(config=config, name="postnet")
+
+        self.enable_tflite_convertible = enable_tflite_convertible
 
     def _build(self):
         """Dummy input for building model."""
@@ -767,8 +771,8 @@ class TFFastSpeech(tf.keras.Model):
         input_signature=[
             tf.TensorSpec(shape=[None, None], dtype=tf.int32),
             tf.TensorSpec(shape=[None, None], dtype=tf.bool),
-            tf.TensorSpec(shape=[None,], dtype=tf.int32),
-            tf.TensorSpec(shape=[None,], dtype=tf.float32),
+            tf.TensorSpec(shape=[None, ], dtype=tf.int32),
+            tf.TensorSpec(shape=[None, ], dtype=tf.float32),
         ],
     )
     def inference(self, input_ids, attention_mask, speaker_ids, speed_ratios):
@@ -823,8 +827,8 @@ class TFFastSpeech(tf.keras.Model):
         input_signature=[
             tf.TensorSpec(shape=[1, None], dtype=tf.int32),
             tf.TensorSpec(shape=[1, None], dtype=tf.bool),
-            tf.TensorSpec(shape=[1,], dtype=tf.int32),
-            tf.TensorSpec(shape=[1,], dtype=tf.float32),
+            tf.TensorSpec(shape=[1, ], dtype=tf.int32),
+            tf.TensorSpec(shape=[1, ], dtype=tf.float32),
         ],
     )
     def inference_tflite(self, input_ids, attention_mask, speaker_ids, speed_ratios):
