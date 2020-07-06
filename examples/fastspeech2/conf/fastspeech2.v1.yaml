@@ -66,7 +66,6 @@ train_max_steps: 200000               # Number of training steps.
 save_interval_steps: 5000             # Interval steps to save checkpoint.
 eval_interval_steps: 500              # Interval steps to evaluate the network.
 log_interval_steps: 200               # Interval steps to record the training log.
-delay_f0_energy_steps: 3              # 2 steps use LR outputs only then 1 steps LR + F0 + Energy.
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
