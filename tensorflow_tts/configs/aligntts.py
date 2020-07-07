@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2020 Minh Nguyen Quan Anh (@dathudeptrai)
+# Copyright 2020 Minh Nguyen Quan Anh, Modified by Trinhlq (@l4zyf9x)
 #  MIT License (https://opensource.org/licenses/MIT)
 
 """FastSpeech Config object."""
