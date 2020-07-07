@@ -702,3 +702,61 @@ class TFAlignTTS(tf.keras.Model):
 
     #     outputs = (mel_before, mel_after, duration_outputs)
     #     return outputs
+
+
+class Viterbi(tf.keras.layers.Layer):
+    """Viterbi backtrack algorithm find best path."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def call(self, inputs, training=False):
+        log_prob_matrix, mel_lengths, character_lengths = inputs
+        batch_size = tf.shape(log_prob_matrix)[0]
+        max_mel_length = tf.shape(log_prob_matrix)[1]
+        max_char_length = tf.shape(log_prob_matrix)[2]
+
+        log_beta_matrix = tf.transpose(tf.ones_like(log_prob_matrix, dtype=tf.float32), [1, 0, 2])  # [T, B, L]
+        offset_matrix = tf.zeros_like(log_beta_matrix, dtype=tf.int32)
+
+        first_log_beta = tf.concat([tf.expand_dims(log_prob_matrix[:, 0, 0], axis=-1),
+                                    tf.tile([[-1e30]], [batch_size, max_char_length - 1])], axis=-1)
+        first_log_beta = tf.expand_dims(first_log_beta, axis=0)
+
+        log_beta_matrix = tf.tensor_scatter_nd_update(log_beta_matrix, [[0]], first_log_beta)
+
+        for t in tf.range(1, max_mel_length):
+            previous_beta = log_beta_matrix[t - 1]  # [batch_size, char_length]
+            previous_beta_shift = tf.concat([tf.tile([[-1e30]], [batch_size, 1]),
+                                             previous_beta[:, :-1]], axis=-1)
+
+            # valid_previous_beta, offset: [batch_size, char_length]
+            valid_previous_beta = tf.reduce_max([previous_beta, previous_beta_shift], axis=0)
+            offset = tf.expand_dims(tf.cast(tf.math.greater(
+                previous_beta_shift, previous_beta), dtype=tf.int32), axis=0)
+
+            # [1, batch_size, char_length]
+            log_beta = tf.expand_dims(valid_previous_beta + log_prob_matrix[:, t, :], axis=0)
+
+            log_beta_matrix = tf.tensor_scatter_nd_update(log_beta_matrix, [[t]], log_beta)
+            offset_matrix = tf.tensor_scatter_nd_update(offset_matrix, [[t]], offset)
+
+        offset_matrix = tf.transpose(offset_matrix,
+                                     [1, 0, 2]) * tf.sequence_mask(mel_lengths, dtype=tf.int32)[:, :, tf.newaxis]
+        # offset_matrix, [batch_size, mel_length, char_length]
+
+        path = tf.ones([max_mel_length, batch_size], dtype=tf.int32) * - 2  # [mel_length, batch_size]
+        index = tf.expand_dims(character_lengths - 1, axis=0)  # [1, batch_size]
+        path = tf.tensor_scatter_nd_update(path, [[max_mel_length - 1]], index)
+
+        for t in tf.range(max_mel_length - 2, -1, -1):  # Start writing from max_mel_length-2 to 0
+            preivous_index = path[t + 1]  # [batch_size]
+            batch_index = tf.expand_dims(tf.range(batch_size), axis=-1)
+            time_index = tf.tile(t[None, None] + 1, [batch_size, 1])
+
+            list_index_query = tf.concat([batch_index, time_index, preivous_index[:, None]], axis=-1)
+            offset = tf.gather_nd(offset_matrix, list_index_query)  # [batch_size]
+
+            index = tf.expand_dims(preivous_index - offset, axis=0)
+            path = tf.tensor_scatter_nd_update(path, [[t]], index)
+
+        return tf.transpose(path, [1, 0])
