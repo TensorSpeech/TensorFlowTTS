@@ -1,4 +1,5 @@
-# This is the hyperparameter configuration file for FastSpeech2 v1.
+# This is the hyperparameter configuration file for FastSpeech2 v2.
+# the different of v2 and v1 is that v2 apply linformer technique.
 # Please make sure this is adjusted for the LJSpeech dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 200k iters but a best checkpoint is around 150k iters.
@@ -18,7 +19,7 @@ fastspeech_params:
     hidden_size: 384
     num_hidden_layers: 4
     num_attention_heads: 2
-    attention_head_size: 192  # hidden_size // num_attention_heads
+    attention_head_size: 8  # in v1, attention_head_size = hidden_size // num_attention_heads
     intermediate_size: 1024
     intermediate_kernel_size: 3
     num_duration_conv_layers: 2
@@ -67,6 +68,7 @@ train_max_steps: 200000               # Number of training steps.
 save_interval_steps: 5000             # Interval steps to save checkpoint.
 eval_interval_steps: 500              # Interval steps to evaluate the network.
 log_interval_steps: 200               # Interval steps to record the training log.
+delay_f0_energy_steps: 3              # 2 steps use LR outputs only then 1 steps LR + F0 + Energy.
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
