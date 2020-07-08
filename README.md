@@ -19,6 +19,7 @@
 :zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems. 
 
 ## What's new
+- 2020/07/05 **(New!)** Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from TFlite team for his support.
 - 2020/06/20 **(New!)** [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
 - 2020/06/07 **(New!)** [Multi-band MelGAN (MB MelGAN)](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported. 
 
@@ -271,7 +272,7 @@ sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
 ```
 
 # Contact
-[dathudeptrai](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com
+[Minh Nguyen Quan Anh](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com, [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com, [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com, [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com
 
 # License
 Overrall, Almost models here are licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) for all countries in the world, except in **Viet Nam** this framework cannot be used for production in any way without permission from TensorflowTTS's Authors. There is an exception, Tacotron-2 can be used with any perpose. So, if you are VietNamese and want to use this framework for production, you **Must** contact our in andvance.

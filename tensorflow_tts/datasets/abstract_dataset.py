@@ -42,19 +42,18 @@ class AbstractDataset(metaclass=abc.ABCMeta):
         """Return number of samples on dataset."""
         pass
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -62,7 +61,9 @@ class AbstractDataset(metaclass=abc.ABCMeta):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
         if batch_size > 1 and map_fn is None:
             raise ValueError("map function must define when batch_size > 1.")

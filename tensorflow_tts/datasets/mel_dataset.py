@@ -28,13 +28,14 @@ from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 class MelDataset(AbstractDataset):
     """Tensorflow compatible mel dataset."""
 
-    def __init__(self,
-                 root_dir,
-                 mel_query="*-raw-feats.h5",
-                 mel_load_fn=np.load,
-                 mel_length_threshold=None,
-                 return_utt_id=False
-                 ):
+    def __init__(
+        self,
+        root_dir,
+        mel_query="*-raw-feats.h5",
+        mel_load_fn=np.load,
+        mel_length_threshold=None,
+        return_utt_id=False,
+    ):
         """Initialize dataset.
 
         Args:
@@ -51,10 +52,16 @@ class MelDataset(AbstractDataset):
 
         # filter by threshold
         if mel_length_threshold is not None:
-            idxs = [idx for idx in range(len(mel_files)) if mel_lengths[idx] > mel_length_threshold]
+            idxs = [
+                idx
+                for idx in range(len(mel_files))
+                if mel_lengths[idx] > mel_length_threshold
+            ]
             if len(mel_files) != len(idxs):
-                logging.warning(f"Some files are filtered by mel length threshold "
-                                f"({len(mel_files)} -> {len(idxs)}).")
+                logging.warning(
+                    f"Some files are filtered by mel length threshold "
+                    f"({len(mel_files)} -> {len(idxs)})."
+                )
             mel_files = [mel_files[idx] for idx in idxs]
 
         # assert the number of files
@@ -91,19 +98,18 @@ class MelDataset(AbstractDataset):
             output_types = (tf.dtypes.string, *output_types)
         return output_types
 
-    def create(self,
-               allow_cache=False,
-               batch_size=1,
-               is_shuffle=False,
-               map_fn=None,
-               reshuffle_each_iteration=True
-               ):
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
-            self.generator,
-            output_types=output_types,
-            args=(self.get_args())
+            self.generator, output_types=output_types, args=(self.get_args())
         )
 
         if allow_cache:
@@ -111,7 +117,9 @@ class MelDataset(AbstractDataset):
 
         if is_shuffle:
             datasets = datasets.shuffle(
-                self.get_len_dataset(), reshuffle_each_iteration=reshuffle_each_iteration)
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
 
         # define padded_shapes.
         padded_shapes = ([None, None], [])

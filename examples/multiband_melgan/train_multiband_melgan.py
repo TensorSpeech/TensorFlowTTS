@@ -18,6 +18,7 @@ import argparse
 import logging
 import os
 import sys
+sys.path.append(".")
 
 import numpy as np
 import soundfile as sf
@@ -44,13 +45,14 @@ from tensorflow_tts.configs import MultiBandMelGANDiscriminatorConfig
 class MultiBandMelganTrainer(MelganTrainer):
     """Multi-Band MelGAN Trainer class based on MelganTrainer."""
 
-    def __init__(self,
-                 config,
-                 steps=0,
-                 epochs=0,
-                 is_generator_mixed_precision=False,
-                 is_discriminator_mixed_precision=False,
-                 ):
+    def __init__(
+        self,
+        config,
+        steps=0,
+        epochs=0,
+        is_generator_mixed_precision=False,
+        is_discriminator_mixed_precision=False,
+    ):
         """Initialize trainer.
 
         Args:
@@ -66,7 +68,7 @@ class MultiBandMelganTrainer(MelganTrainer):
             steps=steps,
             epochs=epochs,
             is_generator_mixed_precision=is_generator_mixed_precision,
-            is_discriminator_mixed_precision=is_discriminator_mixed_precision
+            is_discriminator_mixed_precision=is_discriminator_mixed_precision,
         )
 
         # define metrics to aggregates data and use tf.summary logs them
@@ -91,8 +93,12 @@ class MultiBandMelganTrainer(MelganTrainer):
         # define loss
         self.mse_loss = tf.keras.losses.MeanSquaredError()
         self.mae_loss = tf.keras.losses.MeanAbsoluteError()
-        self.sub_band_stft_loss = TFMultiResolutionSTFT(**self.config["subband_stft_loss_params"])
-        self.full_band_stft_loss = TFMultiResolutionSTFT(**self.config["stft_loss_params"])
+        self.sub_band_stft_loss = TFMultiResolutionSTFT(
+            **self.config["subband_stft_loss_params"]
+        )
+        self.full_band_stft_loss = TFMultiResolutionSTFT(
+            **self.config["stft_loss_params"]
+        )
 
         # define pqmf module
         self.pqmf = pqmf
@@ -118,19 +124,27 @@ class MultiBandMelganTrainer(MelganTrainer):
             y_hat = self.pqmf.synthesis(y_mb_hat)  # [B, T, 1]
 
             # subband multi-resolution stft loss for multi-band model
-            y_mb = self.pqmf.analysis(tf.expand_dims(y, -1))  # [B, T//subbands, subbands]
+            y_mb = self.pqmf.analysis(
+                tf.expand_dims(y, -1)
+            )  # [B, T//subbands, subbands]
             y_mb = tf.transpose(y_mb, (0, 2, 1))  # [B, subbands, T//subbands]
             y_mb = tf.reshape(y_mb, (-1, tf.shape(y_mb)[-1]))  # [B * subbands, T']
 
             y_mb_hat = tf.transpose(y_mb_hat, (0, 2, 1))  # [B, subbands, T//subbands]
-            y_mb_hat = tf.reshape(y_mb_hat, (-1, tf.shape(y_mb_hat)[-1]))  # [B * subbands, T']
+            y_mb_hat = tf.reshape(
+                y_mb_hat, (-1, tf.shape(y_mb_hat)[-1])
+            )  # [B * subbands, T']
 
             # calculate sub/full band spectral_convergence and log mag loss.
             sub_sc_loss, sub_mag_loss = self.sub_band_stft_loss(y_mb, y_mb_hat)
-            full_sc_loss, full_mag_loss = self.full_band_stft_loss(y, tf.squeeze(y_hat, -1))
+            full_sc_loss, full_mag_loss = self.full_band_stft_loss(
+                y, tf.squeeze(y_hat, -1)
+            )
 
             # define generator loss
-            gen_loss = 0.5 * (sub_sc_loss + sub_mag_loss) + 0.5 * (full_sc_loss + full_mag_loss)
+            gen_loss = 0.5 * (sub_sc_loss + sub_mag_loss) + 0.5 * (
+                full_sc_loss + full_mag_loss
+            )
 
             if self.steps >= self.config["discriminator_train_start_steps"]:
                 p_hat = self.discriminator(y_hat)
@@ -139,7 +153,7 @@ class MultiBandMelganTrainer(MelganTrainer):
                     adv_loss += self.mse_loss(
                         p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
                     )
-                adv_loss /= (i + 1)
+                adv_loss /= i + 1
                 gen_loss += self.config["lambda_adv"] * adv_loss
 
                 self.train_metrics["adversarial_loss"].update_state(adv_loss)
@@ -148,17 +162,25 @@ class MultiBandMelganTrainer(MelganTrainer):
                 scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
 
         if self.is_generator_mixed_precision:
-            scaled_gradients = g_tape.gradient(scaled_gen_loss, self.generator.trainable_variables)
+            scaled_gradients = g_tape.gradient(
+                scaled_gen_loss, self.generator.trainable_variables
+            )
             gradients = self.gen_optimizer.get_unscaled_gradients(scaled_gradients)
         else:
             gradients = g_tape.gradient(gen_loss, self.generator.trainable_variables)
-        self.gen_optimizer.apply_gradients(zip(gradients, self.generator.trainable_variables))
+        self.gen_optimizer.apply_gradients(
+            zip(gradients, self.generator.trainable_variables)
+        )
 
         # accumulate loss into metrics
         self.train_metrics["gen_loss"].update_state(gen_loss)
-        self.train_metrics["subband_spectral_convergence_loss"].update_state(sub_sc_loss)
+        self.train_metrics["subband_spectral_convergence_loss"].update_state(
+            sub_sc_loss
+        )
         self.train_metrics["subband_log_magnitude_loss"].update_state(sub_mag_loss)
-        self.train_metrics["fullband_spectral_convergence_loss"].update_state(full_sc_loss)
+        self.train_metrics["fullband_spectral_convergence_loss"].update_state(
+            full_sc_loss
+        )
         self.train_metrics["fullband_log_magnitude_loss"].update_state(full_mag_loss)
 
         # recompute y_hat after 1 step generator for discriminator training.
@@ -181,14 +203,18 @@ class MultiBandMelganTrainer(MelganTrainer):
         y_mb = tf.reshape(y_mb, (-1, tf.shape(y_mb)[-1]))  # [B * subbands, T']
 
         y_mb_hat = tf.transpose(y_mb_hat, (0, 2, 1))  # [B, subbands, T//subbands]
-        y_mb_hat = tf.reshape(y_mb_hat, (-1, tf.shape(y_mb_hat)[-1]))  # [B * subbands, T']
+        y_mb_hat = tf.reshape(
+            y_mb_hat, (-1, tf.shape(y_mb_hat)[-1])
+        )  # [B * subbands, T']
 
         # calculate sub/full band spectral_convergence and log mag loss.
         sub_sc_loss, sub_mag_loss = self.sub_band_stft_loss(y_mb, y_mb_hat)
         full_sc_loss, full_mag_loss = self.full_band_stft_loss(y, tf.squeeze(y_hat, -1))
 
         # define gen_loss
-        gen_loss = 0.5 * (sub_sc_loss + sub_mag_loss) + 0.5 * (full_sc_loss + full_mag_loss)
+        gen_loss = 0.5 * (sub_sc_loss + sub_mag_loss) + 0.5 * (
+            full_sc_loss + full_mag_loss
+        )
 
         if self.steps >= self.config["discriminator_train_start_steps"]:
             p_hat = self.discriminator(y_hat)
@@ -197,7 +223,7 @@ class MultiBandMelganTrainer(MelganTrainer):
                 adv_loss += self.mse_loss(
                     p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
                 )
-            adv_loss /= (i + 1)
+            adv_loss /= i + 1
             gen_loss += adv_loss + self.config["lambda_adv"] * adv_loss
 
             # discriminator
@@ -206,14 +232,12 @@ class MultiBandMelganTrainer(MelganTrainer):
             real_loss = 0.0
             fake_loss = 0.0
             for i in range(len(p)):
-                real_loss += self.mse_loss(
-                    p[i][-1], tf.ones_like(p[i][-1], tf.float32)
-                )
+                real_loss += self.mse_loss(p[i][-1], tf.ones_like(p[i][-1], tf.float32))
                 fake_loss += self.mse_loss(
                     p_hat[i][-1], tf.zeros_like(p_hat[i][-1], tf.float32)
                 )
-            real_loss /= (i + 1)
-            fake_loss /= (i + 1)
+            real_loss /= i + 1
+            fake_loss /= i + 1
             dis_loss = real_loss + fake_loss
 
             # add to total eval loss
@@ -225,7 +249,9 @@ class MultiBandMelganTrainer(MelganTrainer):
         self.eval_metrics["gen_loss"].update_state(gen_loss)
         self.eval_metrics["subband_spectral_convergence_loss"].update_state(sub_sc_loss)
         self.eval_metrics["subband_log_magnitude_loss"].update_state(sub_mag_loss)
-        self.eval_metrics["fullband_spectral_convergence_loss"].update_state(full_sc_loss)
+        self.eval_metrics["fullband_spectral_convergence_loss"].update_state(
+            full_sc_loss
+        )
         self.eval_metrics["fullband_log_magnitude_loss"].update_state(full_mag_loss)
 
     @tf.function(experimental_relax_shapes=True)
@@ -266,10 +292,18 @@ class MultiBandMelganTrainer(MelganTrainer):
             # save as wavefile
             y = np.clip(y, -1, 1)
             y_ = np.clip(y_, -1, 1)
-            sf.write(figname.replace(".png", "_ref.wav"), y,
-                     self.config["sampling_rate"], "PCM_16")
-            sf.write(figname.replace(".png", "_gen.wav"), y_,
-                     self.config["sampling_rate"], "PCM_16")
+            sf.write(
+                figname.replace(".png", "_ref.wav"),
+                y,
+                self.config["sampling_rate"],
+                "PCM_16",
+            )
+            sf.write(
+                figname.replace(".png", "_gen.wav"),
+                y_,
+                self.config["sampling_rate"],
+                "PCM_16",
+            )
 
     def _check_train_finish(self):
         """Check training finished."""
@@ -278,7 +312,9 @@ class MultiBandMelganTrainer(MelganTrainer):
 
         if self.steps == self.config["discriminator_train_start_steps"]:
             self.finish_train = True
-            logging.info(f"Finished training only generator at {self.steps}steps, pls resume and continue training.")
+            logging.info(
+                f"Finished training only generator at {self.steps}steps, pls resume and continue training."
+            )
 
 
 def main():
@@ -286,24 +322,52 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train MultiBand MelGAN (See detail in examples/multiband_melgan/train_multiband_melgan.py)"
     )
-    parser.add_argument("--train-dir", default=None, type=str,
-                        help="directory including training data. ")
-    parser.add_argument("--dev-dir", default=None, type=str,
-                        help="directory including development data. ")
-    parser.add_argument("--use-norm", default=1, type=int,
-                        help="use norm mels for training or raw.")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to save checkpoints.")
-    parser.add_argument("--config", type=str, required=True,
-                        help="yaml format configuration file.")
-    parser.add_argument("--resume", default="", type=str, nargs="?",
-                        help="checkpoint file path to resume training. (default=\"\")")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
-    parser.add_argument("--generator_mixed_precision", default=0, type=int,
-                        help="using mixed precision for generator or not.")
-    parser.add_argument("--discriminator_mixed_precision", default=0, type=int,
-                        help="using mixed precision for discriminator or not.")
+    parser.add_argument(
+        "--train-dir",
+        default=None,
+        type=str,
+        help="directory including training data. ",
+    )
+    parser.add_argument(
+        "--dev-dir",
+        default=None,
+        type=str,
+        help="directory including development data. ",
+    )
+    parser.add_argument(
+        "--use-norm", default=1, type=int, help="use norm mels for training or raw."
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="directory to save checkpoints."
+    )
+    parser.add_argument(
+        "--config", type=str, required=True, help="yaml format configuration file."
+    )
+    parser.add_argument(
+        "--resume",
+        default="",
+        type=str,
+        nargs="?",
+        help='checkpoint file path to resume training. (default="")',
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
+    parser.add_argument(
+        "--generator_mixed_precision",
+        default=0,
+        type=int,
+        help="using mixed precision for generator or not.",
+    )
+    parser.add_argument(
+        "--discriminator_mixed_precision",
+        default=0,
+        type=int,
+        help="using mixed precision for discriminator or not.",
+    )
     args = parser.parse_args()
 
     # set mixed precision config
@@ -318,16 +382,22 @@ def main():
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.WARN,
+            stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
         logging.warning("Skip DEBUG/INFO messages")
 
     # check directory existence
@@ -352,8 +422,9 @@ def main():
 
     # get dataset
     if config["remove_short_samples"]:
-        mel_length_threshold = config["batch_max_steps"] // config["hop_size"] + \
-            2 * config["generator_params"].get("aux_context_window", 0)
+        mel_length_threshold = config["batch_max_steps"] // config[
+            "hop_size"
+        ] + 2 * config["generator_params"].get("aux_context_window", 0)
     else:
         mel_length_threshold = None
 
@@ -375,9 +446,11 @@ def main():
         mel_length_threshold=mel_length_threshold,
     ).create(
         is_shuffle=config["is_shuffle"],
-        map_fn=lambda a, b: collater(a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)),
+        map_fn=lambda a, b: collater(
+            a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)
+        ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"]
+        batch_size=config["batch_size"],
     )
 
     valid_dataset = AudioMelDataset(
@@ -389,20 +462,31 @@ def main():
         mel_length_threshold=mel_length_threshold,
     ).create(
         is_shuffle=config["is_shuffle"],
-        map_fn=lambda a, b: collater(a, b,
-                                     batch_max_steps=tf.constant(config["batch_max_steps_valid"], dtype=tf.int32)),
+        map_fn=lambda a, b: collater(
+            a,
+            b,
+            batch_max_steps=tf.constant(
+                config["batch_max_steps_valid"], dtype=tf.int32
+            ),
+        ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"]
+        batch_size=config["batch_size"],
     )
 
     # define generator and discriminator
     generator = TFMelGANGenerator(
-        MultiBandMelGANGeneratorConfig(**config["generator_params"]), name='multi_band_melgan_generator')
+        MultiBandMelGANGeneratorConfig(**config["generator_params"]),
+        name="multi_band_melgan_generator",
+    )
 
     discriminator = TFMelGANMultiScaleDiscriminator(
-        MultiBandMelGANDiscriminatorConfig(**config["discriminator_params"]), name='multi_band_melgan_discriminator')
+        MultiBandMelGANDiscriminatorConfig(**config["discriminator_params"]),
+        name="multi_band_melgan_discriminator",
+    )
 
-    pqmf = TFPQMF(MultiBandMelGANGeneratorConfig(**config["generator_params"]), name="pqmf")
+    pqmf = TFPQMF(
+        MultiBandMelGANGeneratorConfig(**config["generator_params"]), name="pqmf"
+    )
 
     # dummy input to build model.
     fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
@@ -414,39 +498,47 @@ def main():
     discriminator.summary()
 
     # define trainer
-    trainer = MultiBandMelganTrainer(steps=0,
-                                     epochs=0,
-                                     config=config,
-                                     is_generator_mixed_precision=args.generator_mixed_precision,
-                                     is_discriminator_mixed_precision=args.discriminator_mixed_precision)
+    trainer = MultiBandMelganTrainer(
+        steps=0,
+        epochs=0,
+        config=config,
+        is_generator_mixed_precision=args.generator_mixed_precision,
+        is_discriminator_mixed_precision=args.discriminator_mixed_precision,
+    )
 
     # define optimizer
-    generator_lr_fn = getattr(tf.keras.optimizers.schedules,
-                              config["generator_optimizer_params"]["lr_fn"])(
-        **config["generator_optimizer_params"]["lr_params"]
+    generator_lr_fn = getattr(
+        tf.keras.optimizers.schedules, config["generator_optimizer_params"]["lr_fn"]
+    )(**config["generator_optimizer_params"]["lr_params"])
+    discriminator_lr_fn = getattr(
+        tf.keras.optimizers.schedules, config["discriminator_optimizer_params"]["lr_fn"]
+    )(**config["discriminator_optimizer_params"]["lr_params"])
+
+    gen_optimizer = tf.keras.optimizers.Adam(
+        learning_rate=generator_lr_fn,
+        amsgrad=config["generator_optimizer_params"]["amsgrad"],
     )
-    discriminator_lr_fn = getattr(tf.keras.optimizers.schedules,
-                                  config["discriminator_optimizer_params"]["lr_fn"])(
-        **config["discriminator_optimizer_params"]["lr_params"]
+    dis_optimizer = tf.keras.optimizers.Adam(
+        learning_rate=discriminator_lr_fn,
+        amsgrad=config["discriminator_optimizer_params"]["amsgrad"],
     )
 
-    gen_optimizer = tf.keras.optimizers.Adam(learning_rate=generator_lr_fn,
-                                             amsgrad=config["generator_optimizer_params"]["amsgrad"])
-    dis_optimizer = tf.keras.optimizers.Adam(learning_rate=discriminator_lr_fn,
-                                             amsgrad=config["discriminator_optimizer_params"]["amsgrad"])
-
-    trainer.compile(gen_model=generator,
-                    dis_model=discriminator,
-                    gen_optimizer=gen_optimizer,
-                    dis_optimizer=dis_optimizer,
-                    pqmf=pqmf)
+    trainer.compile(
+        gen_model=generator,
+        dis_model=discriminator,
+        gen_optimizer=gen_optimizer,
+        dis_optimizer=dis_optimizer,
+        pqmf=pqmf,
+    )
 
     # start training
     try:
-        trainer.fit(train_dataset,
-                    valid_dataset,
-                    saved_path=os.path.join(config["outdir"], 'checkpoints/'),
-                    resume=args.resume)
+        trainer.fit(
+            train_dataset,
+            valid_dataset,
+            saved_path=os.path.join(config["outdir"], "checkpoints/"),
+            resume=args.resume,
+        )
     except KeyboardInterrupt:
         trainer.save_checkpoint()
         logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")

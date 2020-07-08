@@ -17,6 +17,8 @@
 import argparse
 import logging
 import os
+import sys
+sys.path.append(".")
 
 import numpy as np
 import yaml
@@ -33,32 +35,60 @@ def main():
     """Run fastspeech2 decoding from folder."""
     parser = argparse.ArgumentParser(
         description="Decode soft-mel features from charactor with trained FastSpeech "
-                    "(See detail in examples/fastspeech2/decode_fastspeech2.py).")
-    parser.add_argument("--rootdir", default=None, type=str, required=True,
-                        help="directory including ids/durations files.")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to save generated speech.")
-    parser.add_argument("--checkpoint", type=str, required=True,
-                        help="checkpoint file to be loaded.")
-    parser.add_argument("--config", default=None, type=str, required=True,
-                        help="yaml format configuration file. if not explicitly provided, "
-                             "it will be searched in the checkpoint directory. (default=None)")
-    parser.add_argument("--batch-size", default=8, type=int, required=False,
-                        help="Batch size for inference.")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
+        "(See detail in examples/fastspeech2/decode_fastspeech2.py)."
+    )
+    parser.add_argument(
+        "--rootdir",
+        default=None,
+        type=str,
+        required=True,
+        help="directory including ids/durations files.",
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="directory to save generated speech."
+    )
+    parser.add_argument(
+        "--checkpoint", type=str, required=True, help="checkpoint file to be loaded."
+    )
+    parser.add_argument(
+        "--config",
+        default=None,
+        type=str,
+        required=True,
+        help="yaml format configuration file. if not explicitly provided, "
+        "it will be searched in the checkpoint directory. (default=None)",
+    )
+    parser.add_argument(
+        "--batch-size",
+        default=8,
+        type=int,
+        required=False,
+        help="Batch size for inference.",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
     args = parser.parse_args()
 
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.WARN,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
         logging.warning("Skip DEBUG/INFO messages")
 
     # check directory existence
@@ -81,12 +111,14 @@ def main():
         root_dir=args.rootdir,
         charactor_query=char_query,
         charactor_load_fn=char_load_fn,
-        return_utt_id=True
+        return_utt_id=True,
     )
     dataset = dataset.create(batch_size=args.batch_size)
 
     # define model and load checkpoint
-    fastspeech2 = TFFastSpeech2(config=FastSpeech2Config(**config["fastspeech_params"]), name='fastspeech2')
+    fastspeech2 = TFFastSpeech2(
+        config=FastSpeech2Config(**config["fastspeech_params"]), name="fastspeech2"
+    )
     fastspeech2._build()
     fastspeech2.load_weights(args.checkpoint)
 
@@ -95,13 +127,19 @@ def main():
         char_ids = data[1]
 
         # fastspeech inference.
-        masked_mel_before, masked_mel_after, duration_outputs, _, _ = fastspeech2.inference(
+        (
+            masked_mel_before,
+            masked_mel_after,
+            duration_outputs,
+            _,
+            _,
+        ) = fastspeech2.inference(
             char_ids,
             attention_mask=tf.math.not_equal(char_ids, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(char_ids)[0]], dtype=tf.int32),
             speed_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
             f0_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
-            energy_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32)
+            energy_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
         )
 
         # convert to numpy
@@ -109,15 +147,22 @@ def main():
         masked_mel_afters = masked_mel_after.numpy()
 
         for (utt_id, mel_before, mel_after, durations) in zip(
-                utt_ids, masked_mel_befores, masked_mel_afters, duration_outputs):
+            utt_ids, masked_mel_befores, masked_mel_afters, duration_outputs
+        ):
             # real len of mel predicted
             real_length = durations.numpy().sum()
             utt_id = utt_id.numpy().decode("utf-8")
             # save to folder.
-            np.save(os.path.join(args.outdir, f"{utt_id}-fs-before-feats.npy"),
-                    mel_before[:real_length, :].astype(np.float32), allow_pickle=False)
-            np.save(os.path.join(args.outdir, f"{utt_id}-fs-after-feats.npy"),
-                    mel_after[:real_length, :].astype(np.float32), allow_pickle=False)
+            np.save(
+                os.path.join(args.outdir, f"{utt_id}-fs-before-feats.npy"),
+                mel_before[:real_length, :].astype(np.float32),
+                allow_pickle=False,
+            )
+            np.save(
+                os.path.join(args.outdir, f"{utt_id}-fs-after-feats.npy"),
+                mel_after[:real_length, :].astype(np.float32),
+                allow_pickle=False,
+            )
 
 
 if __name__ == "__main__":

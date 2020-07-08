@@ -14,39 +14,30 @@
 # limitations under the License.
 """Train FastSpeech2."""
 
+from tensorflow_tts.optimizers import AdamWeightDecay
+from tensorflow_tts.optimizers import WarmUp
+from tensorflow_tts.models import TFFastSpeech2
+from tensorflow_tts.configs import FastSpeech2Config
+from examples.fastspeech2.fastspeech2_dataset import CharactorDurationF0EnergyMelDataset
+from examples.fastspeech.train_fastspeech import FastSpeechTrainer
+from tqdm import tqdm
+import tensorflow_tts
+import yaml
+import tensorflow as tf
+import numpy as np
 import argparse
 import logging
 import os
 import sys
-
-import numpy as np
-import tensorflow as tf
-import yaml
-
-import tensorflow_tts
-
-from tqdm import tqdm
-
-from examples.fastspeech.train_fastspeech import FastSpeechTrainer
-from examples.fastspeech2.fastspeech2_dataset import CharactorDurationF0EnergyMelDataset
-
-from tensorflow_tts.configs import FastSpeech2Config
-
-from tensorflow_tts.models import TFFastSpeech2
-
-from tensorflow_tts.optimizers import WarmUp
-from tensorflow_tts.optimizers import AdamWeightDecay
+sys.path.append(".")
 
 
 class FastSpeech2Trainer(FastSpeechTrainer):
     """FastSpeech2 Trainer class based on FastSpeechTrainer."""
 
-    def __init__(self,
-                 config,
-                 steps=0,
-                 epochs=0,
-                 is_mixed_precision=False,
-                 ):
+    def __init__(
+        self, config, steps=0, epochs=0, is_mixed_precision=False,
+    ):
         """Initialize trainer.
 
         Args:
@@ -56,17 +47,19 @@ class FastSpeech2Trainer(FastSpeechTrainer):
             is_mixed_precision (bool): Use mixed precision or not.
 
         """
-        super(FastSpeech2Trainer, self).__init__(steps=steps,
-                                                 epochs=epochs,
-                                                 config=config,
-                                                 is_mixed_precision=is_mixed_precision)
+        super(FastSpeech2Trainer, self).__init__(
+            steps=steps,
+            epochs=epochs,
+            config=config,
+            is_mixed_precision=is_mixed_precision,
+        )
         # define metrics to aggregates data and use tf.summary logs them
         self.list_metrics_name = [
             "duration_loss",
             "f0_loss",
             "energy_loss",
             "mel_loss_before",
-            "mel_loss_after"
+            "mel_loss_after",
         ]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
@@ -88,27 +81,33 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         self.steps += 1
         self.tqdm.update(1)
         self._check_train_finish()
-        self._apply_delay_using_f0_energy()
 
-    def _apply_delay_using_f0_energy(self):
-        self.model.is_use_f0_energy = tf.cast((self.steps % self.config["delay_f0_energy_steps"] == 0), tf.float32)
-
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None, 80], dtype=tf.float32)])
+    @tf.function(
+        experimental_relax_shapes=True,
+        input_signature=[
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.float32),
+            tf.TensorSpec([None, None], dtype=tf.float32),
+            tf.TensorSpec([None, None, 80], dtype=tf.float32),
+        ],
+    )
     def _one_step_fastspeech2(self, charactor, duration, f0, energy, mel):
         with tf.GradientTape() as tape:
-            mel_before, mel_after, duration_outputs, f0_outputs, energy_outputs = self.model(
+            (
+                mel_before,
+                mel_after,
+                duration_outputs,
+                f0_outputs,
+                energy_outputs,
+            ) = self.model(
                 charactor,
                 attention_mask=tf.math.not_equal(charactor, 0),
                 speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
                 duration_gts=duration,
                 f0_gts=f0,
                 energy_gts=energy,
-                training=True
+                training=True,
             )
             log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
             duration_loss = self.mse(log_duration, duration_outputs)
@@ -116,17 +115,23 @@ class FastSpeech2Trainer(FastSpeechTrainer):
             energy_loss = self.mse(energy, energy_outputs)
             mel_loss_before = self.mae(mel, mel_before)
             mel_loss_after = self.mae(mel, mel_after)
-            loss = duration_loss + f0_loss + energy_loss + mel_loss_before + mel_loss_after
+            loss = (
+                duration_loss + f0_loss + energy_loss + mel_loss_before + mel_loss_after
+            )
 
             if self.is_mixed_precision:
                 scaled_loss = self.optimizer.get_scaled_loss(loss)
 
         if self.is_mixed_precision:
-            scaled_gradients = tape.gradient(scaled_loss, self.model.trainable_variables)
+            scaled_gradients = tape.gradient(
+                scaled_loss, self.model.trainable_variables
+            )
             gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
         else:
             gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables), 5.0)
+        self.optimizer.apply_gradients(
+            zip(gradients, self.model.trainable_variables), 5.0
+        )
 
         # accumulate loss into metrics
         self.train_metrics["duration_loss"].update_state(duration_loss)
@@ -139,11 +144,10 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         """Evaluate model one epoch."""
         logging.info(f"(Steps: {self.steps}) Start evaluation.")
 
-        # force to use f0/energy embedding when evaluation.
-        self.model.is_use_f0_energy = tf.constant(1.0)
-
         # calculate loss for each batch
-        for eval_steps_per_epoch, batch in enumerate(tqdm(self.eval_data_loader, desc="[eval]"), 1):
+        for eval_steps_per_epoch, batch in enumerate(
+            tqdm(self.eval_data_loader, desc="[eval]"), 1
+        ):
             # eval one step
             charactor, duration, f0, energy, mel = batch
             self._eval_step(charactor, duration, f0, energy, mel)
@@ -152,36 +156,49 @@ class FastSpeech2Trainer(FastSpeechTrainer):
                 # save intermedia
                 self.generate_and_save_intermediate_result(batch)
 
-        logging.info(f"(Steps: {self.steps}) Finished evaluation "
-                     f"({eval_steps_per_epoch} steps per epoch).")
+        logging.info(
+            f"(Steps: {self.steps}) Finished evaluation "
+            f"({eval_steps_per_epoch} steps per epoch)."
+        )
 
         # average loss
         for key in self.eval_metrics.keys():
-            logging.info(f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}.")
+            logging.info(
+                f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}."
+            )
 
         # record
-        self._write_to_tensorboard(self.eval_metrics, stage='eval')
+        self._write_to_tensorboard(self.eval_metrics, stage="eval")
 
         # reset
         self.reset_states_eval()
-        self.model.is_use_f0_energy = tf.constant(0.0)
 
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None, 80], dtype=tf.float32)])
+    @tf.function(
+        experimental_relax_shapes=True,
+        input_signature=[
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.float32),
+            tf.TensorSpec([None, None], dtype=tf.float32),
+            tf.TensorSpec([None, None, 80], dtype=tf.float32),
+        ],
+    )
     def _eval_step(self, charactor, duration, f0, energy, mel):
         """Evaluate model one step."""
-        mel_before, mel_after, duration_outputs, f0_outputs, energy_outputs = self.model(
+        (
+            mel_before,
+            mel_after,
+            duration_outputs,
+            f0_outputs,
+            energy_outputs,
+        ) = self.model(
             charactor,
             attention_mask=tf.math.not_equal(charactor, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
             duration_gts=duration,
             f0_gts=f0,
             energy_gts=energy,
-            training=False
+            training=False,
         )
         log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
         duration_loss = self.mse(log_duration, duration_outputs)
@@ -202,18 +219,23 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         if self.steps % self.config["log_interval_steps"] == 0:
             for metric_name in self.list_metrics_name:
                 logging.info(
-                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}.")
+                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}."
+                )
             self._write_to_tensorboard(self.train_metrics, stage="train")
 
             # reset
             self.reset_states_train()
 
-    @tf.function(experimental_relax_shapes=True,
-                 input_signature=[tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.int32),
-                                  tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None], dtype=tf.float32),
-                                  tf.TensorSpec([None, None, 80], dtype=tf.float32)])
+    @tf.function(
+        experimental_relax_shapes=True,
+        input_signature=[
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.float32),
+            tf.TensorSpec([None, None], dtype=tf.float32),
+            tf.TensorSpec([None, None, 80], dtype=tf.float32),
+        ],
+    )
     def predict(self, charactor, duration, f0, energy, mel):
         """Predict."""
         mel_before, mel_after, _, _, _ = self.model(
@@ -223,7 +245,7 @@ class FastSpeech2Trainer(FastSpeechTrainer):
             duration_gts=duration,
             f0_gts=f0,
             energy_gts=energy,
-            training=False
+            training=False,
         )
         return mel_before, mel_after
 
@@ -235,7 +257,9 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         charactor, duration, f0, energy, mel = batch
 
         # predict with tf.function.
-        masked_mel_before, masked_mel_after = self.predict(charactor, duration, f0, energy, mel)
+        masked_mel_before, masked_mel_after = self.predict(
+            charactor, duration, f0, energy, mel
+        )
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
@@ -243,10 +267,15 @@ class FastSpeech2Trainer(FastSpeechTrainer):
             os.makedirs(dirname)
 
         for idx, (mel_gt, mel_pred_before, mel_pred_after) in enumerate(
-                zip(mel, masked_mel_before, masked_mel_after), 1):
+            zip(mel, masked_mel_before, masked_mel_after), 1
+        ):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
-            mel_pred_before = tf.reshape(mel_pred_before, (-1, 80)).numpy()  # [length, 80]
-            mel_pred_after = tf.reshape(mel_pred_after, (-1, 80)).numpy()  # [length, 80]
+            mel_pred_before = tf.reshape(
+                mel_pred_before, (-1, 80)
+            ).numpy()  # [length, 80]
+            mel_pred_after = tf.reshape(
+                mel_pred_after, (-1, 80)
+            ).numpy()  # [length, 80]
 
             # plit figure and save it
             figname = os.path.join(dirname, f"{idx}.png")
@@ -254,15 +283,19 @@ class FastSpeech2Trainer(FastSpeechTrainer):
             ax1 = fig.add_subplot(311)
             ax2 = fig.add_subplot(312)
             ax3 = fig.add_subplot(313)
-            im = ax1.imshow(np.rot90(mel_gt), aspect='auto', interpolation='none')
-            ax1.set_title('Target Mel-Spectrogram')
-            fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax1)
-            ax2.set_title('Predicted Mel-before-Spectrogram')
-            im = ax2.imshow(np.rot90(mel_pred_before), aspect='auto', interpolation='none')
-            fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax2)
-            ax3.set_title('Predicted Mel-after-Spectrogram')
-            im = ax3.imshow(np.rot90(mel_pred_after), aspect='auto', interpolation='none')
-            fig.colorbar(mappable=im, shrink=0.65, orientation='horizontal', ax=ax3)
+            im = ax1.imshow(np.rot90(mel_gt), aspect="auto", interpolation="none")
+            ax1.set_title("Target Mel-Spectrogram")
+            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax1)
+            ax2.set_title("Predicted Mel-before-Spectrogram")
+            im = ax2.imshow(
+                np.rot90(mel_pred_before), aspect="auto", interpolation="none"
+            )
+            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax2)
+            ax3.set_title("Predicted Mel-after-Spectrogram")
+            im = ax3.imshow(
+                np.rot90(mel_pred_after), aspect="auto", interpolation="none"
+            )
+            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax3)
             plt.tight_layout()
             plt.savefig(figname)
             plt.close()
@@ -273,26 +306,60 @@ def main():
     parser = argparse.ArgumentParser(
         description="Train FastSpeech (See detail in tensorflow_tts/bin/train-fastspeech.py)"
     )
-    parser.add_argument("--train-dir", default=None, type=str,
-                        help="directory including training data. ")
-    parser.add_argument("--dev-dir", default=None, type=str,
-                        help="directory including development data. ")
-    parser.add_argument("--use-norm", default=1, type=int,
-                        help="usr norm-mels for train or raw.")
-    parser.add_argument("--f0-stat", default="./dump/stats_f0.npy", type=str, required=True,
-                        help="f0-stat path.")
-    parser.add_argument("--energy-stat", default="./dump/stats_energy.npy", type=str, required=True,
-                        help="energy-stat path.")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to save checkpoints.")
-    parser.add_argument("--config", type=str, required=True,
-                        help="yaml format configuration file.")
-    parser.add_argument("--resume", default="", type=str, nargs="?",
-                        help="checkpoint file path to resume training. (default=\"\")")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
-    parser.add_argument("--mixed_precision", default=0, type=int,
-                        help="using mixed precision for generator or not.")
+    parser.add_argument(
+        "--train-dir",
+        default=None,
+        type=str,
+        help="directory including training data. ",
+    )
+    parser.add_argument(
+        "--dev-dir",
+        default=None,
+        type=str,
+        help="directory including development data. ",
+    )
+    parser.add_argument(
+        "--use-norm", default=1, type=int, help="usr norm-mels for train or raw."
+    )
+    parser.add_argument(
+        "--f0-stat",
+        default="./dump/stats_f0.npy",
+        type=str,
+        required=True,
+        help="f0-stat path.",
+    )
+    parser.add_argument(
+        "--energy-stat",
+        default="./dump/stats_energy.npy",
+        type=str,
+        required=True,
+        help="energy-stat path.",
+    )
+    parser.add_argument(
+        "--outdir", type=str, required=True, help="directory to save checkpoints."
+    )
+    parser.add_argument(
+        "--config", type=str, required=True, help="yaml format configuration file."
+    )
+    parser.add_argument(
+        "--resume",
+        default="",
+        type=str,
+        nargs="?",
+        help='checkpoint file path to resume training. (default="")',
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
+    parser.add_argument(
+        "--mixed_precision",
+        default=0,
+        type=int,
+        help="using mixed precision for generator or not.",
+    )
     args = parser.parse_args()
 
     # set mixed precision config
@@ -305,16 +372,22 @@ def main():
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.WARN,
+            stream=sys.stdout,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
         logging.warning("Skip DEBUG/INFO messages")
 
     # check directory existence
@@ -363,11 +436,11 @@ def main():
         f0_stat=args.f0_stat,
         energy_stat=args.energy_stat,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False
+        return_utt_id=False,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"]
+        batch_size=config["batch_size"],
     )
 
     valid_dataset = CharactorDurationF0EnergyMelDataset(
@@ -380,11 +453,11 @@ def main():
         f0_stat=args.f0_stat,
         energy_stat=args.energy_stat,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False
+        return_utt_id=False,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"]
+        batch_size=config["batch_size"],
     )
 
     fastspeech = TFFastSpeech2(config=FastSpeech2Config(**config["fastspeech_params"]))
@@ -392,22 +465,23 @@ def main():
     fastspeech.summary()
 
     # define trainer
-    trainer = FastSpeech2Trainer(config=config,
-                                 steps=0,
-                                 epochs=0,
-                                 is_mixed_precision=args.mixed_precision)
+    trainer = FastSpeech2Trainer(
+        config=config, steps=0, epochs=0, is_mixed_precision=args.mixed_precision
+    )
 
     # AdamW for fastspeech
     learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
         initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
         decay_steps=config["optimizer_params"]["decay_steps"],
-        end_learning_rate=config["optimizer_params"]["end_learning_rate"]
+        end_learning_rate=config["optimizer_params"]["end_learning_rate"],
     )
 
     learning_rate_fn = WarmUp(
         initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
         decay_schedule_fn=learning_rate_fn,
-        warmup_steps=int(config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"])
+        warmup_steps=int(
+            config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"]
+        ),
     )
 
     optimizer = AdamWeightDecay(
@@ -416,19 +490,20 @@ def main():
         beta_1=0.9,
         beta_2=0.98,
         epsilon=1e-6,
-        exclude_from_weight_decay=['LayerNorm', 'layer_norm', 'bias']
+        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"],
     )
 
     # compile trainer
-    trainer.compile(model=fastspeech,
-                    optimizer=optimizer)
+    trainer.compile(model=fastspeech, optimizer=optimizer)
 
     # start training
     try:
-        trainer.fit(train_dataset,
-                    valid_dataset,
-                    saved_path=os.path.join(config["outdir"], 'checkpoints/'),
-                    resume=args.resume)
+        trainer.fit(
+            train_dataset,
+            valid_dataset,
+            saved_path=os.path.join(config["outdir"], "checkpoints/"),
+            resume=args.resume,
+        )
     except KeyboardInterrupt:
         trainer.save_checkpoint()
         logging.info(f"Successfully saved checkpoint @ {trainer.steps}steps.")

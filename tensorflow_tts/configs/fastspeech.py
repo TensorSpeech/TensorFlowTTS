@@ -47,7 +47,8 @@ class FastSpeechConfig(object):
             postnet_conv_filters=512,
             postnet_conv_kernel_sizes=5,
             postnet_dropout_rate=0.1,
-            **kwargs):
+            **kwargs
+    ):
         """Init parameters for Fastspeech model."""
         # fastspeech
         self.vocab_size = vocab_size

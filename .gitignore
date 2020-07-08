@@ -26,3 +26,9 @@ ljspeech
 *.npy
 ./*.wav
 *.yml
+!docker-compose.yml
+/Pipfile
+/Pipfile.lock
+/datasets
+/examples/tacotron2/exp/
+/temp/

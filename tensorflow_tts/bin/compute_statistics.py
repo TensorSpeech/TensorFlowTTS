@@ -36,28 +36,46 @@ def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
         description="Compute mean and variance of dumped raw features "
-                    "(See detail in tensorflow_tts/bin/compute_statistics.py).")
-    parser.add_argument("--rootdir", type=str, required=True,
-                        help="directory including feature files. ")
-    parser.add_argument("--config", type=str, required=True,
-                        help="yaml format configuration file.")
-    parser.add_argument("--outdir", default=None, type=str, required=True,
-                        help="directory to save statistics.")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
+        "(See detail in tensorflow_tts/bin/compute_statistics.py)."
+    )
+    parser.add_argument(
+        "--rootdir", type=str, required=True, help="directory including feature files. "
+    )
+    parser.add_argument(
+        "--config", type=str, required=True, help="yaml format configuration file."
+    )
+    parser.add_argument(
+        "--outdir",
+        default=None,
+        type=str,
+        required=True,
+        help="directory to save statistics.",
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
     args = parser.parse_args()
 
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
-        logging.warning('Skip DEBUG/INFO messages')
+            level=logging.WARN,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
+        logging.warning("Skip DEBUG/INFO messages")
 
     # load config
     with open(args.config) as f:
@@ -80,9 +98,7 @@ def main():
         raise ValueError("Support only npy format.")
 
     dataset = MelDataset(
-        args.rootdir,
-        mel_query=mel_query,
-        mel_load_fn=mel_load_fn
+        args.rootdir, mel_query=mel_query, mel_load_fn=mel_load_fn
     ).create(batch_size=1)
 
     # calculate statistics
@@ -93,13 +109,15 @@ def main():
 
     # save to file
     stats = np.stack([scaler.mean_, scaler.scale_], axis=0)
-    np.save(os.path.join(args.outdir, "stats.npy"), stats.astype(np.float32), allow_pickle=False)
+    np.save(
+        os.path.join(args.outdir, "stats.npy"),
+        stats.astype(np.float32),
+        allow_pickle=False,
+    )
 
     # calculate statistic of f0
     f0_dataset = AudioDataset(
-        args.rootdir,
-        audio_query=f0_query,
-        audio_load_fn=np.load,
+        args.rootdir, audio_query=f0_query, audio_load_fn=np.load,
     ).create(batch_size=1)
 
     pitch_vecs = []
@@ -107,19 +125,20 @@ def main():
         f0 = f0[0].numpy()  # [T]
         f0 = remove_outlier(f0)
         pitch_vecs.append(f0)
-    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]]
-                               for v in pitch_vecs])
+    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]] for v in pitch_vecs])
     mean, std = np.mean(nonzeros), np.std(nonzeros)
 
     # save to file
     stats = np.stack([mean, std], axis=0)
-    np.save(os.path.join(args.outdir, "stats_f0.npy"), stats.astype(np.float32), allow_pickle=False)
+    np.save(
+        os.path.join(args.outdir, "stats_f0.npy"),
+        stats.astype(np.float32),
+        allow_pickle=False,
+    )
 
     # calculate statistic of energy
     energy_dataset = AudioDataset(
-        args.rootdir,
-        audio_query=energy_query,
-        audio_load_fn=np.load,
+        args.rootdir, audio_query=energy_query, audio_load_fn=np.load,
     ).create(batch_size=1)
 
     energy_vecs = []
@@ -127,13 +146,16 @@ def main():
         e = e[0].numpy()
         e = remove_outlier(e)
         energy_vecs.append(e)
-    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]]
-                               for v in energy_vecs])
+    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]] for v in energy_vecs])
     mean, std = np.mean(nonzeros), np.std(nonzeros)
 
     # save to file
     stats = np.stack([mean, std], axis=0)
-    np.save(os.path.join(args.outdir, "stats_energy.npy"), stats.astype(np.float32), allow_pickle=False)
+    np.save(
+        os.path.join(args.outdir, "stats_energy.npy"),
+        stats.astype(np.float32),
+        allow_pickle=False,
+    )
 
 
 if __name__ == "__main__":

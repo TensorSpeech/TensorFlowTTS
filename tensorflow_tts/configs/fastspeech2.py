@@ -20,15 +20,17 @@ from tensorflow_tts.configs import FastSpeechConfig
 class FastSpeech2Config(FastSpeechConfig):
     """Initialize FastSpeech2 Config."""
 
-    def __init__(self,
-                 f0_kernel_size,
-                 energy_kernel_size,
-                 f0_dropout_rate,
-                 energy_dropout_rate,
-                 f0_energy_predictor_filters,
-                 f0_energy_predictor_kernel_sizes,
-                 f0_energy_predictor_dropout_probs,
-                 ** kwargs):
+    def __init__(
+        self,
+        f0_kernel_size,
+        energy_kernel_size,
+        f0_dropout_rate,
+        energy_dropout_rate,
+        f0_energy_predictor_filters,
+        f0_energy_predictor_kernel_sizes,
+        f0_energy_predictor_dropout_probs,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.f0_kernel_size = f0_kernel_size
         self.energy_kernel_size = energy_kernel_size

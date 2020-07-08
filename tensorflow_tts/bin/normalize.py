@@ -33,30 +33,50 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 def main():
     """Run preprocessing process."""
     parser = argparse.ArgumentParser(
-        description="Normalize dumped raw features (See detail in tensorflow_tts/bin/normalize.py).")
-    parser.add_argument("--rootdir", default=None, type=str, required=True,
-                        help="directory including feature files to be normalized. ")
-    parser.add_argument("--outdir", type=str, required=True,
-                        help="directory to dump normalized feature files.")
-    parser.add_argument("--stats", type=str, required=True,
-                        help="statistics file.")
-    parser.add_argument("--config", type=str, required=True,
-                        help="yaml format configuration file.")
-    parser.add_argument("--verbose", type=int, default=1,
-                        help="logging level. higher is more logging. (default=1)")
+        description="Normalize dumped raw features (See detail in tensorflow_tts/bin/normalize.py)."
+    )
+    parser.add_argument(
+        "--rootdir",
+        default=None,
+        type=str,
+        required=True,
+        help="directory including feature files to be normalized. ",
+    )
+    parser.add_argument(
+        "--outdir",
+        type=str,
+        required=True,
+        help="directory to dump normalized feature files.",
+    )
+    parser.add_argument("--stats", type=str, required=True, help="statistics file.")
+    parser.add_argument(
+        "--config", type=str, required=True, help="yaml format configuration file."
+    )
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        default=1,
+        help="logging level. higher is more logging. (default=1)",
+    )
     args = parser.parse_args()
 
     # set logger
     if args.verbose > 1:
         logging.basicConfig(
-            level=logging.DEBUG, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.DEBUG,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     elif args.verbose > 0:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
+            level=logging.INFO,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
     else:
         logging.basicConfig(
-            level=logging.WARN, format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s")
-        logging.warning('Skip DEBUG/INFO messages')
+            level=logging.WARN,
+            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+        )
+        logging.warning("Skip DEBUG/INFO messages")
 
     # load config
     with open(args.config) as f:
@@ -65,14 +85,17 @@ def main():
 
     # check directory existence
     os.makedirs(args.outdir, exist_ok=True)
-    os.makedirs(os.path.join(args.outdir, 'train', 'norm-feats'), exist_ok=True)
-    os.makedirs(os.path.join(args.outdir, 'valid', 'norm-feats'), exist_ok=True)
+    os.makedirs(os.path.join(args.outdir, "train", "norm-feats"), exist_ok=True)
+    os.makedirs(os.path.join(args.outdir, "valid", "norm-feats"), exist_ok=True)
 
     # get dataset
     if args.rootdir is not None:
         if config["format"] == "npy":
             mel_query = "*-raw-feats.npy"
-            def mel_load_fn(x): return np.load(x, allow_pickle=True)
+
+            def mel_load_fn(x):
+                return np.load(x, allow_pickle=True)
+
         else:
             raise ValueError("support only npy format.")
 
@@ -93,8 +116,8 @@ def main():
         raise ValueError("Support only npy format")
 
     # load train/valid utt_ids
-    train_utt_ids = np.load(os.path.join(args.rootdir, 'train_utt_ids.npy'))
-    valid_utt_ids = np.load(os.path.join(args.rootdir, 'valid_utt_ids.npy'))
+    train_utt_ids = np.load(os.path.join(args.rootdir, "train_utt_ids.npy"))
+    valid_utt_ids = np.load(os.path.join(args.rootdir, "valid_utt_ids.npy"))
 
     # process each file
     for items in tqdm(dataset):
@@ -113,8 +136,13 @@ def main():
                 subdir = "train"
             elif utt_id in valid_utt_ids:
                 subdir = "valid"
-            np.save(os.path.join(args.outdir, subdir, "norm-feats", f"{utt_id}-norm-feats.npy"),
-                    mel.astype(np.float32), allow_pickle=False)
+            np.save(
+                os.path.join(
+                    args.outdir, subdir, "norm-feats", f"{utt_id}-norm-feats.npy"
+                ),
+                mel.astype(np.float32),
+                allow_pickle=False,
+            )
         else:
             raise ValueError("support only npy format.")
 
