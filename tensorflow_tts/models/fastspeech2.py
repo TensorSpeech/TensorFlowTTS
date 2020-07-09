@@ -51,12 +51,12 @@ class TFFastSpeechVariantPredictor(tf.keras.layers.Layer):
         if config.n_speakers > 1:
             self.decoder_speaker_embeddings = tf.keras.layers.Embedding(
                 config.n_speakers,
-                config.hidden_size,
+                config.encoder_self_attention_params.hidden_size,
                 embeddings_initializer=get_initializer(config.initializer_range),
                 name="speaker_embeddings",
             )
             self.speaker_fc = tf.keras.layers.Dense(
-                units=config.hidden_size, name="speaker_fc"
+                units=config.encoder_self_attention_params.hidden_size, name="speaker_fc"
             )
 
         self.config = config
