@@ -907,6 +907,10 @@ class TFTacotron2(tf.keras.Model):
 
         mel_outputs = decoder_output + residual_projection
 
+        alignment_history = tf.transpose(
+            final_decoder_state.alignment_history.stack(), [1, 2, 0]
+        )
+
         return decoder_output, mel_outputs, stop_token_prediction, alignment_history
 
     @tf.function(
