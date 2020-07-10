@@ -29,6 +29,7 @@ import argparse
 import logging
 import os
 import sys
+import gc
 sys.path.append(".")
 
 
@@ -64,6 +65,7 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
         self.reset_states_eval()
+        gc.collect()
 
         self.config = config
 
