@@ -196,6 +196,9 @@ def _symbols_to_sequence(symbols):
 def _arpabet_to_sequence(text):
     return _symbols_to_sequence(["@" + s for s in text.split()])
 
+def arpa2seq(text):
+    return _symbols_to_sequence(["@" + s for s in text.split()])
+
 
 def _should_keep_symbol(s):
     return s in _symbol_to_id and s != "_" and s != "~"
