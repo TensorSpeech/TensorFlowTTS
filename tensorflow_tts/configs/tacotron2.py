@@ -14,7 +14,7 @@
 # limitations under the License.
 """Tacotron-2 Config object."""
 
-from tensorflow_tts.processor.ljspeech import symbols
+from tensorflow_tts.processor.kss import symbols
 
 
 class Tacotron2Config(object):

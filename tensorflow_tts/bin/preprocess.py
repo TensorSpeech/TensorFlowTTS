@@ -28,7 +28,7 @@ import pyworld as pw
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import KSSProcessor
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -138,8 +138,8 @@ def main():
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
 
-    processor = LJSpeechProcessor(
-        root_path=args.rootdir, cleaner_names="english_cleaners"
+    processor = KSSProcessor(
+        root_path=args.rootdir, cleaner_names="korean_cleaners"
     )
 
     # check directly existence

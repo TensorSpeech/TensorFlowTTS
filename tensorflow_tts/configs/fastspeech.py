@@ -14,7 +14,7 @@
 # limitations under the License.
 """FastSpeech Config object."""
 
-from tensorflow_tts.processor.ljspeech import symbols
+from tensorflow_tts.processor.kss import symbols
 
 import collections
 
