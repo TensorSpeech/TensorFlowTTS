@@ -67,8 +67,9 @@ extras_require = {
 dirname = os.path.dirname(__file__)
 setup(
     name="TensorflowTTS",
-    version="0.0",
+    version="0.7",
     url="https://github.com/dathudeptrai/TensorflowTTS",
+    dowload_url="https://github.com/TensorSpeech/TensorflowTTS/archive/v0.7.tar.gz",
     author="Minh Nguyen Quan Anh, Eren Gölge, Kuan Chen, Takuya Ebata, Trinh Le Quang",
     author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com, azraelkuan@gmail.com, meguru.mokke@gmail.com, trinhle.cse@gmail.com",
     description="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
