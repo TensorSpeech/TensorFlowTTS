@@ -51,5 +51,7 @@ python examples/fastspeech2/mfa/postproc.py
 ```
 This takes two arguments (`--dump-dir` and `--duration-path`) but the defaults are fine if you didn't change anything.
 
-** After this, it should be ready to train **
+**After this, it should be ready to train**
+
+
 
