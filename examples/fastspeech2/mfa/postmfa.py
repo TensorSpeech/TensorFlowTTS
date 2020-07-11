@@ -82,7 +82,10 @@ def main():
         dur = interval.duration()*(sarate/hopsz)
         durations.append(int(dur))
         phs += mark + " "
-      
+      # Add pad token
+      phs += "END"
+      # Add padding duration
+      durations.append(1)
       phs += "}"
       phs = phs.replace(" }","}")
 
