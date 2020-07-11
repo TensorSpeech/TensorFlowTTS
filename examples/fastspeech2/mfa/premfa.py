@@ -15,7 +15,7 @@ def main():
     )
     parser.add_argument(
         "--out-path",
-        default="datasets",
+        default="TextGrid",
         type=str,
         help="Directory to create for TextGrid output",
     )
