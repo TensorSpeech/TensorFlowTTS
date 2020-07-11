@@ -75,6 +75,9 @@ def main():
       pha = tg[1]
       durations = []
       phs = "{"
+      addsil = True
+      if pha.intervals[-1].mark in sil_phones:
+        addsil = False
       for interval in pha.intervals:
         mark = interval.mark
         if mark in sil_phones:
@@ -82,10 +85,12 @@ def main():
         dur = interval.duration()*(sarate/hopsz)
         durations.append(int(dur))
         phs += mark + " "
-      # Add pad token
-      phs += "END"
-      # Add padding duration
-      durations.append(1)
+      # Add pad token and duration
+      if addsil:
+        phs += "SIL"
+        durations.append(1)
+      
+      
       phs += "}"
       phs = phs.replace(" }","}")
 
