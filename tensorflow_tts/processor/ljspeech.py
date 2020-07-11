@@ -95,7 +95,8 @@ valid_symbols = [
     "Y",
     "Z",
     "ZH",
-    "SIL", #Silence token
+    "SIL",#Silence token
+    "END", #Ending pad token
 ]
 
 _pad = "_"
@@ -195,17 +196,6 @@ def _symbols_to_sequence(symbols):
 
 def _arpabet_to_sequence(text):
     return _symbols_to_sequence(["@" + s for s in text.split()])
-
-def arpa2seq(text):
-    return _symbols_to_sequence(["@" + s for s in text.split()])
-
-def cleantext(text, cleaner_names):
-    for name in cleaner_names:
-        cleaner = getattr(cleaners, name)
-        if not cleaner:
-            raise Exception("Unknown cleaner: %s" % name)
-        text = cleaner(text)
-    return text
 
 
 def _should_keep_symbol(s):
