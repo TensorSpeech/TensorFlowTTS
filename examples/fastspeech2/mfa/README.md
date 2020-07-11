@@ -3,14 +3,15 @@ This guide will be assuming you're using LJSpeech or an English dataset formatte
 **Read this guide before doing preprocessing**
 
 ## Setting up MFA
-You'll need to download Montreal Forced Aligner; the following commands will work for 64-bit Linux:
+You'll need to download Montreal Forced Aligner; the following commands will work for 64-bit Linux.
+
 We'll be using the LibriSpeech lexicon as a dictionary, this should cover all words on LJSpeech.
 ```
 wget https://github.com/MontrealCorpusTools/Montreal-Forced-Aligner/releases/download/v1.1.0-beta.2/montreal-forced-aligner_linux.tar.gz
 tar -zxvf montreal-forced-aligner_linux.tar.gz
 wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -O montreal-forced-aligner/pretrained_models/librispeech-lexicon.txt
 ```
-**Note that if your dataset contains words not present in the LibriSpeech lexicon, this will be a big problem**. 
+**Note that if your dataset contains words not present in the LibriSpeech lexicon stuff will fail**. 
 
 ## Using MFA
 
