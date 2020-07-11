@@ -9,34 +9,52 @@ from jamo import hangul_to_jamo, h2j, j2h, jamo_to_hcj
 
 from .ko_dictionary import english_dictionary, etc_dictionary
 
-PAD = "_"
-EOS = "~"
-PUNC = "!'(),-.:;?"
-SPACE = " "
+"""
+초성과 종성은 같아보이지만, 다른 character이다.
 
-JAMO_LEADS = "".join([chr(_) for _ in range(0x1100, 0x1113)])
-JAMO_VOWELS = "".join([chr(_) for _ in range(0x1161, 0x1176)])
-JAMO_TAILS = "".join([chr(_) for _ in range(0x11A8, 0x11C3)])
+'_-!'(),-.:;? ᄀᄁᄂᄃᄄᄅᄆᄇᄈᄉᄊᄋᄌᄍᄎᄏᄐᄑ하ᅢᅣᅤᅥᅦᅧᅨᅩᅪᅫᅬᅭᅮᅯᅰᅱᅲᅳᅴᅵᆨᆩᆪᆫᆬᆭᆮᆯᆰᆱᆲᆳᆴᆵᆶᆷᆸᆹᆺᆻᆼᆽᆾᆿᇀᇁᇂ~'
 
-VALID_CHARS = JAMO_LEADS + JAMO_VOWELS + JAMO_TAILS + PUNC + SPACE
-ALL_SYMBOLS = PAD + EOS + VALID_CHARS
+'_': 0, '-': 7, '!': 2, "'": 3, '(': 4, ')': 5, ',': 6, '.': 8, ':': 9, ';': 10,
+'?': 11, ' ': 12, 'ᄀ': 13, 'ᄁ': 14, 'ᄂ': 15, 'ᄃ': 16, 'ᄄ': 17, 'ᄅ': 18, 'ᄆ': 19, 'ᄇ': 20,
+'ᄈ': 21, 'ᄉ': 22, 'ᄊ': 23, 'ᄋ': 24, 'ᄌ': 25, 'ᄍ': 26, 'ᄎ': 27, 'ᄏ': 28, 'ᄐ': 29, 'ᄑ': 30,
+'ᄒ': 31, 'ᅡ': 32, 'ᅢ': 33, 'ᅣ': 34, 'ᅤ': 35, 'ᅥ': 36, 'ᅦ': 37, 'ᅧ': 38, 'ᅨ': 39, 'ᅩ': 40,
+'ᅪ': 41, 'ᅫ': 42, 'ᅬ': 43, 'ᅭ': 44, 'ᅮ': 45, 'ᅯ': 46, 'ᅰ': 47, 'ᅱ': 48, 'ᅲ': 49, 'ᅳ': 50,
+'ᅴ': 51, 'ᅵ': 52, 'ᆨ': 53, 'ᆩ': 54, 'ᆪ': 55, 'ᆫ': 56, 'ᆬ': 57, 'ᆭ': 58, 'ᆮ': 59, 'ᆯ': 60,
+'ᆰ': 61, 'ᆱ': 62, 'ᆲ': 63, 'ᆳ': 64, 'ᆴ': 65, 'ᆵ': 66, 'ᆶ': 67, 'ᆷ': 68, 'ᆸ': 69, 'ᆹ': 70,
+'ᆺ': 71, 'ᆻ': 72, 'ᆼ': 73, 'ᆽ': 74, 'ᆾ': 75, 'ᆿ': 76, 'ᇀ': 77, 'ᇁ': 78, 'ᇂ': 79, '~': 80
+"""
 
-char_to_id = {c: i for i, c in enumerate(ALL_SYMBOLS)}
-id_to_char = {i: c for i, c in enumerate(ALL_SYMBOLS)}
+_pad = "_"
+_eos = "~"
+_punctuation = "!'(),-.:;? "
+_special = "-"
+
+_jamo_leads = [chr(_) for _ in range(0x1100, 0x1113)]
+_jamo_vowels = [chr(_) for _ in range(0x1161, 0x1176)]
+_jamo_tails = [chr(_) for _ in range(0x11A8, 0x11C3)]
+
+_letters = _jamo_leads + _jamo_vowels + _jamo_tails;
+
+symbols = (
+    [_pad] + list(_special) + list(_punctuation) + _letters + [_eos]
+)
+
+_symbol_to_id = {c: i for i, c in enumerate(symbols)}
+_id_to_symbol = {i: c for i, c in enumerate(symbols)}
 
 quote_checker = """([`"'＂“‘])(.+?)([`"'＂”’])"""
 
 
 def is_lead(char):
-    return char in JAMO_LEADS
+    return char in _jamo_leads
 
 
 def is_vowel(char):
-    return char in JAMO_VOWELS
+    return char in _jamo_vowels
 
 
 def is_tail(char):
-    return char in JAMO_TAILS
+    return char in _jamo_tails
 
 
 def get_mode(char):
@@ -133,9 +151,9 @@ def tokenize(text, as_id=False):
     tokens = list(hangul_to_jamo(text))  # '존경하는'  --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ', '~']
 
     if as_id:
-        return [char_to_id[token] for token in tokens] + [char_to_id[EOS]]
+        return [_symbol_to_id[token] for token in tokens]
     else:
-        return [token for token in tokens] + [EOS]
+        return [token for token in tokens]
 
 
 def tokenizer_fn(iterator):

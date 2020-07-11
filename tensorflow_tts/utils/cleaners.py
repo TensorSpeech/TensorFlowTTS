@@ -102,5 +102,5 @@ def english_cleaners(text):
 
 def korean_cleaners(text):
     """Pipeline for Korean text, including number and abbreviation expansion."""
-    text = ko_tokenize(text)  # '존경하는' --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ', '~']
+    text = ko_tokenize(text)  # '존경하는' --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ']
     return text
