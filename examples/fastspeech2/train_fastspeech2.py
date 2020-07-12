@@ -65,7 +65,7 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
         self.reset_states_eval()
-        gc.collect()
+        
 
         self.config = config
 
@@ -174,6 +174,7 @@ class FastSpeech2Trainer(FastSpeechTrainer):
 
         # reset
         self.reset_states_eval()
+        gc.collect()
 
     @tf.function(
         experimental_relax_shapes=True,
