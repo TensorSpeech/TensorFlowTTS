@@ -113,6 +113,12 @@ def main():
         default=1,
         help="logging level. higher is more logging. (default=1)",
     )
+    parser.add_argument(
+       "--trimlist",
+        type=str,
+        default="",
+        help="MFA Trimlist.",
+    )
     args = parser.parse_args()
 
     # set logger
@@ -178,10 +184,20 @@ def main():
             valid_utt_ids.append(utt_ids)
 
     # save train and valid utt_ids to track later.
+    trimids = np.empty(1)
+    trimlens = np.empty(1)
+    if len(args.trimlist) > 1:
+        print("Loading trimfile...")
+        trimfile = np.load(args.trimlist)
+        trimids = trimfile[0]
+        trimlens = trimfile[1]
+        print(str(len(trimids)) + " - " + str(len(trimlens)))
+
     np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
     np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
 
     pbar = tqdm(initial=0, total=len(processor.items), desc="[Preprocessing]")
+
 
     # process each data
     def save_to_file(idx):
@@ -203,13 +219,18 @@ def main():
         ), f"{utt_id} seems to have a different sampling rate."
 
         # trim silence
-        if config["trim_silence"]:
+        if config["trim_silence"] and len(args.trimlist) == 0:
             audio, _ = librosa.effects.trim(
                 audio,
                 top_db=config["trim_threshold_in_db"],
                 frame_length=config["trim_frame_size"],
                 hop_length=config["trim_hop_size"],
             )
+        sarate = config["sampling_rate"]
+        if len(args.trimlist) > 1:
+            uttidx = np.where(trimids == utt_id)[0]
+            calca = int(float(trimlens[uttidx]) * sarate) # if we do not wrap the number in float first we get numpy ufunc error
+            audio = audio[0:calca]
 
         if "sampling_rate_for_feats" not in config:
             x = audio

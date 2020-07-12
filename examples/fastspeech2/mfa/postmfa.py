@@ -41,6 +41,12 @@ def main():
         type=int,
         help="Sample rate of source audio",
     )
+    parser.add_argument(
+       "--trimlistname",
+       default="trimlist",
+        type=str,
+        help="Name of trimlist output",
+    )
     args = parser.parse_args()
     hopsz = 256
     sarate = args.sample_rate
@@ -61,6 +67,9 @@ def main():
     sil_phones = ['sil', 'sp', 'spn', '']
     metafile = open(inmetadpath,"w")
     print("Reading TextGrids...")
+
+    trimidlist = []
+    trimdurlist = []
     for tgp in tqdm(tgrids):
       if not os.path.isfile(txgridpath + "/" + tgp):
         print("Could not find " + tgp)
@@ -74,10 +83,8 @@ def main():
       tg = textgrid.TextGrid.fromFile(txgridpath + "/" + tgp)
       pha = tg[1]
       durations = []
+      totdursecs = 0.0
       phs = "{"
-      addsil = True
-      if pha.intervals[-1].mark in sil_phones:
-        addsil = False
       for interval in pha.intervals:
         mark = interval.mark
         if mark in sil_phones:
@@ -85,14 +92,13 @@ def main():
         dur = interval.duration()*(sarate/hopsz)
         durations.append(int(dur))
         phs += mark + " "
-      # Add pad token and duration
-      if addsil:
-        phs += "SIL"
-        durations.append(1)
-      
-      
+        totdursecs += interval.duration()
+      phs += "END"
+      durations.append(0)
       phs += "}"
       phs = phs.replace(" }","}")
+      trimidlist.append(tgp.replace(".TextGrid",""))
+      trimdurlist.append(totdursecs)
 
       
       
@@ -102,6 +108,7 @@ def main():
 
 
     metafile.close()
+    np.save(args.trimlistname,np.array([np.array(trimidlist),np.array(trimdurlist)]))
   
   
 
