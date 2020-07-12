@@ -15,16 +15,24 @@ format: "npy"
 ###########################################################
 fastspeech_params:
     n_speakers: 1
-    hidden_size: 384
-    num_hidden_layers: 4
-    num_attention_heads: 2
-    intermediate_size: 1024
-    intermediate_kernel_size: 3
+    encoder_hidden_size: 384
+    encoder_num_hidden_layers: 4
+    encoder_num_attention_heads: 2
+    encoder_attention_head_size: 192  # hidden_size // num_attention_heads
+    encoder_intermediate_size: 1024
+    encoder_intermediate_kernel_size: 3
+    encoder_hidden_act: "mish"
+    decoder_hidden_size: 384
+    decoder_num_hidden_layers: 4
+    decoder_num_attention_heads: 2
+    decoder_attention_head_size: 192  # hidden_size // num_attention_heads
+    decoder_intermediate_size: 1024
+    decoder_intermediate_kernel_size: 3
+    decoder_hidden_act: "mish"
     num_duration_conv_layers: 2
     duration_predictor_filters: 256
     duration_predictor_kernel_sizes: 3
     num_mels: 80
-    hidden_act: "mish"
     hidden_dropout_prob: 0.1
     attention_probs_dropout_prob: 0.1
     duration_predictor_dropout_probs: 0.1

@@ -1,4 +1,5 @@
-# This is the hyperparameter configuration file for FastSpeech v1.
+# This is the hyperparameter configuration file for FastSpeech2 v2.
+# the different of v2 and v1 is that v2 apply linformer technique.
 # Please make sure this is adjusted for the LJSpeech dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 200k iters but a best checkpoint is around 150k iters.
@@ -15,27 +16,27 @@ format: "npy"
 ###########################################################
 fastspeech_params:
     n_speakers: 1
-    encoder_hidden_size: 384
-    encoder_num_hidden_layers: 4
+    encoder_hidden_size: 256
+    encoder_num_hidden_layers: 3
     encoder_num_attention_heads: 2
-    encoder_attention_head_size: 192  # hidden_size // num_attention_heads
+    encoder_attention_head_size: 8  # in v1, = 384//2
     encoder_intermediate_size: 1024
     encoder_intermediate_kernel_size: 3
     encoder_hidden_act: "mish"
-    decoder_hidden_size: 384
-    decoder_num_hidden_layers: 4
+    decoder_hidden_size: 256
+    decoder_num_hidden_layers: 3
     decoder_num_attention_heads: 2
-    decoder_attention_head_size: 192  # hidden_size // num_attention_heads
-    decoder_intermediate_size: 1024
+    decoder_attention_head_size: 8  # in v1, = 384//2
+    decoder_intermediate_size: 768
     decoder_intermediate_kernel_size: 3
     decoder_hidden_act: "mish"
-    num_duration_conv_layers: 2
-    duration_predictor_filters: 256
-    duration_predictor_kernel_sizes: 3
+    variant_prediction_num_conv_layers: 2
+    variant_predictor_filter: 256
+    variant_predictor_kernel_size: 3
+    variant_predictor_dropout_rate: 0.5
     num_mels: 80
     hidden_dropout_prob: 0.2
     attention_probs_dropout_prob: 0.1
-    duration_predictor_dropout_probs: 0.2
     max_position_embeddings: 2048
     initializer_range: 0.02
     output_attentions: False
@@ -67,7 +68,7 @@ train_max_steps: 200000               # Number of training steps.
 save_interval_steps: 5000             # Interval steps to save checkpoint.
 eval_interval_steps: 500              # Interval steps to evaluate the network.
 log_interval_steps: 200               # Interval steps to record the training log.
-
+delay_f0_energy_steps: 3              # 2 steps use LR outputs only then 1 steps LR + F0 + Energy.
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
