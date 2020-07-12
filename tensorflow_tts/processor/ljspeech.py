@@ -96,7 +96,7 @@ valid_symbols = [
     "Z",
     "ZH",
     "SIL",#Silence
-    "END" #padding token
+    "END", #padding token
 ]
 
 _pad = "_"
