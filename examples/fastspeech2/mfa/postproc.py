@@ -64,7 +64,7 @@ def main():
             np.save(durload,duraz)
           else:
             if durlen > mellen:
-              duraz[len(duraz) - 2] -= durlen - mellen
+              duraz[len(duraz) - 2] += durlen - mellen
           durlog.write(str(mellen) + "|" + str(durlen) + "\n")
         durlog.close()
 
