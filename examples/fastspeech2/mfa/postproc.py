@@ -42,8 +42,10 @@ def main():
       
     print("Step 1/2: Match duration to sets")
     sets = ["train", "valid"]
+    
     for set in sets:
         print("Matching to " + set + " set.")
+        durlog = open("durcomp_" + set + ".txt","w")
         dumpstage = args.dump_dir + "/" + set
         featpath = dumpstage + "/norm-feats"
         zdurpath = dumpstage + "/durations"
@@ -62,7 +64,11 @@ def main():
             np.save(durload,duraz)
           else:
             if durlen > mellen:
-              print("Duration length is greater than mel lenght, this shouldn't be happenning!!!!!!!!!!!!")
+              duraz[len(duraz) - 2] -= durlen - mellen
+          durlog.write(str(mellen) + "|" + str(durlen) + "\n")
+        durlog.close()
+
+         
 
 
       
