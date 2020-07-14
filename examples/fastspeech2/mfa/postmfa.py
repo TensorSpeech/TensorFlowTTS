@@ -47,6 +47,12 @@ def main():
         type=str,
         help="Name of trimlist output",
     )
+    parser.add_argument(
+       "--round",
+       default="y",
+        type=str,
+        help="Whether to round durations",
+    )
     args = parser.parse_args()
     hopsz = 256
     sarate = args.sample_rate
@@ -55,6 +61,10 @@ def main():
     inmetadpath = args.dataset_path + "/metadata.csv"
     wavspath = args.dataset_path + "/wavs"
     txgridpath = args.textgrid_path
+    doround = True
+    if args.round == "n":
+      print("Not rounding")
+      doround = False
     
     tgrids = os.listdir(txgridpath)
 
@@ -90,7 +100,12 @@ def main():
         if mark in sil_phones:
           mark = "SIL"
         dur = interval.duration()*(sarate/hopsz)
-        durations.append(round(dur))
+        if doround:
+          durations.append(round(dur))
+        else:
+          durations.append(int(dur))
+
+        
         phs += mark + " "
         totdursecs += interval.duration()
       phs += "END"
