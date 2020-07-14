@@ -90,7 +90,7 @@ def main():
         if mark in sil_phones:
           mark = "SIL"
         dur = interval.duration()*(sarate/hopsz)
-        durations.append(int(dur))
+        durations.append(round(dur))
         phs += mark + " "
         totdursecs += interval.duration()
       phs += "END"
