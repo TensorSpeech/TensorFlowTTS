@@ -21,7 +21,7 @@
 ## What's new
 - 2020/07/05 **(New!)** Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from TFlite team for his support.
 - 2020/06/20 **(New!)** [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
-- 2020/06/07 **(New!)** [Multi-band MelGAN (MB MelGAN)](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported. 
+- 2020/06/07 [Multi-band MelGAN (MB MelGAN)](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported. 
 
 
 ## Features
@@ -31,6 +31,7 @@
 - Suitable for deployment.
 - Easy to implement new model based-on abtract class.
 - Mixed precision to speed-up training if posible.
+- TFlite conversion for all supported model.
 
 ## Requirements
 This repository is tested on Ubuntu 18.04 with:
@@ -44,8 +45,14 @@ This repository is tested on Ubuntu 18.04 with:
 Different Tensorflow version should be working but not tested yet. This repo will try to work with latest stable tensorflow version.
 
 ## Installation
+### With pip
 ```bash
-$ git clone https://github.com/dathudeptrai/TensorflowTTS.git
+$ pip install TensorflowTTS
+```
+### From source 
+Examples are included in the repository but are not shipped with the framework. Therefore, in order to run the latest verion of examples, you need install from source following bellow.
+```bash
+$ git clone https://github.com/TensorSpeech/TensorflowTTS.git
 $ cd TensorflowTTS
 $ pip install  .
 ```
