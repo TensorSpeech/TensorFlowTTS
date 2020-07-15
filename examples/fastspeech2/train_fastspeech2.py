@@ -363,6 +363,13 @@ def main():
         type=int,
         help="using mixed precision for generator or not.",
     )
+    parser.add_argument(
+        "--pretrained",
+        default="",
+        type=str,
+        nargs="?",
+        help='Path of checkpoint model to use as pretrained',
+    )
     args = parser.parse_args()
 
     # set mixed precision config
@@ -466,6 +473,11 @@ def main():
     fastspeech = TFFastSpeech2(config=FastSpeech2Config(**config["fastspeech_params"]))
     fastspeech._build()
     fastspeech.summary()
+
+    if len(args.pretrained) > 1:
+      print("Loading pretrained parameters...")
+      fastspeech.load_weights(args.pretrained)
+
 
     # define trainer
     trainer = FastSpeech2Trainer(
