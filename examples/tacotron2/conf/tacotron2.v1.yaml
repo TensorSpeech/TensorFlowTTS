@@ -1,4 +1,4 @@
-# This is the hyperparameter configuration file for Tacotron2 v1.
+# This is the hyperparameter configuration file for Tacotron 2 v1.
 # Please make sure this is adjusted for the LJSpeech dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 200k iters but 65k iters is enough to get a good models.
@@ -8,7 +8,6 @@
 ###########################################################
 hop_size: 256            # Hop size.
 format: "npy"
-
 
 ###########################################################
 #              NETWORK ARCHITECTURE SETTING               #
@@ -23,12 +22,12 @@ tacotron2_params:
     n_conv_encoder: 5
     encoder_conv_filters: 512
     encoder_conv_kernel_sizes: 5
-    encoder_conv_activation: 'relu'
+    encoder_conv_activation: "relu"
     encoder_conv_dropout_rate: 0.5
     encoder_lstm_units: 256
     n_prenet_layers: 2
     prenet_units: 256
-    prenet_activation: 'relu'
+    prenet_activation: "relu"
     prenet_dropout_rate: 0.5
     n_lstm_decoder: 1
     reduction_factor: 1
@@ -49,10 +48,9 @@ tacotron2_params:
 batch_size: 32             # Batch size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
-mel_length_threshold: 32   # remove all targets has mel_length <= 32 
+mel_length_threshold: 32   # remove all targets has mel_length <= 32.
 is_shuffle: true           # shuffle dataset after each epoch.
-use_fixed_shapes: true     # use_fixed_shapes for training (2x speed-up)
-                           # refer (https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118)
+use_fixed_shapes: true    # use_fixed_shapes for training.
 
 ###########################################################
 #             OPTIMIZER & SCHEDULER SETTING               #
@@ -63,8 +61,7 @@ optimizer_params:
     decay_steps: 150000          # < train_max_steps is recommend.
     warmup_proportion: 0.02
     weight_decay: 0.001
-    
-    
+
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
@@ -76,6 +73,7 @@ start_schedule_teacher_forcing: 200001  # don't need to apply schedule teacher f
 start_ratio_value: 0.5                  # start ratio of scheduled teacher forcing.
 schedule_decay_steps: 50000             # decay step scheduled teacher forcing.
 end_ratio_value: 0.0                    # end ratio of scheduled teacher forcing.
+
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################

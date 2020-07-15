@@ -12,33 +12,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Train Tacotron2."""
+"""Train Tacotron 2."""
 import tensorflow as tf
 
 physical_devices = tf.config.list_physical_devices("GPU")
 for i in range(len(physical_devices)):
     tf.config.experimental.set_memory_growth(physical_devices[i], True)
 
-import sys
-
-sys.path.append(".")
-
 import argparse
 import logging
 import os
 
+import tensorflow_tts
+
+import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from tqdm import tqdm
 
-import tensorflow_tts
-from examples.tacotron2.tacotron_dataset import CharactorMelDataset
+from tacotron_dataset import CharactorMelDataset
 from tensorflow_tts.configs.tacotron2 import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
-from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
+from tensorflow_tts.optimizers import WarmUp
+from tensorflow_tts.optimizers import AdamWeightDecay
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
-                                  return_strategy)
+from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
+from tqdm import tqdm
+
+
+os.environ["TF_GPU_THREAD_MODE"] = "gpu_private"
 
 
 class Tacotron2Trainer(Seq2SeqBasedTrainer):
@@ -48,13 +49,11 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
     ):
         """Initialize trainer.
-
         Args:
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
             config (dict): Config dict loaded from yaml format configuration file.
             is_mixed_precision (bool): Use mixed precision or not.
-
         """
         super(Tacotron2Trainer, self).__init__(
             steps=steps,
@@ -115,13 +114,12 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
 
     def compute_per_example_losses(self, batch, outputs):
         """Compute per example losses and return dict_metrics_losses
-        Note that all element of the loss MUST has a shape [batch_size] and 
+        Note that all element of the loss MUST has a shape [batch_size] and
         the keys of dict_metrics_losses MUST be in self.list_metrics_name.
-
         Args:
             batch: dictionary batch input return from dataloader
             outputs: outputs of the model
-        
+
         Returns:
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
@@ -141,35 +139,25 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         )
 
         # calculate stop_loss
-        max_mel_length = (
-            tf.reduce_max(batch["mel_lengths"])
-            if self.config["use_fixed_shapes"] is False
-            else [self.config["max_mel_length"]]
+        stop_gts = ~tf.sequence_mask(
+            batch["mel_lengths"], tf.shape(batch["mel_gts"])[1]
         )
-        stop_gts = tf.expand_dims(
-            tf.range(tf.reduce_max(max_mel_length), dtype=tf.int32), 0
-        )  # [1, max_len]
-        stop_gts = tf.tile(
-            stop_gts, [tf.shape(batch["mel_lengths"])[0], 1]
-        )  # [B, max_len]
-        stop_gts = tf.cast(
-            tf.math.greater_equal(stop_gts, tf.expand_dims(batch["mel_lengths"], 1)),
-            tf.float32,
-        )
-
         stop_token_loss = calculate_2d_loss(
             stop_gts, stop_token_predictions, loss_fn=self.binary_crossentropy
         )
 
         # calculate guided attention loss.
-        attention_masks = tf.cast(
-            tf.math.not_equal(batch["g_attentions"], -1.0), tf.float32
-        )
-        loss_att = tf.reduce_sum(
-            tf.abs(alignment_historys * batch["g_attentions"]) * attention_masks,
-            axis=[1, 2],
-        )
-        loss_att /= tf.reduce_sum(attention_masks, axis=[1, 2])
+        if "g_attentions" in batch:
+            att_mask = tf.cast(
+                tf.math.not_equal(batch["g_attentions"], -1.0), tf.float32
+            )
+            loss_att = tf.reduce_sum(
+                tf.abs(alignment_historys * batch["g_attentions"]) * att_mask,
+                axis=[1, 2],
+            )
+            loss_att /= tf.reduce_sum(att_mask, axis=[1, 2])
+        else:
+            loss_att = 0
 
         per_example_losses = (
             stop_token_loss + mel_loss_before + mel_loss_after + loss_att
@@ -189,14 +177,14 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         import matplotlib.pyplot as plt
 
         # predict with tf.function for faster.
-        outputs = self.one_step_predict(batch)
         (
             decoder_output,
             mel_outputs,
             stop_token_predictions,
             alignment_historys,
-        ) = outputs
+        ) = self.one_step_predict(batch)
         mel_gts = batch["mel_gts"]
+        utt_ids = batch["utt_ids"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
@@ -204,208 +192,178 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             mels_before = decoder_output.values[0].numpy()
             mels_after = mel_outputs.values[0].numpy()
             mel_gts = mel_gts.values[0].numpy()
+            utt_ids = utt_ids.values[0].numpy()
             alignment_historys = alignment_historys.values[0].numpy()
         except Exception:
             mels_before = decoder_output.numpy()
             mels_after = mel_outputs.numpy()
             mel_gts = mel_gts.numpy()
+            utt_ids = utt_ids.numpy()
             alignment_historys = alignment_historys.numpy()
 
         # check directory
-        dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        pred_output_dir = os.path.join(
+            self.config["outdir"], "predictions", f"{self.steps}_steps"
+        )
+        os.makedirs(pred_output_dir, exist_ok=True)
 
-        for idx, (mel_gt, mel_before, mel_after, alignment_history) in enumerate(
-            zip(mel_gts, mels_before, mels_after, alignment_historys), 1
-        ):
-            mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
-            mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
-            mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
+        num_mels = self.config["tacotron2_params"]["n_mels"]
+        items = zip(utt_ids, mel_gts, mels_before, mels_after, alignment_historys)
+        for idx, (utt_id, mel_gt, mel_before, mel_after, alignment) in enumerate(items):
+            mel_gt = tf.reshape(mel_gt, (-1, num_mels)).numpy()
+            mel_before = tf.reshape(mel_before, (-1, num_mels)).numpy()
+            mel_after = tf.reshape(mel_after, (-1, num_mels)).numpy()
+            utt_id_str = utt_id.decode("utf8")
 
-            # plot figure and save it
-            figname = os.path.join(dirname, f"{idx}.png")
-            fig = plt.figure(figsize=(10, 8))
-            ax1 = fig.add_subplot(311)
-            ax2 = fig.add_subplot(312)
-            ax3 = fig.add_subplot(313)
-            im = ax1.imshow(np.rot90(mel_gt), aspect="auto", interpolation="none")
-            ax1.set_title("Target Mel-Spectrogram")
-            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax1)
-            ax2.set_title(f"Predicted Mel-before-Spectrogram @ {self.steps} steps")
-            im = ax2.imshow(np.rot90(mel_before), aspect="auto", interpolation="none")
-            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax2)
-            ax3.set_title(f"Predicted Mel-after-Spectrogram @ {self.steps} steps")
-            im = ax3.imshow(np.rot90(mel_after), aspect="auto", interpolation="none")
-            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax3)
+            # plot mel
+            figname = os.path.join(pred_output_dir, f"{utt_id_str}.png")
+            fig, axes = plt.subplots(figsize=(10, 8), nrows=3)
+            for ax, data in zip(axes, [mel_gt, mel_before, mel_after]):
+                im = ax.imshow(np.rot90(data), aspect="auto", interpolation="none")
+                fig.colorbar(im, pad=0.02, aspect=15, orientation="vertical", ax=ax)
+            axes[0].set_title(f"Target mel spectrogram ({utt_id_str})")
+            axes[1].set_title(
+                f"Predicted mel spectrogram before post-net @ {self.steps} steps"
+            )
+            axes[2].set_title(
+                f"Predicted mel spectrogram after post-net @ {self.steps} steps"
+            )
             plt.tight_layout()
-            plt.savefig(figname)
+            plt.savefig(figname, bbox_inches="tight")
             plt.close()
 
             # plot alignment
-            figname = os.path.join(dirname, f"{idx}_alignment.png")
-            fig = plt.figure(figsize=(8, 6))
-            ax = fig.add_subplot(111)
+            figname = os.path.join(pred_output_dir, f"{utt_id_str}_alignment.png")
+            fig, ax = plt.subplots(figsize=(8, 6))
             ax.set_title(f"Alignment @ {self.steps} steps")
             im = ax.imshow(
-                alignment_history, aspect="auto", origin="lower", interpolation="none"
+                alignment, aspect="auto", origin="lower", interpolation="none"
             )
-            fig.colorbar(im, ax=ax)
-            xlabel = "Decoder timestep"
-            plt.xlabel(xlabel)
-            plt.ylabel("Encoder timestep")
+            fig.colorbar(im, aspect=15, ax=ax)
+            ax.set_xlabel("Decoder timestep")
+            ax.set_ylabel("Encoder timestep")
             plt.tight_layout()
-            plt.savefig(figname)
+            plt.savefig(figname, bbox_inches="tight")
             plt.close()
 
 
 def main():
     """Run training process."""
-    parser = argparse.ArgumentParser(
-        description="Train FastSpeech (See detail in tensorflow_tts/bin/train-fastspeech.py)"
-    )
+    parser = argparse.ArgumentParser(description="Train Tacotron 2.")
     parser.add_argument(
-        "--train-dir",
-        default=None,
+        "--train_dir",
+        default=argparse.SUPPRESS,
         type=str,
-        help="directory including training data. ",
+        help="Directory containing training data.",
     )
     parser.add_argument(
-        "--dev-dir",
-        default=None,
+        "--valid_dir",
+        default=argparse.SUPPRESS,
         type=str,
-        help="directory including development data. ",
+        help="Directory containing validation data.",
     )
     parser.add_argument(
-        "--use-norm", default=1, type=int, help="usr norm-mels for train or raw."
+        "--use_norm",
+        action="store_true",
+        help="Whether or not to use normalized features.",
     )
     parser.add_argument(
-        "--outdir", type=str, required=True, help="directory to save checkpoints."
+        "--stats_path",
+        default=argparse.SUPPRESS,
+        type=str,
+        help="Path to statistics file with mean and std values for standardization.",
     )
     parser.add_argument(
-        "--config", type=str, required=True, help="yaml format configuration file."
+        "--outdir",
+        default=argparse.SUPPRESS,
+        type=str,
+        help="Output directory where checkpoints and results will be saved.",
+    )
+    parser.add_argument(
+        "--config", type=str, required=True, help="YAML format configuration file."
     )
     parser.add_argument(
         "--resume",
         default="",
         type=str,
         nargs="?",
-        help='checkpoint file path to resume training. (default="")',
+        help="Checkpoint file path to resume training. (default='')",
     )
     parser.add_argument(
         "--verbose",
         type=int,
         default=1,
-        help="logging level. higher is more logging. (default=1)",
+        choices=[0, 1, 2],
+        help="Logging level. 0: DEBUG, 1: INFO, 2: WARN.",
     )
     parser.add_argument(
         "--mixed_precision",
-        default=0,
-        type=int,
-        help="using mixed precision for generator or not.",
+        action="store_true",
+        help="Whether or not to use mixed precision training.",
     )
     args = parser.parse_args()
 
-    # return strategy
     STRATEGY = return_strategy()
 
-    # set mixed precision config
-    if args.mixed_precision == 1:
-        tf.config.optimizer.set_experimental_options({"auto_mixed_precision": True})
-
-    args.mixed_precision = bool(args.mixed_precision)
-    args.use_norm = bool(args.use_norm)
-
-    # set logger
-    if args.verbose > 1:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-    elif args.verbose > 0:
-        logging.basicConfig(
-            level=logging.INFO,
-            stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-    else:
-        logging.basicConfig(
-            level=logging.WARN,
-            stream=sys.stdout,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-        logging.warning("Skip DEBUG/INFO messages")
-
-    # check directory existence
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir)
-
-    # check arguments
-    if args.train_dir is None:
-        raise ValueError("Please specify --train-dir")
-    if args.dev_dir is None:
-        raise ValueError("Please specify --valid-dir")
-
     # load and save config
-    with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.Loader)
+    config = yaml.load(open(args.config), Loader=yaml.Loader)
     config.update(vars(args))
     config["version"] = tensorflow_tts.__version__
 
-    # get dataset
-    if config["remove_short_samples"]:
-        mel_length_threshold = config["mel_length_threshold"]
-    else:
-        mel_length_threshold = 0
+    # set logger and print parameters
+    fmt = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
+    log_level = {0: logging.DEBUG, 1: logging.INFO, 2: logging.WARN}
+    logging.basicConfig(level=log_level[config["verbose"]], format=fmt)
+    _ = [logging.info("%s = %s", key, value) for key, value in config.items()]
 
-    if config["format"] == "npy":
-        charactor_query = "*-ids.npy"
-        mel_query = "*-raw-feats.npy" if args.use_norm is False else "*-norm-feats.npy"
-        charactor_load_fn = np.load
-        mel_load_fn = np.load
-    else:
-        raise ValueError("Only npy are supported.")
-
-    train_dataset = CharactorMelDataset(
-        root_dir=args.train_dir,
-        charactor_query=charactor_query,
-        mel_query=mel_query,
-        charactor_load_fn=charactor_load_fn,
-        mel_load_fn=mel_load_fn,
-        mel_length_threshold=mel_length_threshold,
-        reduction_factor=config["tacotron2_params"]["reduction_factor"],
-        use_fixed_shapes=config["use_fixed_shapes"],
+    # check required arguments
+    missing_dirs = list(
+        filter(lambda x: x not in config, ["train_dir", "valid_dir", "outdir"])
     )
+    if missing_dirs:
+        raise ValueError(f"{missing_dirs}.")
+    if not config["use_norm"]:
+        config["stats_path"] = None
 
-    # update max_mel_length and max_char_length to config
-    config.update({"max_mel_length": int(train_dataset.max_mel_length)})
-    config.update({"max_char_length": int(train_dataset.max_char_length)})
+    # check output directory
+    os.makedirs(config["outdir"], exist_ok=True)
 
-    with open(os.path.join(args.outdir, "config.yml"), "w") as f:
+    with open(os.path.join(config["outdir"], "config.yml"), "w") as f:
         yaml.dump(config, f, Dumper=yaml.Dumper)
-    for key, value in config.items():
-        logging.info(f"{key} = {value}")
 
-    train_dataset = train_dataset.create(
+    # set mixed precision config
+    if config["mixed_precision"]:
+        tf.config.optimizer.set_experimental_options({"auto_mixed_precision": True})
+
+    # get dataset
+    train_dataset = CharactorMelDataset(
+        dataset_dir=config["train_dir"],
+        use_norm=config["use_norm"],
+        stats_path=config["stats_path"],
+        return_guided_attention=True,
+        reduction_factor=config["tacotron2_params"]["reduction_factor"],
+        n_mels=config["tacotron2_params"]["n_mels"],
+        use_fixed_shapes=config["use_fixed_shapes"],
+        mel_len_threshold=config["mel_length_threshold"],
+    ).create(
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        training=True,
     )
 
     valid_dataset = CharactorMelDataset(
-        root_dir=args.dev_dir,
-        charactor_query=charactor_query,
-        mel_query=mel_query,
-        charactor_load_fn=charactor_load_fn,
-        mel_load_fn=mel_load_fn,
-        mel_length_threshold=mel_length_threshold,
+        dataset_dir=config["valid_dir"],
+        use_norm=config["use_norm"],
+        stats_path=config["stats_path"],
+        return_guided_attention=True,
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
-        use_fixed_shapes=False,  # don't need apply fixed shape for evaluation.
+        n_mels=config["tacotron2_params"]["n_mels"],
+        use_fixed_shapes=False,
+        mel_len_threshold=config["mel_length_threshold"],
     ).create(
-        is_shuffle=config["is_shuffle"],
-        allow_cache=config["allow_cache"],
         batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        allow_cache=config["allow_cache"],
     )
 
     # define trainer

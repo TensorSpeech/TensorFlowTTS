@@ -12,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Extract durations based-on tacotron-2 alignments for FastSpeech."""
+"""Extract durations based on Tacotron 2 alignments for FastSpeech."""
 
 import argparse
 import logging
 import os
-import sys
 
-sys.path.append(".")
+import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,176 +26,163 @@ import tensorflow as tf
 import yaml
 from tqdm import tqdm
 
-from examples.tacotron2.tacotron_dataset import CharactorMelDataset
+from tacotron_dataset import CharactorMelDataset
 from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
 
 
-def get_duration_from_alignment(alignment):
-    D = np.array([0 for _ in range(np.shape(alignment)[0])])
-
-    for i in range(np.shape(alignment)[1]):
-        max_index = alignment[:, i].tolist().index(alignment[:, i].max())
-        D[max_index] = D[max_index] + 1
-
-    return D
-
-
 def main():
-    """Running extract tacotron-2 durations."""
+    """Running extract Tacotron 2 durations."""
     parser = argparse.ArgumentParser(
-        description="Extract durations from charactor with trained Tacotron-2 "
-        "(See detail in tensorflow_tts/example/tacotron-2/extract_duration.py)."
+        description=(
+            "Extract durations from characters with trained Tacotron 2 (See detail in"
+            " tensorflow_tts/example/tacotron-2/extract_duration.py)."
+        )
     )
     parser.add_argument(
         "--rootdir",
-        default=None,
         type=str,
         required=True,
-        help="directory including ids/durations files.",
+        help="Directory including ids/durations files.",
     )
     parser.add_argument(
-        "--outdir", type=str, required=True, help="directory to save generated speech."
+        "--outdir",
+        type=str,
+        required=True,
+        help="Directory where generated speech will be saved.",
     )
     parser.add_argument(
-        "--checkpoint", type=str, required=True, help="checkpoint file to be loaded."
+        "--checkpoint", type=str, required=True, help="Checkpoint file to be loaded."
     )
     parser.add_argument(
-        "--use-norm", default=1, type=int, help="usr norm-mels for train or raw."
+        "--use_norm",
+        action="store_true",
+        help="Whether or not to use normalized features.",
     )
-    parser.add_argument("--batch-size", default=8, type=int, help="batch size.")
-    parser.add_argument("--win-front", default=2, type=int, help="win-front.")
-    parser.add_argument("--win-back", default=2, type=int, help="win-front.")
-    parser.add_argument("--save-alignment", default=0, type=int, help="save-alignment.")
+    parser.add_argument(
+        "--stats_path",
+        default=argparse.SUPPRESS,
+        type=str,
+        help=(
+            "Path to the statistics file with mean and std values for standardization."
+        ),
+    )
+    parser.add_argument("--batch_size", default=8, type=int, help="Batch size.")
+    parser.add_argument(
+        "--win_front", default=3, type=int, help="Window to apply in the front."
+    )
+    parser.add_argument(
+        "--win_back", default=3, type=int, help="Window to apply in the back."
+    )
+    parser.add_argument(
+        "--save_alignment",
+        action="store_true",
+        help="Whether or not to save alignment plot.",
+    )
     parser.add_argument(
         "--config",
-        default=None,
         type=str,
         required=True,
-        help="yaml format configuration file. if not explicitly provided, "
-        "it will be searched in the checkpoint directory. (default=None)",
+        help=(
+            "YAML format configuration file. If not explicitly provided, it will be"
+            " searched in the checkpoint directory."
+        ),
     )
     parser.add_argument(
         "--verbose",
         type=int,
         default=1,
-        help="logging level. higher is more logging. (default=1)",
+        choices=[0, 1, 2],
+        help="Logging level. 0: DEBUG, 1: INFO, 2: WARN.",
     )
     args = parser.parse_args()
 
-    # set logger
-    if args.verbose > 1:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-    elif args.verbose > 0:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-    else:
-        logging.basicConfig(
-            level=logging.WARN,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-        logging.warning("Skip DEBUG/INFO messages")
-
-    # check directory existence
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir)
-
     # load config
-    with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.Loader)
+    config = yaml.load(open(args.config), Loader=yaml.Loader)
     config.update(vars(args))
 
-    if config["format"] == "npy":
-        char_query = "*-ids.npy"
-        mel_query = "*-raw-feats.npy" if args.use_norm is False else "*-norm-feats.npy"
-        char_load_fn = np.load
-        mel_load_fn = np.load
-    else:
-        raise ValueError("Only npy is supported.")
+    # set logger
+    fmt = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
+    log_level = {0: logging.DEBUG, 1: logging.INFO, 2: logging.WARN}
+    logging.basicConfig(level=log_level[config["verbose"]], format=fmt)
 
-    # define data-loader
-    dataset = CharactorMelDataset(
-        root_dir=args.rootdir,
-        charactor_query=char_query,
-        mel_query=mel_query,
-        charactor_load_fn=char_load_fn,
-        mel_load_fn=mel_load_fn,
-    )
-    dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
+    # check directory existence
+    os.makedirs(config["outdir"], exist_ok=True)
 
-    # define model and load checkpoint
+    if config["use_norm"] and "stats_path" not in config:
+        raise ValueError("'--stats_path' should be provided when using '--use_norm'.")
+    if not config["use_norm"]:
+        config["stats_path"] = None
+
+    ds = CharactorMelDataset(
+        dataset_dir=config["rootdir"],
+        use_norm=config["use_norm"],
+        stats_path=config["stats_path"],
+        return_guided_attention=False,
+        reduction_factor=1,
+        n_mels=config["tacotron2_params"]["n_mels"],
+        use_fixed_shapes=config["use_fixed_shapes"],
+    ).create(batch_size=config["batch_size"], training=True)
+
+    # define model and load weights
     tacotron2 = TFTacotron2(
         config=Tacotron2Config(**config["tacotron2_params"]),
-        training=True,  # enable teacher forcing mode.
+        training=True,  # enable teacher forcing mode
         name="tacotron2",
     )
-    tacotron2._build()  # build model to be able load_weights.
+    tacotron2._build()
     tacotron2.load_weights(args.checkpoint)
 
-    for data in tqdm(dataset, desc="[Extract Duration]"):
-        utt_ids = data["utt_ids"]
-        input_lengths = data["input_lengths"]
-        mel_lengths = data["mel_lengths"]
-        utt_ids = utt_ids.numpy()
-
-        # tacotron2 inference.
-        mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2(
-            **data,
+    for batch in tqdm(ds, desc="[Extract Duration]"):
+        bs, _ = tf.shape(batch["input_ids"])
+        # tacotron 2 inference
+        *_, alignments = tacotron2(
+            batch["input_ids"],
+            batch["input_lengths"],
+            speaker_ids=tf.zeros([bs]),
+            mel_gts=batch["mel_gts"],
+            mel_lengths=batch["mel_lengths"],
             use_window_mask=True,
-            win_front=args.win_front,
-            win_back=args.win_back,
+            win_front=config["win_front"],
+            win_back=config["win_back"],
             training=True,
         )
-
-        # convert to numpy
-        alignment_historys = alignment_historys.numpy()
-
-        for i, alignment in enumerate(alignment_historys):
-            real_char_length = (
-                input_lengths[i].numpy() - 1
-            )  # minus 1 because char have eos tokens.
-            real_mel_length = mel_lengths[i].numpy()
-            alignment = alignment[:real_char_length, :real_mel_length]
-            d = get_duration_from_alignment(alignment)  # [max_char_len]
-
-            saved_name = utt_ids[i].decode("utf-8")
-
-            # check a length compatible
-            assert (
-                len(d) == real_char_length
-            ), f"different between len_char and len_durations, {len(d)} and {real_char_length}"
-
-            assert (
-                np.sum(d) == real_mel_length
-            ), f"different between sum_durations and len_mel, {np.sum(d)} and {real_mel_length}"
-
-            # save D to folder.
+        for alignment, char_len, mel_len, utt_id in zip(
+            alignments, batch["input_lengths"], batch["mel_lengths"], batch["utt_ids"]
+        ):
+            alignment = alignment[: char_len - 1, :mel_len]
+            idx, _, updates = tf.unique_with_counts(tf.math.argmax(alignment, axis=0))
+            duration = tf.scatter_nd(
+                tf.expand_dims(idx, -1), updates, [alignment.shape[0]]
+            )
+            # check that length is compatible
+            assert duration.shape[0] == char_len - 1, (
+                f"different between len_char and len_durations, {len(duration)} and"
+                f" {char_len}"
+            )
+            assert np.sum(duration) == mel_len, (
+                f"different between sum_durations and len_mel, {np.sum(duration)} and"
+                f" {mel_len}"
+            )
+            utt_id_str = utt_id.numpy().decode("utf8")
             np.save(
-                os.path.join(args.outdir, f"{saved_name}-durations.npy"),
-                d.astype(np.int32),
+                os.path.join(config["outdir"], f"{utt_id_str}-durations.npy"),
+                duration.numpy().astype(np.int32),
                 allow_pickle=False,
             )
-
-            # save alignment to debug.
-            if args.save_alignment == 1:
-                figname = os.path.join(args.outdir, f"{saved_name}_alignment.png")
-                fig = plt.figure(figsize=(8, 6))
-                ax = fig.add_subplot(111)
-                ax.set_title(f"Alignment of {saved_name}")
+            # save alignment to debug
+            if config["save_alignment"]:
+                figname = os.path.join(config["outdir"], f"{utt_id_str}_alignment.png")
+                fig, ax = plt.subplots(figsize=(8, 6))
                 im = ax.imshow(
-                    alignment, aspect="auto", origin="lower", interpolation="none"
+                    alignment, aspect="auto", interpolation="none", origin="lower"
                 )
-                fig.colorbar(im, ax=ax)
-                xlabel = "Decoder timestep"
-                plt.xlabel(xlabel)
-                plt.ylabel("Encoder timestep")
+                fig.colorbar(im, pad=0.02, aspect=15, orientation="vertical", ax=ax)
+                ax.set_title(f"Alignment of {utt_id_str}")
+                ax.set_xlabel("Decoder timestep")
+                ax.set_ylabel("Encoder timestep")
                 plt.tight_layout()
-                plt.savefig(figname)
+                plt.savefig(figname, bbox_inches="tight")
                 plt.close()
 
 
