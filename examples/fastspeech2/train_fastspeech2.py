@@ -31,7 +31,6 @@ from tqdm import tqdm
 import tensorflow_tts
 import yaml
 import tensorflow as tf
-<<<<<<< HEAD
 import numpy as np
 import argparse
 import logging
@@ -39,9 +38,7 @@ import os
 import sys
 import gc
 sys.path.append(".")
-=======
 
->>>>>>> upstream/master
 
 
 class FastSpeech2Trainer(FastSpeechTrainer):
