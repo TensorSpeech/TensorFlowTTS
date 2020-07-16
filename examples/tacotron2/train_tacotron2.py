@@ -35,7 +35,7 @@ from tensorflow_tts.models import TFTacotron2
 from tensorflow_tts.optimizers import WarmUp
 from tensorflow_tts.optimizers import AdamWeightDecay
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
+from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy, TFGriffinLim
 from tqdm import tqdm
 
 
@@ -74,6 +74,13 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         self.reset_states_eval()
 
         self.config = config
+        self.griffin_lim_tf = None
+        if "dataset_config_path" in config and config["use_norm"]:
+            self.griffin_lim_tf = TFGriffinLim(
+                config["dataset_config_path"], config["stats_path"]
+            )
+        elif "dataset_config_path" in config:
+            self.griffin_lim_tf = TFGriffinLim(config["dataset_config_path"])
 
     def compile(self, model, optimizer):
         super().compile(model, optimizer)
@@ -207,6 +214,10 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         )
         os.makedirs(pred_output_dir, exist_ok=True)
 
+        # get audio samples output with Griffin-Lim algorithm
+        if self.griffin_lim_tf:
+            tf_wav = self.griffin_lim_tf(mel_outputs)
+
         num_mels = self.config["tacotron2_params"]["n_mels"]
         items = zip(utt_ids, mel_gts, mels_before, mels_after, alignment_historys)
         for idx, (utt_id, mel_gt, mel_before, mel_after, alignment) in enumerate(items):
@@ -214,6 +225,10 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             mel_before = tf.reshape(mel_before, (-1, num_mels)).numpy()
             mel_after = tf.reshape(mel_after, (-1, num_mels)).numpy()
             utt_id_str = utt_id.decode("utf8")
+
+            # save audio file
+            if self.griffin_lim_tf:
+                self.griffin_lim_tf.save_wav(tf_wav[idx], pred_output_dir, utt_id_str)
 
             # plot mel
             figname = os.path.join(pred_output_dir, f"{utt_id_str}.png")
@@ -274,6 +289,12 @@ def main():
         help="Path to statistics file with mean and std values for standardization.",
     )
     parser.add_argument(
+        "--dataset_config_path",
+        default=argparse.SUPPRESS,
+        type=str,
+        help="Path to dataset parameters file.",
+    )
+    parser.add_argument(
         "--outdir",
         default=argparse.SUPPRESS,
         type=str,
@@ -322,6 +343,8 @@ def main():
     )
     if missing_dirs:
         raise ValueError(f"{missing_dirs}.")
+    if config["use_norm"] and "stats_path" not in config:
+        raise ValueError("'--stats_path' should be provided when using '--use_norm'.")
     if not config["use_norm"]:
         config["stats_path"] = None
 

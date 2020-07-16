@@ -27,6 +27,7 @@ import tensorflow as tf
 from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
 from tensorflow_tts.processor.ljspeech import LJSpeechProcessor, symbols
+from tensorflow_tts.utils import TFGriffinLim
 from tqdm import tqdm
 
 
@@ -86,7 +87,7 @@ def main():
         )
     )
     parser.add_argument(
-        "--rootdir",
+        "--data_dir",
         type=str,
         required=True,
         help=(
@@ -119,6 +120,12 @@ def main():
         help=(
             "Path to the statistics file with mean and std values for standardization."
         ),
+    )
+    parser.add_argument(
+        "--dataset_config_path",
+        default=argparse.SUPPRESS,
+        type=str,
+        help="Path to the config file with dataset parameters.",
     )
     parser.add_argument("--batch_size", default=8, type=int, help="Batch size.")
     parser.add_argument(
@@ -168,8 +175,8 @@ def main():
     # check directory existence
     os.makedirs(config["outdir"], exist_ok=True)
 
-    if os.path.isdir(config["rootdir"]):
-        char_files_path = os.path.join(config["rootdir"], "ids", "*-ids.npy")
+    if os.path.isdir(config["data_dir"]):
+        char_files_path = os.path.join(config["data_dir"], "ids", "*-ids.npy")
         char_files = sorted(glob.glob(char_files_path))
         assert len(char_files) > 0, f"No files found in '{char_files_path}'."
 
@@ -186,10 +193,10 @@ def main():
                     "utt_ids": utt_id,
                 }
 
-    elif os.path.splitext(config["rootdir"])[1] == ".txt":
-        with open(config["rootdir"], encoding="utf8") as f:
+    elif os.path.splitext(config["data_dir"])[1] == ".txt":
+        with open(config["data_dir"], encoding="utf8") as f:
             sentences = f.read().splitlines()
-        assert len(sentences) > 0, f"No text found in '{config['rootdir']}'."
+        assert len(sentences) > 0, f"No text found in '{config['data_dir']}'."
         dataset_processor = {
             "ljspeech": LJSpeechProcessor,
         }
@@ -227,6 +234,10 @@ def main():
     # setup window
     tacotron2.setup_window(win_front=config["win_front"], win_back=config["win_back"])
 
+    griffin_lim_tf = None
+    if "dataset_config_path" in config:
+        griffin_lim_tf = TFGriffinLim(config["dataset_config_path"])
+
     for batch in tqdm(ds, desc="[Decoding]"):
         bs, _ = tf.shape(batch["input_ids"])
         # tacotron2 inference
@@ -247,6 +258,12 @@ def main():
                 mel_pred.numpy().astype(np.float32),
                 allow_pickle=False,
             )
+
+            if griffin_lim_tf:
+                tf_wav = griffin_lim_tf(tf.expand_dims(mel_pred, 0))
+                griffin_lim_tf.save_wav(
+                    tf_wav, config["outdir"], f"{utt_id_str}-{mel_save_name}"
+                )
 
 
 if __name__ == "__main__":

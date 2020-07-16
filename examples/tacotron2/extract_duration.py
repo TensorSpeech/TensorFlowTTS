@@ -40,7 +40,7 @@ def main():
         )
     )
     parser.add_argument(
-        "--rootdir",
+        "--data_dir",
         type=str,
         required=True,
         help="Directory including ids/durations files.",
@@ -115,7 +115,7 @@ def main():
         config["stats_path"] = None
 
     ds = CharactorMelDataset(
-        dataset_dir=config["rootdir"],
+        dataset_dir=config["data_dir"],
         use_norm=config["use_norm"],
         stats_path=config["stats_path"],
         return_guided_attention=False,
