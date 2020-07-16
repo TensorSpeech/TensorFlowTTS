@@ -17,6 +17,8 @@
 import os
 
 import librosa
+import yaml
+
 import numpy as np
 import soundfile as sf
 import tensorflow as tf
@@ -24,23 +26,33 @@ from sklearn.preprocessing import StandardScaler
 
 
 def griffin_lim_lb(
-    mel_spec, stats_path, dataset_config, n_iter=32, output_dir=None, wav_name="lb"
+    mel_spec,
+    dataset_config_path,
+    stats_path=None,
+    n_iter=32,
+    output_dir=None,
+    wav_name="lb",
 ):
     """Generate wave from mel spectrogram with Griffin-Lim algorithm using Librosa.
     Args:
         mel_spec (ndarray): array representing the mel spectrogram.
         stats_path (str): path to the `stats.npy` file containing norm statistics.
-        dataset_config (Dict): dataset configuration parameters.
+        dataset_config_path (Dict): dataset configuration parameters file.
         n_iter (int): number of iterations for GL.
         output_dir (str): output directory where audio file will be saved.
         wav_name (str): name of the output file.
     Returns:
         gl_lb (ndarray): generated wave.
     """
-    scaler = StandardScaler()
-    scaler.mean_, scaler.scale_ = np.load(stats_path)
+    if stats_path:
+        scaler = StandardScaler()
+        scaler.mean_, scaler.scale_ = np.load(stats_path)
+        mel_spec = np.power(10.0, scaler.inverse_transform(mel_spec)).T
+    else:
+        mel_spec = np.power(10.0, mel_spec).T
 
-    mel_spec = np.power(10.0, scaler.inverse_transform(mel_spec)).T
+    dataset_config = yaml.load(open(dataset_config_path), Loader=yaml.Loader)
+
     mel_basis = librosa.filters.mel(
         dataset_config["sampling_rate"],
         n_fft=dataset_config["fft_size"],
@@ -64,16 +76,14 @@ def griffin_lim_lb(
 class TFGriffinLim(tf.keras.layers.Layer):
     """Griffin-Lim algorithm for phase reconstruction from mel spectrogram magnitude."""
 
-    def __init__(self, stats_path, dataset_config):
+    def __init__(self, dataset_config_path, stats_path=None):
         """Init GL params.
         Args:
+            dataset_config_path (Dict): dataset configuration parameters file.
             stats_path (str): path to the `stats.npy` file containing norm statistics.
-            dataset_config (Dict): dataset configuration parameters.
         """
         super().__init__()
-        scaler = StandardScaler()
-        scaler.mean_, scaler.scale_ = np.load(stats_path)
-        self.scaler = scaler
+        dataset_config = yaml.load(open(dataset_config_path), Loader=yaml.Loader)
         self.ds_config = dataset_config
         self.mel_basis = librosa.filters.mel(
             self.ds_config["sampling_rate"],
@@ -82,6 +92,11 @@ class TFGriffinLim(tf.keras.layers.Layer):
             fmin=self.ds_config["fmin"],
             fmax=self.ds_config["fmax"],
         )  # [num_mels, fft_size // 2 + 1]
+        self.scaler = None
+        if stats_path:
+            scaler = StandardScaler()
+            scaler.mean_, scaler.scale_ = np.load(stats_path)
+            self.scaler = scaler
 
     def save_wav(self, gl_tf, output_dir, wav_name):
         """Generate WAV file and save it.
@@ -120,8 +135,13 @@ class TFGriffinLim(tf.keras.layers.Layer):
         Returns:
             (tf.Tensor): reconstructed signal from GL algorithm.
         """
-        # de-normalize mel spectogram
-        mel_spec = tf.math.pow(10.0, mel_spec * self.scaler.scale_ + self.scaler.mean_)
+        # de-normalize mel spectogram if necessary
+        if self.scaler:
+            mel_spec = tf.math.pow(
+                10.0, mel_spec * self.scaler.scale_ + self.scaler.mean_
+            )
+        else:
+            mel_spec = tf.math.pow(10.0, mel_spec)
         inverse_mel = tf.linalg.pinv(self.mel_basis)
 
         # [:, num_mels] @ [fft_size // 2 + 1, num_mels].T
