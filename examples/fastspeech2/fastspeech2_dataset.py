@@ -60,15 +60,12 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         energy_query="*-raw-energy.npy",
         f0_stat="./dump/stats_f0.npy",
         energy_stat="./dump/stats_energy.npy",
-        max_f0_embeddings=256,
-        max_energy_embeddings=256,
         charactor_load_fn=np.load,
         mel_load_fn=np.load,
         duration_load_fn=np.load,
         f0_load_fn=np.load,
         energy_load_fn=np.load,
         mel_length_threshold=0,
-        return_utt_id=False,
     ):
         """Initialize dataset.
 
@@ -77,11 +74,16 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             charactor_query (str): Query to find charactor files in root_dir.
             mel_query (str): Query to find feature files in root_dir.
             duration_query (str): Query to find duration files in root_dir.
+            f0_query (str): Query to find f0 files in root_dir.
+            energy_query (str): Query to find energy files in root_dir.
+            f0_stat (str): str path of f0_stat.
+            energy_stat (str): str path of energy_stat.
             charactor_load_fn (func): Function to load charactor file.
             mel_load_fn (func): Function to load feature file.
             duration_load_fn (func): Function to load duration file.
+            f0_load_fn (func): Function to load f0 file.
+            energy_load_fn (func): Function to load energy file.
             mel_length_threshold (int): Threshold to remove short feature files.
-            return_utt_id (bool): Whether to return the utterance id with arrays.
 
         """
         # find all of charactor and mel files.
@@ -118,12 +120,9 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         self.f0_load_fn = f0_load_fn
         self.energy_load_fn = energy_load_fn
         self.mel_length_threshold = mel_length_threshold
-        self.return_utt_id = return_utt_id
 
         self.f0_stat = np.load(f0_stat)
         self.energy_stat = np.load(energy_stat)
-        self.max_f0_embeddings = max_f0_embeddings
-        self.max_energy_embeddings = max_energy_embeddings
 
     def get_args(self):
         return [self.utt_ids]
