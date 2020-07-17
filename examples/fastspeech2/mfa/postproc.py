@@ -63,7 +63,15 @@ def main():
             duraz[-1] += mellen - durlen
           else:
             if durlen > mellen:
-              duraz[len(duraz) - 2] -= durlen - mellen
+              diff = durlen - mellen
+              found = False
+              for r in reversed(range(len(duraz) - 1)):
+                if duraz[r] >= diff:
+                  duraz[r] -= diff
+                  found = True
+                  break
+              if not found:
+                print("not found!!!") 
           durlog.write(str(mellen) + "|" + str(durlen) + "\n")
           np.save(durload,duraz)
         durlog.close()
