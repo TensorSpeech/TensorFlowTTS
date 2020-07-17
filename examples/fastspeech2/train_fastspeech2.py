@@ -51,13 +51,11 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
     ):
         """Initialize trainer.
-
         Args:
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
             config (dict): Config dict loaded from yaml format configuration file.
             is_mixed_precision (bool): Use mixed precision or not.
-
         """
         super(FastSpeech2Trainer, self).__init__(
             steps=steps,
