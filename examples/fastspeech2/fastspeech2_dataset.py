@@ -14,18 +14,16 @@
 # limitations under the License.
 """Dataset modules."""
 
+import itertools
 import logging
 import os
 import random
-import itertools
-import numpy as np
 
+import numpy as np
 import tensorflow as tf
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
-
-from tensorflow_tts.utils import find_files
-from tensorflow_tts.utils import remove_outlier
+from tensorflow_tts.utils import find_files, remove_outlier
 
 
 def average_by_duration(x, durs):
@@ -69,7 +67,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         duration_load_fn=np.load,
         f0_load_fn=np.load,
         energy_load_fn=np.load,
-        mel_length_threshold=None,
+        mel_length_threshold=0,
         return_utt_id=False,
     ):
         """Initialize dataset.
@@ -92,63 +90,6 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         duration_files = sorted(find_files(root_dir, duration_query))
         f0_files = sorted(find_files(root_dir, f0_query))
         energy_files = sorted(find_files(root_dir, energy_query))
-        # filter by threshold
-        if mel_length_threshold is not None:
-            mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
-
-            idxs = [
-                idx
-                for idx in range(len(mel_files))
-                if mel_lengths[idx] > mel_length_threshold
-            ]
-            if len(mel_files) != len(idxs):
-                logging.warning(
-                    f"Some files are filtered by mel length threshold "
-                    f"({len(mel_files)} -> {len(idxs)})."
-                )
-            mel_files = [mel_files[idx] for idx in idxs]
-            charactor_files = [charactor_files[idx] for idx in idxs]
-            duration_files = [duration_files[idx] for idx in idxs]
-            mel_lengths = [mel_lengths[idx] for idx in idxs]
-            f0_files = [f0_files[idx] for idx in idxs]
-            energy_files = [energy_files[idx] for idx in idxs]
-
-            # bucket sequence length trick, sort based-on mel-length.
-            idx_sort = np.argsort(mel_lengths)
-
-            # sort
-            mel_files = np.array(mel_files)[idx_sort]
-            charactor_files = np.array(charactor_files)[idx_sort]
-            duration_files = np.array(duration_files)[idx_sort]
-            f0_files = np.array(f0_files)[idx_sort]
-            energy_files = np.array(energy_files)[idx_sort]
-            mel_lengths = np.array(mel_lengths)[idx_sort]
-
-            # group
-            idx_lengths = [
-                [idx, length]
-                for idx, length in zip(np.arange(len(mel_lengths)), mel_lengths)
-            ]
-            groups = [
-                list(g) for _, g in itertools.groupby(idx_lengths, lambda a: a[1])
-            ]
-
-            # group shuffle
-            random.shuffle(groups)
-
-            # get idxs affter group shuffle
-            idxs = []
-            for group in groups:
-                for idx, _ in group:
-                    idxs.append(idx)
-
-            # re-arange dataset
-            mel_files = np.array(mel_files)[idxs]
-            charactor_files = np.array(charactor_files)[idxs]
-            duration_files = np.array(duration_files)[idxs]
-            f0_files = np.array(f0_files)[idxs]
-            energy_files = np.array(energy_files)[idxs]
-            mel_lengths = np.array(mel_lengths)[idxs]
 
         # assert the number of files
         assert len(mel_files) != 0, f"Not found any mels files in ${root_dir}."
@@ -176,6 +117,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         self.duration_load_fn = duration_load_fn
         self.f0_load_fn = f0_load_fn
         self.energy_load_fn = energy_load_fn
+        self.mel_length_threshold = mel_length_threshold
         self.return_utt_id = return_utt_id
 
         self.f0_stat = np.load(f0_stat)
@@ -215,10 +157,17 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             f0 = tf_average_by_duration(f0, duration)
             energy = tf_average_by_duration(energy, duration)
 
-            if self.return_utt_id:
-                items = utt_id, charactor, duration, f0, energy, mel
-            else:
-                items = charactor, duration, f0, energy, mel
+            items = {
+                "utt_ids": utt_id,
+                "input_ids": charactor,
+                "speaker_ids": 0,
+                "duration_gts": duration,
+                "f0_gts": f0,
+                "energy_gts": energy,
+                "mel_gts": mel,
+                "mel_lengths": len(mel),
+            }
+
             yield items
 
     def create(
@@ -235,6 +184,10 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             self.generator, output_types=output_types, args=(self.get_args())
         )
 
+        datasets = datasets.filter(
+            lambda x: x["mel_lengths"] > self.mel_length_threshold
+        )
+
         if allow_cache:
             datasets = datasets.cache()
 
@@ -244,16 +197,33 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
                 reshuffle_each_iteration=reshuffle_each_iteration,
             )
 
-        datasets = datasets.padded_batch(
-            batch_size, padded_shapes=([None], [None], [None], [None], [None, None])
-        )
+        # define padded shapes
+        padded_shapes = {
+            "utt_ids": [],
+            "input_ids": [None],
+            "speaker_ids": [],
+            "duration_gts": [None],
+            "f0_gts": [None],
+            "energy_gts": [None],
+            "mel_gts": [None, None],
+            "mel_lengths": [],
+        }
+
+        datasets = datasets.padded_batch(batch_size, padded_shapes=padded_shapes)
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
 
     def get_output_dtypes(self):
-        output_types = (tf.int32, tf.int32, tf.float32, tf.float32, tf.float32)
-        if self.return_utt_id:
-            output_types = (tf.dtypes.string, *output_types)
+        output_types = {
+            "utt_ids": tf.string,
+            "input_ids": tf.int32,
+            "speaker_ids": tf.int32,
+            "duration_gts": tf.int32,
+            "f0_gts": tf.float32,
+            "energy_gts": tf.float32,
+            "mel_gts": tf.float32,
+            "mel_lengths": tf.int32,
+        }
         return output_types
 
     def get_len_dataset(self):

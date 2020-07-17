@@ -3,20 +3,13 @@
 """Group Convolution Modules."""
 
 from tensorflow.python.framework import tensor_shape
-from tensorflow.python.keras import activations
-from tensorflow.python.keras import constraints
-from tensorflow.python.keras import initializers
-from tensorflow.python.keras import regularizers
+from tensorflow.python.keras import (activations, constraints, initializers,
+                                     regularizers)
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.engine.input_spec import InputSpec
-
+from tensorflow.python.keras.layers import Conv1D, SeparableConv1D
 from tensorflow.python.keras.utils import conv_utils
-from tensorflow.python.ops import array_ops
-from tensorflow.python.ops import nn
-from tensorflow.python.ops import nn_ops
-
-from tensorflow.python.keras.layers import Conv1D
-from tensorflow.python.keras.layers import SeparableConv1D
+from tensorflow.python.ops import array_ops, nn, nn_ops
 
 
 class Convolution(object):

@@ -23,9 +23,10 @@
 
 # Regular expression matching whitespace:
 import re
-from unidecode import unidecode
-from tensorflow_tts.utils.number_norm import normalize_numbers
 
+from unidecode import unidecode
+
+from tensorflow_tts.utils.number_norm import normalize_numbers
 
 _whitespace_re = re.compile(r"\s+")
 

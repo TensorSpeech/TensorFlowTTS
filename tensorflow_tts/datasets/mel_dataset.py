@@ -16,13 +16,12 @@
 
 import logging
 import os
-import numpy as np
 
+import numpy as np
 import tensorflow as tf
 
-from tensorflow_tts.utils import find_files
-
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
+from tensorflow_tts.utils import find_files
 
 
 class MelDataset(AbstractDataset):
@@ -33,8 +32,7 @@ class MelDataset(AbstractDataset):
         root_dir,
         mel_query="*-raw-feats.h5",
         mel_load_fn=np.load,
-        mel_length_threshold=None,
-        return_utt_id=False,
+        mel_length_threshold=0,
     ):
         """Initialize dataset.
 
@@ -43,26 +41,11 @@ class MelDataset(AbstractDataset):
             mel_query (str): Query to find feature files in root_dir.
             mel_load_fn (func): Function to load feature file.
             mel_length_threshold (int): Threshold to remove short feature files.
-            return_utt_id (bool): Whether to return the utterance id with arrays.
 
         """
         # find all of mel files.
         mel_files = sorted(find_files(root_dir, mel_query))
         mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
-
-        # filter by threshold
-        if mel_length_threshold is not None:
-            idxs = [
-                idx
-                for idx in range(len(mel_files))
-                if mel_lengths[idx] > mel_length_threshold
-            ]
-            if len(mel_files) != len(idxs):
-                logging.warning(
-                    f"Some files are filtered by mel length threshold "
-                    f"({len(mel_files)} -> {len(idxs)})."
-                )
-            mel_files = [mel_files[idx] for idx in idxs]
 
         # assert the number of files
         assert len(mel_files) != 0, f"Not found any mel files in ${root_dir}."
@@ -76,7 +59,7 @@ class MelDataset(AbstractDataset):
         self.mel_files = mel_files
         self.mel_lengths = mel_lengths
         self.mel_load_fn = mel_load_fn
-        self.return_utt_id = return_utt_id
+        self.mel_length_threshold = mel_length_threshold
 
     def get_args(self):
         return [self.utt_ids]
@@ -86,16 +69,21 @@ class MelDataset(AbstractDataset):
             mel_file = self.mel_files[i]
             mel = self.mel_load_fn(mel_file)
             mel_length = self.mel_lengths[i]
-            if self.return_utt_id:
-                items = utt_id, mel, mel_length
-            else:
-                items = mel, mel_length
+
+            items = {
+                "utt_ids": utt_id,
+                "mels": mel,
+                "mel_lengths": mel_length
+            }
+
             yield items
 
     def get_output_dtypes(self):
-        output_types = (tf.float32, tf.int32)
-        if self.return_utt_id:
-            output_types = (tf.dtypes.string, *output_types)
+        output_types = {
+            "utt_ids": tf.string,
+            "mels": tf.float32,
+            "mel_lengths": tf.int32   
+        }
         return output_types
 
     def create(
@@ -112,6 +100,10 @@ class MelDataset(AbstractDataset):
             self.generator, output_types=output_types, args=(self.get_args())
         )
 
+        datasets = datasets.filter(
+            lambda x: x["mel_lengths"] > self.mel_length_threshold
+        )
+
         if allow_cache:
             datasets = datasets.cache()
 
@@ -121,10 +113,12 @@ class MelDataset(AbstractDataset):
                 reshuffle_each_iteration=reshuffle_each_iteration,
             )
 
-        # define padded_shapes.
-        padded_shapes = ([None, None], [])
-        if self.return_utt_id:
-            padded_shapes = ([], *padded_shapes)
+        # define padded shapes
+        padded_shapes = {
+            "utt_ids": [],
+            "mels": [None, 80],
+            "mel_lengths": [],
+        }
 
         datasets = datasets.padded_batch(batch_size, padded_shapes=padded_shapes)
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)

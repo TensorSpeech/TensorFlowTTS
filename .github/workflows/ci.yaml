@@ -16,8 +16,8 @@ jobs:
     strategy:
       max-parallel: 10
       matrix:
-        python-version: [3.6]
-        tensorflow-version: [2.1.0]
+        python-version: [3.7]
+        tensorflow-version: [2.2.0]
     steps:
       - uses: actions/checkout@master
       - uses: actions/setup-python@v1
