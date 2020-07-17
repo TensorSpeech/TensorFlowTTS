@@ -33,10 +33,10 @@ Now, run the aligner. It takes the path where the wavs and transcriptions are, t
 After aligning, run the post-MFA script. This will process the MFA outputs into initial durations and modify the transcripts of your metadata.csv to be phonetic.
 
 Again, this can take many arguments but all the defaults are good, you only need to specify the path of the config you're going to use (and the `--sample-rate` if it's something other than than 22050).
-This is because the it needs the `hop_size` to calculate durations correctly. The `round n` is to disable rounding.
+This is because the it needs the `hop_size` to calculate durations correctly. The `round y` is to enable rounding, which gives greater accuracy.
 
 ```
-python examples/fastspeech2/mfa/postmfa.py --round n --yaml-path examples/fastspeech2/conf/fastspeech2.v2.yaml
+python examples/fastspeech2/mfa/postmfa.py --round y --yaml-path examples/fastspeech2/conf/fastspeech2.v2.yaml
 ```
 This will output the durations into a folder named `durations`
 
@@ -45,7 +45,7 @@ In `tensorflow-tts-preprocess`, add `--trimlist trimlist.npy` as an argument. Th
 
 ## After regular preprocessing
 
-Normally, the features will be slightly higher in length than the extracted durations, which is why you must execute this. It adds the difference to the last duration.
+Normally, the features will be slightly higher in length than the extracted durations, which is why you must execute this. It compensates for the differences
 Now, run the final duration postprocessing script. This one will drop the durations into the train and valid dump folders and match the lengths to the normalized features.
 
 ```
