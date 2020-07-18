@@ -11,7 +11,7 @@ wget https://github.com/MontrealCorpusTools/Montreal-Forced-Aligner/releases/dow
 tar -zxvf montreal-forced-aligner_linux.tar.gz
 wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -O montreal-forced-aligner/pretrained_models/librispeech-lexicon.txt
 ```
-**Note that if your dataset contains words not present in the LibriSpeech lexicon stuff will fail**. 
+**Note that if your dataset contains words not present in the LibriSpeech lexicon stuff will fail**. You'll want to make a dictionary augmenter that adds missing words; if they're a lot, you can just run g2p on those, but if they're little and you've got time, it's best to add them manually
 
 ## Using MFA
 
@@ -36,7 +36,7 @@ Again, this can take many arguments but all the defaults are good, you only need
 This is because the it needs the `hop_size` to calculate durations correctly. The `round y` is to enable rounding, which gives greater accuracy.
 
 ```
-python examples/fastspeech2/mfa/postmfa.py --round y --yaml-path examples/fastspeech2/conf/fastspeech2.v1t.yaml
+python examples/fastspeech2/mfa/postmfa.py --round y --yaml-path examples/fastspeech2/conf/fastspeech2.v1.yaml
 ```
 This will output the durations into a folder named `durations`
 

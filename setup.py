@@ -39,6 +39,7 @@ requirements = {
         "pyworld>=0.2.10",
         "numba<=0.48",# Fix No module named "numba.decorators"
         "textgrid",
+        "g2p_en",
     ],
     "setup": ["numpy", "pytest-runner",],
     "test": [

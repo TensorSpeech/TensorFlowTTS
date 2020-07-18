@@ -7,6 +7,7 @@ import os
 
 import numpy as np
 import soundfile as sf
+from g2p_en import G2p
 
 from tensorflow_tts.utils import cleaners
 
@@ -104,7 +105,7 @@ _eos = "~"
 _punctuation = "!'(),.:;? "
 _special = "-"
 _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
+_singlesil = [",",";","?",".","..."]
 # Prepend "@" to ARPAbet symbols to ensure uniqueness (some are the same as uppercase letters):
 _arpabet = ["@" + s for s in valid_symbols]
 
@@ -179,6 +180,19 @@ class LJSpeechProcessor(object):
             sequence += _arpabet_to_sequence(m.group(2))
             text = m.group(3)
         return sequence
+      
+    def processtxtph(self,intxt):
+      g2p = G2p()
+      ptext =  _clean_text(intxt,[self.cleaner_names])
+      phs = _g2p2synth(g2p(ptext))
+
+      arpatxt = " ".join(phs)
+      ids = _arpabet_to_sequence(arpatxt)
+
+      return ids, arpatxt
+  
+  
+  
 
 
 def _clean_text(text, cleaner_names):
@@ -188,6 +202,27 @@ def _clean_text(text, cleaner_names):
             raise Exception("Unknown cleaner: %s" % name)
         text = cleaner(text)
     return text
+
+def _g2p2synth(inseq):
+  phseq = list()
+  for idx, itm in enumerate(inseq):
+    if itm == ' ':
+      continue
+    
+    if idx < len(inseq) - 1: #Prevent it from appending SILs due to end periods
+      if itm in _singlesil:
+       phseq.append("SIL")
+       continue
+    else:
+      if itm in _singlesil:
+        continue # Skip ending dots
+
+    phseq.append(itm)
+    
+  phseq.append("SIL")
+  return phseq
+
+
 
 
 def _symbols_to_sequence(symbols):
