@@ -36,7 +36,7 @@ Again, this can take many arguments but all the defaults are good, you only need
 This is because the it needs the `hop_size` to calculate durations correctly. The `round y` is to enable rounding, which gives greater accuracy.
 
 ```
-python examples/fastspeech2/mfa/postmfa.py --round y --yaml-path examples/fastspeech2/conf/fastspeech2.v2.yaml
+python examples/fastspeech2/mfa/postmfa.py --round y --yaml-path examples/fastspeech2/conf/fastspeech2.v1b.yaml
 ```
 This will output the durations into a folder named `durations`
 
