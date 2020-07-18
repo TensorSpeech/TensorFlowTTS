@@ -14,13 +14,6 @@
 # limitations under the License.
 """Train FastSpeech2."""
 
-import numpy as np
-import argparse
-import logging
-import os
-import sys
-sys.path.append(".")
-
 from tensorflow_tts.optimizers import AdamWeightDecay
 from tensorflow_tts.optimizers import WarmUp
 from tensorflow_tts.models import TFFastSpeech2
@@ -37,8 +30,8 @@ import logging
 import os
 import sys
 import gc
-sys.path.append(".")
 
+sys.path.append(".")
 
 
 class FastSpeech2Trainer(FastSpeechTrainer):
@@ -48,13 +41,11 @@ class FastSpeech2Trainer(FastSpeechTrainer):
         self, config, steps=0, epochs=0, is_mixed_precision=False,
     ):
         """Initialize trainer.
-
         Args:
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
             config (dict): Config dict loaded from yaml format configuration file.
             is_mixed_precision (bool): Use mixed precision or not.
-
         """
         super(FastSpeech2Trainer, self).__init__(
             steps=steps,
