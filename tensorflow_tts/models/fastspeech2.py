@@ -227,7 +227,7 @@ class TFFastSpeech2(TFFastSpeech):
         duration_outputs = self.duration_predictor(
             [last_encoder_hidden_states, speaker_ids, attention_mask]
         )  # [batch_size, length]
-        duration_outputs = tf.math.exp(duration_outputs) - 1.0
+        duration_outputs = tf.nn.relu(tf.math.exp(duration_outputs) - 1.0)
         duration_outputs = tf.cast(
             tf.math.round(duration_outputs * speed_ratios), tf.int32
         )
