@@ -90,7 +90,12 @@ def main():
             os.remove(wavefn)
         continue
 
-      tg = textgrid.TextGrid.fromFile(txgridpath + "/" + tgp)
+      try:
+        tg = textgrid.TextGrid.fromFile(txgridpath + "/" + tgp)
+      except:
+        print("Failed to read file " + tgp + " , skipping")
+        continue
+      
       pha = tg[1]
       durations = []
       totdursecs = 0.0
