@@ -94,6 +94,18 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         self.stft_loss = TFMultiResolutionSTFT(**self.config["stft_loss_params"])
 
     def compute_per_example_generator_losses(self, batch, outputs):
+        """Compute per example generator losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
         dict_metrics_losses = {}
         per_example_losses = 0.0
 

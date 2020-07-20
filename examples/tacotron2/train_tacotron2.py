@@ -89,9 +89,11 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         )
 
     def _train_step(self, batch):
+        """Here we re-define _train_step because apply input_signature make
+        the training progress slower on my experiment. Note that input_signature
+        is apply on based_trainer by default.
+        """
         if self._already_apply_input_signature is False:
-            # train_element_signature = self._get_train_element_signature()
-            # eval_element_signature = self._get_eval_element_signature()
             self.one_step_forward = tf.function(
                 self._one_step_forward, experimental_relax_shapes=True
             )
@@ -112,6 +114,18 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         self._check_train_finish()
 
     def compute_per_example_losses(self, batch, outputs):
+        """Compute per example losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
         (
             decoder_output,
             post_mel_outputs,

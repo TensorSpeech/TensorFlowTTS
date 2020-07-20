@@ -80,6 +80,18 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
         )
 
     def compute_per_example_losses(self, batch, outputs):
+        """Compute per example losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
         mel_before, mel_after, duration_outputs = outputs
 
         log_duration = tf.math.log(
