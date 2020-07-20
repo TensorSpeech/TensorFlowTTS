@@ -95,8 +95,8 @@ class TFSTFT(tf.keras.layers.Layer):
 
         # add small number to prevent nan value.
         # compatible with pytorch version.
-        x_mag = tf.math.sqrt(x_mag ** 2 + 1e-7)
-        y_mag = tf.math.sqrt(y_mag ** 2 + 1e-7)
+        x_mag = tf.clip_by_value(tf.math.sqrt(x_mag ** 2 + 1e-7), 1e-7, 1e3) 
+        y_mag = tf.clip_by_value(tf.math.sqrt(y_mag ** 2 + 1e-7), 1e-7, 1e3)
 
         sc_loss = self.spectral_convergenge_loss(y_mag, x_mag)
         mag_loss = self.log_stft_magnitude_loss(y_mag, x_mag)
