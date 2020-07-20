@@ -7,6 +7,7 @@ def safemkdir(dirn):
   if not os.path.isdir(dirn):
     os.mkdir(dirn)
 
+from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="Postprocess MFA alignments including length and split matching")
     parser.add_argument(
@@ -42,6 +43,7 @@ def main():
       
     print("Step 1/2: Match duration to sets")
     sets = ["train", "valid"]
+    afterdel = list()
     
     for set in sets:
         print("Matching to " + set + " set.")
@@ -71,11 +73,31 @@ def main():
                   found = True
                   break
               if not found:
-                print("not found!!!") 
+                trueid = idf.replace("norm-feats.npy","")
+                print("Not found for " + trueid + " adding to list")
+                afterdel.append(trueid)
+
+
+
+
+
           durlog.write(str(mellen) + "|" + str(durlen) + "\n")
           np.save(durload,duraz)
         durlog.close()
+    
+    for trueid in afterdel:
+      searchterm = trueid + "*"
+      print(searchterm)
+      for path in Path(args.dump_dir).rglob(searchterm):
+        print("Deleting: " + path.name)
+        os.remove(path.as_posix())
+     
+     
 
+    
+      
+    
+    
          
 
 
