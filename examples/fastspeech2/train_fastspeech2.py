@@ -329,7 +329,6 @@ def main():
         f0_stat=args.f0_stat,
         energy_stat=args.energy_stat,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
@@ -346,7 +345,6 @@ def main():
         f0_stat=args.f0_stat,
         energy_stat=args.energy_stat,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
