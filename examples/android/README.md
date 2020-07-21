@@ -9,6 +9,8 @@ This is a simple Android demo which will load converted FastSpeech2 and Multi-Ba
 4. Modify two module pathes according to your environment
 5. Run the app!
 
-### TO-DO:
+### TO-DO
 * LJSpeechProcessor is not implemented in this demo.
 
+### LICENSE
+ The license use for this code is [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/)
