@@ -131,11 +131,6 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         gc.collect()
         return per_example_losses, dict_metrics_losses
 
-    def _check_train_finish(self):
-        """Check training finished."""
-        if self.steps >= self.config["train_max_steps"]:
-            self.finish_train = True
-
     def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
@@ -187,16 +182,6 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             plt.tight_layout()
             plt.savefig(figname)
             plt.close()
-
-
-def return_strategy():
-    physical_devices = tf.config.list_physical_devices("GPU")
-    if len(physical_devices) == 0:
-        return tf.distribute.OneDeviceStrategy(device="/cpu:0")
-    elif len(physical_devices) == 1:
-        return tf.distribute.OneDeviceStrategy(device="/gpu:0")
-    else:
-        return tf.distribute.MirroredStrategy()
 
 
 def main():
