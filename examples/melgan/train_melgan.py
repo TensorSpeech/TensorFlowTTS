@@ -14,31 +14,34 @@
 # limitations under the License.
 """Train MelGAN."""
 
+import tensorflow as tf
+
+physical_devices = tf.config.list_physical_devices("GPU")
+for i in range(len(physical_devices)):
+    tf.config.experimental.set_memory_growth(physical_devices[i], True)
+
+import sys
+
+sys.path.append(".")
+
 import argparse
 import logging
 import os
-import sys
-sys.path.append(".")
 
 import numpy as np
 import soundfile as sf
-import tensorflow as tf
 import yaml
-
-import tensorflow_tts
-
 from tqdm import tqdm
 
-from tensorflow_tts.trainers import GanBasedTrainer
-
-from examples.melgan.audio_mel_dataset import AudioMelDataset
-
-from tensorflow_tts.models import TFMelGANGenerator
-from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
-
-from tensorflow_tts.losses import TFMelSpectrogram
-
+import tensorflow_tts
 import tensorflow_tts.configs.melgan as MELGAN_CONFIG
+from examples.melgan.audio_mel_dataset import AudioMelDataset
+from tensorflow_tts.losses import TFMelSpectrogram
+from tensorflow_tts.models import (TFMelGANGenerator,
+                                   TFMelGANMultiScaleDiscriminator)
+from tensorflow_tts.trainers import GanBasedTrainer
+from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
+                                  return_strategy)
 
 
 class MelganTrainer(GanBasedTrainer):
@@ -47,6 +50,7 @@ class MelganTrainer(GanBasedTrainer):
     def __init__(
         self,
         config,
+        strategy,
         steps=0,
         epochs=0,
         is_generator_mixed_precision=False,
@@ -67,6 +71,7 @@ class MelganTrainer(GanBasedTrainer):
             steps,
             epochs,
             config,
+            strategy,
             is_generator_mixed_precision,
             is_discriminator_mixed_precision,
         )
@@ -89,240 +94,110 @@ class MelganTrainer(GanBasedTrainer):
     def compile(self, gen_model, dis_model, gen_optimizer, dis_optimizer):
         super().compile(gen_model, dis_model, gen_optimizer, dis_optimizer)
         # define loss
-        self.mse_loss = tf.keras.losses.MeanSquaredError()
-        self.mae_loss = tf.keras.losses.MeanAbsoluteError()
+        self.mse_loss = tf.keras.losses.MeanSquaredError(
+            reduction=tf.keras.losses.Reduction.NONE
+        )
+        self.mae_loss = tf.keras.losses.MeanAbsoluteError(
+            reduction=tf.keras.losses.Reduction.NONE
+        )
         self.mels_loss = TFMelSpectrogram()
 
-    def init_train_eval_metrics(self, list_metrics_name):
-        """Init train and eval metrics to save it to tensorboard."""
-        self.train_metrics = {}
-        self.eval_metrics = {}
-        for name in list_metrics_name:
-            self.train_metrics.update(
-                {name: tf.keras.metrics.Mean(name="train_" + name, dtype=tf.float32)}
-            )
-            self.eval_metrics.update(
-                {name: tf.keras.metrics.Mean(name="eval_" + name, dtype=tf.float32)}
-            )
+    def compute_per_example_generator_losses(self, batch, outputs):
+        """Compute per example generator losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
-    def reset_states_train(self):
-        """Reset train metrics after save it to tensorboard."""
-        for metric in self.train_metrics.keys():
-            self.train_metrics[metric].reset_states()
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
+        audios = batch["audios"]
+        y_hat = outputs
 
-    def reset_states_eval(self):
-        """Reset eval metrics after save it to tensorboard."""
-        for metric in self.eval_metrics.keys():
-            self.eval_metrics[metric].reset_states()
-
-    def _train_step(self, batch):
-        """Train model one step."""
-        y, mels = batch
-        y, y_hat = self._one_step_generator(y, mels)
-        self._one_step_discriminator(y, y_hat)
-
-        # update counts
-        self.steps += 1
-        self.tqdm.update(1)
-        self._check_train_finish()
-
-    @tf.function(experimental_relax_shapes=True)
-    def _one_step_generator(self, y, mels):
-        """One step generator training."""
-        with tf.GradientTape() as g_tape:
-            y_hat = self.generator(mels)  # [B, T, 1]
-            p_hat = self.discriminator(y_hat)
-            adv_loss = 0.0
-            for i in range(len(p_hat)):
-                adv_loss += self.mse_loss(
-                    p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
-                )
-            adv_loss /= i + 1
-
-            p = self.discriminator(tf.expand_dims(y, 2))
-            # define feature-matching loss
-            fm_loss = 0.0
-            for i in range(len(p_hat)):
-                for j in range(len(p_hat[i]) - 1):
-                    fm_loss += self.mae_loss(p_hat[i][j], p[i][j])
-            fm_loss /= (i + 1) * (j + 1)
-            adv_loss += self.config["lambda_feat_match"] * fm_loss
-            gen_loss = adv_loss
-
-            if self.is_generator_mixed_precision:
-                scaled_gen_loss = self.gen_optimizer.get_scaled_loss(gen_loss)
-
-        if self.is_generator_mixed_precision:
-            scaled_gradients = g_tape.gradient(
-                scaled_gen_loss, self.generator.trainable_variables
-            )
-            gradients = self.gen_optimizer.get_unscaled_gradients(scaled_gradients)
-        else:
-            gradients = g_tape.gradient(gen_loss, self.generator.trainable_variables)
-        self.gen_optimizer.apply_gradients(
-            zip(gradients, self.generator.trainable_variables)
-        )
-
-        # accumulate loss into metrics
-        self.train_metrics["adversarial_loss"].update_state(adv_loss)
-        self.train_metrics["fm_loss"].update_state(fm_loss)
-        self.train_metrics["gen_loss"].update_state(gen_loss)
-        self.train_metrics["mels_spectrogram_loss"].update_state(
-            self.mels_loss(y, tf.squeeze(y_hat, -1))
-        )
-
-        # recompute y_hat after 1 step generator for discriminator training.
-        y_hat = self.generator(mels)
-        return y, y_hat
-
-    @tf.function(experimental_relax_shapes=True)
-    def _one_step_discriminator(self, y, y_hat):
-        """One step discriminator training."""
-        with tf.GradientTape() as d_tape:
-            y = tf.expand_dims(y, 2)
-            p = self.discriminator(y)
-            p_hat = self.discriminator(y_hat)
-            real_loss = 0.0
-            fake_loss = 0.0
-            for i in range(len(p)):
-                real_loss += self.mse_loss(
-                    p[i][-1], tf.ones_like(p[i][-1], dtype=tf.float32)
-                )
-                fake_loss += self.mse_loss(
-                    p_hat[i][-1], tf.zeros_like(p_hat[i][-1], dtype=tf.float32)
-                )
-            real_loss /= i + 1
-            fake_loss /= i + 1
-            dis_loss = real_loss + fake_loss
-
-            if self.is_discriminator_mixed_precision:
-                scaled_dis_loss = self.dis_optimizer.get_scaled_loss(dis_loss)
-
-        if self.is_discriminator_mixed_precision:
-            scaled_gradients = d_tape.gradient(
-                scaled_dis_loss, self.discriminator.trainable_variables
-            )
-            gradients = self.dis_optimizer.get_unscaled_gradients(scaled_gradients)
-        else:
-            gradients = d_tape.gradient(
-                dis_loss, self.discriminator.trainable_variables
-            )
-        self.dis_optimizer.apply_gradients(
-            zip(gradients, self.discriminator.trainable_variables)
-        )
-
-        # accumulate loss into metrics
-        self.train_metrics["real_loss"].update_state(real_loss)
-        self.train_metrics["fake_loss"].update_state(fake_loss)
-        self.train_metrics["dis_loss"].update_state(dis_loss)
-
-    def _eval_epoch(self):
-        """Evaluate model one epoch."""
-        logging.info(f"(Steps: {self.steps}) Start evaluation.")
-
-        # calculate loss for each batch
-        for eval_steps_per_epoch, batch in enumerate(
-            tqdm(self.eval_data_loader, desc="[eval]"), 1
-        ):
-            # eval one step
-            self._eval_step(batch)
-
-            if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
-                # save intermedia
-                self.generate_and_save_intermediate_result(batch)
-
-        logging.info(
-            f"(Steps: {self.steps}) Finished evaluation "
-            f"({eval_steps_per_epoch} steps per epoch)."
-        )
-
-        # average loss
-        for key in self.eval_metrics.keys():
-            logging.info(
-                f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}."
-            )
-
-        # record
-        self._write_to_tensorboard(self.eval_metrics, stage="eval")
-
-        # reset
-        self.reset_states_eval()
-
-    @tf.function(experimental_relax_shapes=True)
-    def _eval_step(self, batch):
-        """Evaluate model one step."""
-        y, mels = batch  # [B, T], [B, T, 80]
-
-        # Generator
-        y_hat = self.generator(mels)
-        p_hat = self.discriminator(y_hat)
+        p_hat = self._discriminator(y_hat)
+        p = self._discriminator(tf.expand_dims(audios, 2))
         adv_loss = 0.0
         for i in range(len(p_hat)):
-            adv_loss += self.mse_loss(
-                p_hat[i][-1], tf.ones_like(p_hat[i][-1], dtype=tf.float32)
+            adv_loss += calculate_3d_loss(
+                tf.ones_like(p_hat[i][-1]), p_hat[i][-1], loss_fn=self.mse_loss
             )
         adv_loss /= i + 1
 
-        p = self.discriminator(tf.expand_dims(y, 2))
+        # define feature-matching loss
         fm_loss = 0.0
         for i in range(len(p_hat)):
             for j in range(len(p_hat[i]) - 1):
-                fm_loss += self.mae_loss(p_hat[i][j], p[i][j])
-
+                fm_loss += calculate_3d_loss(
+                    p[i][j], p_hat[i][j], loss_fn=self.mae_loss
+                )
         fm_loss /= (i + 1) * (j + 1)
-        gen_loss = adv_loss + self.config["lambda_feat_match"] * fm_loss
+        adv_loss += self.config["lambda_feat_match"] * fm_loss
 
-        # discriminator
-        p_hat = self.discriminator(y_hat)
+        per_example_losses = adv_loss
+
+        dict_metrics_losses = {
+            "adversarial_loss": adv_loss,
+            "fm_loss": fm_loss,
+            "gen_loss": adv_loss,
+            "mels_spectrogram_loss": calculate_2d_loss(
+                audios, tf.squeeze(y_hat, -1), loss_fn=self.mels_loss
+            ),
+        }
+
+        return per_example_losses, dict_metrics_losses
+
+    def compute_per_example_discriminator_losses(self, batch, gen_outputs):
+        audios = batch["audios"]
+        y_hat = gen_outputs
+
+        y = tf.expand_dims(audios, 2)
+        p = self._discriminator(y)
+        p_hat = self._discriminator(y_hat)
+
         real_loss = 0.0
         fake_loss = 0.0
         for i in range(len(p)):
-            real_loss += self.mse_loss(p[i][-1], tf.ones_like(p[i][-1], tf.float32))
-            fake_loss += self.mse_loss(
-                p_hat[i][-1], tf.zeros_like(p_hat[i][-1], tf.float32)
+            real_loss += calculate_3d_loss(
+                tf.ones_like(p[i][-1]), p[i][-1], loss_fn=self.mse_loss
+            )
+            fake_loss += calculate_3d_loss(
+                tf.zeros_like(p_hat[i][-1]), p_hat[i][-1], loss_fn=self.mse_loss
             )
         real_loss /= i + 1
         fake_loss /= i + 1
         dis_loss = real_loss + fake_loss
 
-        # add to total eval loss
-        self.eval_metrics["adversarial_loss"].update_state(adv_loss)
-        self.eval_metrics["fm_loss"].update_state(fm_loss)
-        self.eval_metrics["gen_loss"].update_state(gen_loss)
-        self.eval_metrics["real_loss"].update_state(real_loss)
-        self.eval_metrics["fake_loss"].update_state(fake_loss)
-        self.eval_metrics["dis_loss"].update_state(dis_loss)
-        self.eval_metrics["mels_spectrogram_loss"].update_state(
-            self.mels_loss(y, tf.squeeze(y_hat, -1))
-        )
+        # calculate per_example_losses and dict_metrics_losses
+        per_example_losses = dis_loss
 
-    def _check_log_interval(self):
-        """Log to tensorboard."""
-        if self.steps % self.config["log_interval_steps"] == 0:
-            for metric_name in self.list_metrics_name:
-                logging.info(
-                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}."
-                )
-            self._write_to_tensorboard(self.train_metrics, stage="train")
+        dict_metrics_losses = {
+            "real_loss": real_loss,
+            "fake_loss": fake_loss,
+            "dis_loss": dis_loss,
+        }
 
-            # reset
-            self.reset_states_train()
-
-    @tf.function(
-        experimental_relax_shapes=True,
-        input_signature=[tf.TensorSpec([None, None, 80])],
-    )
-    def predict(self, mels):
-        """Predict."""
-        return self.generator(mels)
+        return per_example_losses, dict_metrics_losses
 
     def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
         # generate
-        y_batch, x_batch = batch
-        y_batch_ = self.predict(x_batch)
+        y_batch_ = self.one_step_predict(batch)
+        y_batch = batch["audios"]
+
+        # convert to tensor.
+        # here we just take a sample at first replica.
+        try:
+            y_batch_ = y_batch_.values[0].numpy()
+            y_batch = y_batch.values[0].numpy()
+        except Exception:
+            y_batch_ = y_batch_.numpy()
+            y_batch = y_batch.numpy()
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
@@ -361,24 +236,9 @@ class MelganTrainer(GanBasedTrainer):
                 "PCM_16",
             )
 
-    def _check_train_finish(self):
-        """Check training finished."""
-        if self.steps >= self.config["train_max_steps"]:
-            self.finish_train = True
-
-    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
-        self.set_train_data_loader(train_data_loader)
-        self.set_eval_data_loader(valid_data_loader)
-        self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
-        if len(resume) > 1:
-            self.load_checkpoint(resume)
-            logging.info(f"Successfully resumed from {resume}.")
-        self.run()
-
 
 def collater(
-    audio,
-    mel,
+    items,
     batch_max_steps=tf.constant(8192, dtype=tf.int32),
     hop_size=tf.constant(256, dtype=tf.int32),
 ):
@@ -389,6 +249,8 @@ def collater(
         hop_size (int): Hop size of auxiliary features.
 
     """
+    audio, mel = items["audios"], items["mels"]
+
     if batch_max_steps is None:
         batch_max_steps = (tf.shape(audio)[0] // hop_size) * hop_size
 
@@ -410,7 +272,15 @@ def collater(
         audio = tf.pad(audio, [[0, batch_max_steps - len(audio)]])
         mel = tf.pad(mel, [[0, batch_max_frames - len(mel)], [0, 0]])
 
-    return audio, mel
+    items = {
+        "utt_ids": items["utt_ids"],
+        "audios": audio,
+        "mels": mel,
+        "mel_lengths": len(mel),
+        "audio_lengths": len(audio),
+    }
+
+    return items
 
 
 def main():
@@ -465,6 +335,9 @@ def main():
         help="using mixed precision for discriminator or not.",
     )
     args = parser.parse_args()
+
+    # return strategy
+    STRATEGY = return_strategy()
 
     # set mixed precision config
     if args.generator_mixed_precision == 1 or args.discriminator_mixed_precision == 1:
@@ -542,11 +415,13 @@ def main():
         mel_length_threshold=mel_length_threshold,
     ).create(
         is_shuffle=config["is_shuffle"],
-        map_fn=lambda a, b: collater(
-            a, b, batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32)
+        map_fn=lambda items: collater(
+            items,
+            batch_max_steps=tf.constant(config["batch_max_steps"], dtype=tf.int32),
+            hop_size=tf.constant(config["hop_size"], dtype=tf.int32),
         ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"],
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
     )
 
     valid_dataset = AudioMelDataset(
@@ -558,57 +433,57 @@ def main():
         mel_length_threshold=mel_length_threshold,
     ).create(
         is_shuffle=config["is_shuffle"],
-        map_fn=lambda a, b: collater(
-            a,
-            b,
+        map_fn=lambda items: collater(
+            items,
             batch_max_steps=tf.constant(
                 config["batch_max_steps_valid"], dtype=tf.int32
             ),
+            hop_size=tf.constant(config["hop_size"], dtype=tf.int32),
         ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"],
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
     )
-
-    # define generator and discriminator
-    generator = TFMelGANGenerator(
-        MELGAN_CONFIG.MelGANGeneratorConfig(**config["generator_params"]),
-        name="melgan_generator",
-    )
-
-    discriminator = TFMelGANMultiScaleDiscriminator(
-        MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["discriminator_params"]),
-        name="melgan_discriminator",
-    )
-
-    # dummy input to build model.
-    fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
-    y_hat = generator(fake_mels)
-    discriminator(y_hat)
-
-    generator.summary()
-    discriminator.summary()
-
-    # Load pretrained here
-    # and fine-tune on ur target dataset.
-    # generater.load_weights(pretrained_generator.h5)
-    # discriminator.load_weights(pretrained_discriminator.h5)
 
     # define trainer
     trainer = MelganTrainer(
         steps=0,
         epochs=0,
         config=config,
+        strategy=STRATEGY,
         is_generator_mixed_precision=args.generator_mixed_precision,
         is_discriminator_mixed_precision=args.discriminator_mixed_precision,
     )
 
+    # define generator and discriminator
+    with STRATEGY.scope():
+        generator = TFMelGANGenerator(
+            MELGAN_CONFIG.MelGANGeneratorConfig(**config["generator_params"]),
+            name="melgan_generator",
+        )
+
+        discriminator = TFMelGANMultiScaleDiscriminator(
+            MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["discriminator_params"]),
+            name="melgan_discriminator",
+        )
+
+        # dummy input to build model.
+        fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
+        y_hat = generator(fake_mels)
+        discriminator(y_hat)
+
+        generator.summary()
+        discriminator.summary()
+
+        gen_optimizer = tf.keras.optimizers.Adam(**config["generator_optimizer_params"])
+        dis_optimizer = tf.keras.optimizers.Adam(
+            **config["discriminator_optimizer_params"]
+        )
+
     trainer.compile(
         gen_model=generator,
         dis_model=discriminator,
-        gen_optimizer=tf.keras.optimizers.Adam(**config["generator_optimizer_params"]),
-        dis_optimizer=tf.keras.optimizers.Adam(
-            **config["discriminator_optimizer_params"]
-        ),
+        gen_optimizer=gen_optimizer,
+        dis_optimizer=dis_optimizer,
     )
 
     # start training

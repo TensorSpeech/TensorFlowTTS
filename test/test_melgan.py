@@ -19,11 +19,8 @@ import os
 import pytest
 import tensorflow as tf
 
-from tensorflow_tts.models import TFMelGANGenerator
-from tensorflow_tts.models import TFMelGANMultiScaleDiscriminator
-
-from tensorflow_tts.configs import MelGANGeneratorConfig
-from tensorflow_tts.configs import MelGANDiscriminatorConfig
+from tensorflow_tts.configs import MelGANDiscriminatorConfig, MelGANGeneratorConfig
+from tensorflow_tts.models import TFMelGANGenerator, TFMelGANMultiScaleDiscriminator
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 

@@ -15,15 +15,14 @@
 
 import logging
 import os
-import pytest
-import numpy as np
-import tensorflow as tf
-
 import time
 
-from tensorflow_tts.models import TFTacotron2
-from tensorflow_tts.configs import Tacotron2Config
+import numpy as np
+import pytest
+import tensorflow as tf
 
+from tensorflow_tts.configs import Tacotron2Config
+from tensorflow_tts.models import TFTacotron2
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -49,7 +48,7 @@ def test_tacotron2_trainable(
         [batch_size, max_input_length], maxval=n_chars, dtype=tf.int32
     )
     speaker_ids = tf.convert_to_tensor([0] * batch_size, tf.int32)
-    mel_outputs = tf.random.uniform(shape=[batch_size, max_mel_length, 80])
+    mel_gts = tf.random.uniform(shape=[batch_size, max_mel_length, 80])
     mel_lengths = np.random.randint(
         max_mel_length, high=max_mel_length + 1, size=[batch_size]
     )
@@ -64,18 +63,18 @@ def test_tacotron2_trainable(
     binary_crossentropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
     @tf.function(experimental_relax_shapes=True)
-    def one_step_training(input_ids, speaker_ids, mel_outputs, mel_lengths):
+    def one_step_training(input_ids, speaker_ids, mel_gts, mel_lengths):
         with tf.GradientTape() as tape:
             mel_preds, post_mel_preds, stop_preds, alignment_history = model(
                 input_ids,
                 tf.constant([max_input_length, max_input_length]),
                 speaker_ids,
-                mel_outputs,
+                mel_gts,
                 mel_lengths,
                 training=True,
             )
-            loss_before = tf.keras.losses.MeanSquaredError()(mel_outputs, mel_preds)
-            loss_after = tf.keras.losses.MeanSquaredError()(mel_outputs, post_mel_preds)
+            loss_before = tf.keras.losses.MeanSquaredError()(mel_gts, mel_preds)
+            loss_after = tf.keras.losses.MeanSquaredError()(mel_gts, post_mel_preds)
 
             stop_gts = tf.expand_dims(
                 tf.range(tf.reduce_max(mel_lengths), dtype=tf.int32), 0
@@ -99,7 +98,7 @@ def test_tacotron2_trainable(
         if i == 1:
             start = time.time()
         loss, alignment_history = one_step_training(
-            input_ids, speaker_ids, mel_outputs, mel_lengths
+            input_ids, speaker_ids, mel_gts, mel_lengths
         )
         print(f" > loss: {loss}")
     total_runtime = time.time() - start

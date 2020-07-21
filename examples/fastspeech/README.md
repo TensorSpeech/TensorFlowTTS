@@ -21,6 +21,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/fastspeech/train_fastspeech.py \
   --resume ""
 ```
 
+IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode.
+
 ### Step 3: Decode mel-spectrogram from folder ids
 To running inference on folder ids (charactor), run below command line:
 

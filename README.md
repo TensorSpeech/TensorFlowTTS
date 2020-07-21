@@ -19,8 +19,9 @@
 :zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems. 
 
 ## What's new
+- 2020/07/17 **(NEW!)** Support MultiGPU for all Trainer.
 - 2020/07/05 **(New!)** Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from TFlite team for his support.
-- 2020/06/20 **(New!)** [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
+- 2020/06/20 [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
 - 2020/06/07 [Multi-band MelGAN (MB MelGAN)](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported. 
 
 
@@ -31,6 +32,7 @@
 - Suitable for deployment.
 - Easy to implement new model based-on abtract class.
 - Mixed precision to speed-up training if posible.
+- Support both Single/Multi GPU in base trainer class.
 - TFlite conversion for all supported model.
 
 ## Requirements
@@ -40,9 +42,9 @@ This repository is tested on Ubuntu 18.04 with:
 - Cuda 10.1
 - CuDNN 7.6.5
 - Tensorflow 2.2
-- [Tensorflow Addons](https://github.com/tensorflow/addons) 0.9.1
+- [Tensorflow Addons](https://github.com/tensorflow/addons) 0.10.0
 
-Different Tensorflow version should be working but not tested yet. This repo will try to work with latest stable tensorflow version.
+Different Tensorflow version should be working but not tested yet. This repo will try to work with latest stable tensorflow version. **We recommend you install tensorflow 2.3.0 to training in case you want to use MultiGPU.**
 
 ## Installation
 ### With pip
@@ -79,7 +81,7 @@ We are also implement some techniques to improve quality and convergence speed f
 
 
 # Audio Samples
-Here in an audio samples on valid set. [tacotron-2](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b), [fastspeech2](https://drive.google.com/drive/u/1/folders/1NG7oOfNuXSh7WyAoM1hI8P5BxDALY_mU)
+Here in an audio samples on valid set. [tacotron-2](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_), [fastspeech](https://drive.google.com/open?id=1f69ujszFeGnIy7PMwc8AkUckhIaT2OD0), [melgan](https://drive.google.com/open?id=1mBwGVchwtNkgFsURl7g4nMiqx4gquAC2), [melgan.stft](https://drive.google.com/open?id=1xUkDjbciupEkM3N4obiJAYySTo6J9z6b), [fastspeech2](https://drive.google.com/drive/u/1/folders/1NG7oOfNuXSh7WyAoM1hI8P5BxDALY_mU), [multiband_melgan](https://drive.google.com/drive/folders/1DCV3sa6VTyoJzZmKATYvYVDUAFXlQ_Zp)
 
 # Tutorial End-to-End
 
@@ -193,7 +195,7 @@ To know how to training model from scratch or fine-tune with other datasets/lang
 A detail implementation of abstract dataset class from [tensorflow_tts/dataset/abstract_dataset](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/datasets/abstract_dataset.py). There are some functions you need overide and understand:
 
 1. **get_args**: This function return argumentation for **generator** class, normally is utt_ids.
-2. **generator**: This funtion have an inputs from **get_args** function and return a inputs for models.
+2. **generator**: This funtion have an inputs from **get_args** function and return a inputs for models. **Note that we return dictionary for all generator function with they keys exactly match with the parameter of the model because base_trainer will use model(\*\*batch) to do forward step.**
 3. **get_output_dtypes**: This function need return dtypes for each element from **generator** function.
 4. **get_len_dataset**: Return len of datasets, normaly is len(utt_ids).
 
@@ -203,22 +205,18 @@ A detail implementation of abstract dataset class from [tensorflow_tts/dataset/a
 - If you do shuffle before cache, the dataset won't shuffle when it re-iterate over datasets.
 - You should apply map_fn to make each elements return from **generator** function have a same length before get batch and feed it into a model.
 
-Some examples to use this **abstract_dataset** are [tacotron_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/tacotron_dataset.py), [fastspeech_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/fastspeech_dataset.py), [melgan_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/audio_mel_dataset.py).
+Some examples to use this **abstract_dataset** are [tacotron_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/tacotron_dataset.py), [fastspeech_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/fastspeech_dataset.py), [melgan_dataset.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/audio_mel_dataset.py), [fastspeech2_dataset.py](https://github.com/TensorSpeech/TensorflowTTS/blob/master/examples/fastspeech2/fastspeech2_dataset.py)
 
 
 ## Abstract Trainer Class
 
-A detail implementation of base_trainer from [tensorflow_tts/trainer/base_trainer.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py). It include [Seq2SeqBasedTrainer](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py#L265) and [GanBasedTrainer](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py#L149) inherit from [BasedTrainer](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py#L16). There a some functions you **MUST** overide when implement new_trainer:
+A detail implementation of base_trainer from [tensorflow_tts/trainer/base_trainer.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py). It include [Seq2SeqBasedTrainer](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py#L265) and [GanBasedTrainer](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py#L149) inherit from [BasedTrainer](https://github.com/dathudeptrai/TensorflowTTS/blob/master/tensorflow_tts/trainers/base_trainer.py#L16). All trainer support both single/multi GPU. There a some functions you **MUST** overide when implement new_trainer:
 
 - **compile**: This function aim to define a models, and losses.
-- **_train_step**: This function perform one step training logic of a model.
-- **_eval_epoch**: This function perform eval epoch, include **_eval_step**, **generate_and_save_intermediate_result** and **_write_to_tensorboard**.
-- **_eval_step**: This function perform evaluation steps, calculate loss and write it into tensorboard.
-- **_check_log_interval**: This function write training loss into tensorboard after pre-define interval steps.
 - **generate_and_save_intermediate_result**: This function will save intermediate result such as: plot alignment, save audio generated, plot mel-spectrogram ...
-- **_check_train_finish**: Check if a training progress finished or not.
+- **compute_per_example_losses**: This function will compute per_example_loss for model, note that all element of the loss **MUST** has shape [batch_size].
 
-All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py), [train_multiband_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/train_multiband_melgan.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). In the near future, we will implement MultiGPU for **BasedTrainer** class.
+All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py), [train_multiband_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/train_multiband_melgan.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)). 
 
 # End-to-End Examples
 You can know how to inference each model at [notebooks](https://github.com/dathudeptrai/TensorflowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing). Here is an example code for end2end inference with fastspeech and melgan.
@@ -264,7 +262,6 @@ ids = tf.expand_dims(ids, 0)
 
 masked_mel_before, masked_mel_after, duration_outputs = fastspeech.inference(
     ids,
-    attention_mask=tf.math.not_equal(ids, 0),
     speaker_ids=tf.zeros(shape=[tf.shape(ids)[0]]),
     speed_ratios=tf.constant([1.0], dtype=tf.float32)
 )

@@ -17,8 +17,8 @@
 # Compatible with https://github.com/kan-bayashi/ParallelWaveGAN/blob/master/parallel_wavegan/layers/pqmf.py.
 """Multi-band MelGAN Modules."""
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from scipy.signal import kaiser
 
 

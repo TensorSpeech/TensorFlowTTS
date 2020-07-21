@@ -13,17 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import tensorflow as tf
+
 import logging
 import os
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
 from tensorflow_tts.configs import MultiBandMelGANGeneratorConfig
-
-from tensorflow_tts.models import TFMelGANGenerator
-from tensorflow_tts.models import TFPQMF
+from tensorflow_tts.models import TFPQMF, TFMelGANGenerator
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 

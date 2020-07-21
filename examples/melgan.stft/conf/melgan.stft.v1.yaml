@@ -75,7 +75,7 @@ generator_optimizer_params:
     lr_fn: "PiecewiseConstantDecay"
     lr_params: 
         boundaries: [100000]       # = discriminator_train_start_steps.
-        values: [0.001, 0.0001]    # learning rate each interval.
+        values: [0.0005, 0.0001]    # learning rate each interval.
 
     
 discriminator_optimizer_params:

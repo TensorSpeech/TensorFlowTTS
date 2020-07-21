@@ -15,11 +15,12 @@
 
 import logging
 import os
+
 import pytest
 import tensorflow as tf
 
-from tensorflow_tts.models import TFFastSpeech2
 from tensorflow_tts.configs import FastSpeech2Config
+from tensorflow_tts.models import TFFastSpeech2
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -34,7 +35,7 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
     config = FastSpeech2Config(
         encoder_num_hidden_layers=num_hidden_layers,
         decoder_num_hidden_layers=num_hidden_layers + 1,
-        n_speakers=n_speakers
+        n_speakers=n_speakers,
     )
 
     fastspeech2 = TFFastSpeech2(config, name="fastspeech")
@@ -54,7 +55,12 @@ def test_fastspeech_trainable(num_hidden_layers, n_speakers):
     def one_step_training():
         with tf.GradientTape() as tape:
             mel_outputs_before, _, duration_outputs, _, _ = fastspeech2(
-                input_ids, attention_mask, speaker_ids, duration_gts, f0_gts, energy_gts, training=True
+                input_ids,
+                speaker_ids,
+                duration_gts,
+                f0_gts,
+                energy_gts,
+                training=True,
             )
             duration_loss = tf.keras.losses.MeanSquaredError()(
                 duration_gts, duration_outputs

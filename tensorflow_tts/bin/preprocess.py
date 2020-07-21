@@ -18,15 +18,13 @@ import argparse
 import logging
 import os
 
-from pathos.multiprocessing import ProcessingPool as Pool
-
 import librosa
 import numpy as np
-import yaml
 import pyworld as pw
-
-from tqdm import tqdm
+import yaml
+from pathos.multiprocessing import ProcessingPool as Pool
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
 

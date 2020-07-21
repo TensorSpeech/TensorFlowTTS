@@ -2,8 +2,8 @@
 # This code is copy and modify from https://github.com/keithito/tacotron.
 """Perform preprocessing and raw feature extraction."""
 
-import re
 import os
+import re
 
 import numpy as np
 import soundfile as sf

@@ -19,15 +19,15 @@ fastspeech_params:
     encoder_hidden_size: 256
     encoder_num_hidden_layers: 3
     encoder_num_attention_heads: 2
-    encoder_attention_head_size: 8  # in v1, = 384//2
+    encoder_attention_head_size: 16  # in v1, = 384//2
     encoder_intermediate_size: 1024
     encoder_intermediate_kernel_size: 3
     encoder_hidden_act: "mish"
     decoder_hidden_size: 256
     decoder_num_hidden_layers: 3
     decoder_num_attention_heads: 2
-    decoder_attention_head_size: 8  # in v1, = 384//2
-    decoder_intermediate_size: 768
+    decoder_attention_head_size: 16  # in v1, = 384//2
+    decoder_intermediate_size: 1024
     decoder_intermediate_kernel_size: 3
     decoder_hidden_act: "mish"
     variant_prediction_num_conv_layers: 2
