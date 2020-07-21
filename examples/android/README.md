@@ -13,4 +13,7 @@ This is a simple Android demo which will load converted FastSpeech2 and Multi-Ba
 * LJSpeechProcessor is not implemented in this demo.
 
 ### LICENSE
- The license use for this code is [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/)
+ The license use for this code is [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/). Please read the license carefully before you use it.
+
+### Contributors
+[Xuefeng Ding](https://github.com/mapledxf)
