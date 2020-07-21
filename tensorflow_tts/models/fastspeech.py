@@ -743,17 +743,15 @@ class TFFastSpeech(tf.keras.Model):
         """Dummy input for building model."""
         # fake inputs
         input_ids = tf.convert_to_tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]], tf.int32)
-        attention_mask = tf.convert_to_tensor(
-            [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32
-        )
         speaker_ids = tf.convert_to_tensor([0], tf.int32)
         duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32)
-        self(input_ids, attention_mask, speaker_ids, duration_gts)
+        self(input_ids, speaker_ids, duration_gts)
 
     def call(
-        self, input_ids, attention_mask, speaker_ids, duration_gts, training=False
+        self, input_ids, speaker_ids, duration_gts, training=False, **kwargs,
     ):
         """Call logic."""
+        attention_mask = tf.math.not_equal(input_ids, 0)
         embedding_output = self.embeddings([input_ids, speaker_ids], training=training)
         encoder_output = self.encoder(
             [embedding_output, attention_mask], training=training
@@ -791,8 +789,9 @@ class TFFastSpeech(tf.keras.Model):
         outputs = (mel_before, mel_after, duration_outputs)
         return outputs
 
-    def _inference(self, input_ids, attention_mask, speaker_ids, speed_ratios):
+    def _inference(self, input_ids, speaker_ids, speed_ratios, **kwargs):
         """Call logic."""
+        attention_mask = tf.math.not_equal(input_ids, 0)
         embedding_output = self.embeddings([input_ids, speaker_ids], training=False)
         encoder_output = self.encoder(
             [embedding_output, attention_mask], training=False
@@ -808,6 +807,8 @@ class TFFastSpeech(tf.keras.Model):
 
         if speed_ratios is None:
             speed_ratios = tf.convert_to_tensor(np.array([1.0]), dtype=tf.float32)
+
+        speed_ratios = tf.expand_dims(speed_ratios, 1)
 
         duration_outputs = tf.cast(
             tf.math.round(duration_outputs * speed_ratios), tf.int32
@@ -844,7 +845,6 @@ class TFFastSpeech(tf.keras.Model):
             experimental_relax_shapes=True,
             input_signature=[
                 tf.TensorSpec(shape=[None, None], dtype=tf.int32),
-                tf.TensorSpec(shape=[None, None], dtype=tf.bool),
                 tf.TensorSpec(shape=[None,], dtype=tf.int32),
                 tf.TensorSpec(shape=[None,], dtype=tf.float32),
             ],
@@ -855,7 +855,6 @@ class TFFastSpeech(tf.keras.Model):
             experimental_relax_shapes=True,
             input_signature=[
                 tf.TensorSpec(shape=[1, None], dtype=tf.int32),
-                tf.TensorSpec(shape=[1, None], dtype=tf.bool),
                 tf.TensorSpec(shape=[1,], dtype=tf.int32),
                 tf.TensorSpec(shape=[1,], dtype=tf.float32),
             ],

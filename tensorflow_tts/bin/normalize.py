@@ -21,7 +21,6 @@ import os
 
 import numpy as np
 import yaml
-
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
@@ -103,7 +102,6 @@ def main():
             args.rootdir,
             mel_query=mel_query,
             mel_load_fn=mel_load_fn,
-            return_utt_id=True,
         ).create(batch_size=1)
 
     # restore scaler
@@ -121,7 +119,7 @@ def main():
 
     # process each file
     for items in tqdm(dataset):
-        utt_id, mel, _ = items
+        utt_id, mel = items["utt_ids"], items["mels"]
 
         # convert to numpy
         utt_id = utt_id[0].numpy().decode("utf-8")

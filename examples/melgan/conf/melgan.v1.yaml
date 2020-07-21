@@ -75,9 +75,10 @@ discriminator_optimizer_params:
 #                    INTERVAL SETTING                     #
 ###########################################################
 train_max_steps: 4000000                # Number of training steps.
-save_interval_steps: 10000               # Interval steps to save checkpoint.
-eval_interval_steps: 5000              # Interval steps to evaluate the network.
-log_interval_steps: 200                # Interval steps to record the training log.
+save_interval_steps: 3               # Interval steps to save checkpoint.
+eval_interval_steps: 2              # Interval steps to evaluate the network.
+log_interval_steps: 1                # Interval steps to record the training log.
+discriminator_train_start_steps: 0     # step to start training discriminator.
 
 ###########################################################
 #                     OTHER SETTING                       #

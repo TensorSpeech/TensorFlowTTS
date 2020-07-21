@@ -15,8 +15,9 @@
 """AdamW for training self-attention."""
 
 
-import tensorflow as tf
 import re
+
+import tensorflow as tf
 
 
 class WarmUp(tf.keras.optimizers.schedules.LearningRateSchedule):

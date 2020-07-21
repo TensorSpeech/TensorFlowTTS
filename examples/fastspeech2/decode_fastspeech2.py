@@ -18,16 +18,16 @@ import argparse
 import logging
 import os
 import sys
+
 sys.path.append(".")
 
 import numpy as np
-import yaml
 import tensorflow as tf
-
+import yaml
 from tqdm import tqdm
 
-from tensorflow_tts.configs import FastSpeech2Config
 from examples.fastspeech.fastspeech_dataset import CharactorDataset
+from tensorflow_tts.configs import FastSpeech2Config
 from tensorflow_tts.models import TFFastSpeech2
 
 
@@ -111,7 +111,6 @@ def main():
         root_dir=args.rootdir,
         charactor_query=char_query,
         charactor_load_fn=char_load_fn,
-        return_utt_id=True,
     )
     dataset = dataset.create(batch_size=args.batch_size)
 
@@ -123,8 +122,8 @@ def main():
     fastspeech2.load_weights(args.checkpoint)
 
     for data in tqdm(dataset, desc="Decoding"):
-        utt_ids = data[0]
-        char_ids = data[1]
+        utt_ids = data["utt_ids"]
+        char_ids = data["input_ids"]
 
         # fastspeech inference.
         (
@@ -135,7 +134,6 @@ def main():
             _,
         ) = fastspeech2.inference(
             char_ids,
-            attention_mask=tf.math.not_equal(char_ids, 0),
             speaker_ids=tf.zeros(shape=[tf.shape(char_ids)[0]], dtype=tf.int32),
             speed_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
             f0_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),

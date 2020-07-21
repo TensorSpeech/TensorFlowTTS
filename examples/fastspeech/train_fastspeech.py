@@ -14,36 +14,37 @@
 # limitations under the License.
 """Train FastSpeech."""
 
+import tensorflow as tf
+
+physical_devices = tf.config.list_physical_devices("GPU")
+for i in range(len(physical_devices)):
+    tf.config.experimental.set_memory_growth(physical_devices[i], True)
+
 import argparse
 import logging
 import os
 import sys
+
 sys.path.append(".")
 
 import numpy as np
-import tensorflow as tf
 import yaml
 
 import tensorflow_tts
-
-from tqdm import tqdm
-
-from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from examples.fastspeech.fastspeech_dataset import CharactorDurationMelDataset
-
 import tensorflow_tts.configs.fastspeech as FASTSPEECH_CONFIG
-
+from examples.fastspeech.fastspeech_dataset import CharactorDurationMelDataset
 from tensorflow_tts.models import TFFastSpeech
-
-from tensorflow_tts.optimizers import WarmUp
-from tensorflow_tts.optimizers import AdamWeightDecay
+from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
+from tensorflow_tts.trainers import Seq2SeqBasedTrainer
+from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
+                                  return_strategy)
 
 
 class FastSpeechTrainer(Seq2SeqBasedTrainer):
     """FastSpeech Trainer class based on Seq2SeqBasedTrainer."""
 
     def __init__(
-        self, config, steps=0, epochs=0, is_mixed_precision=False,
+        self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
     ):
         """Initialize trainer.
 
@@ -58,6 +59,7 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             steps=steps,
             epochs=epochs,
             config=config,
+            strategy=strategy,
             is_mixed_precision=is_mixed_precision,
         )
         # define metrics to aggregates data and use tf.summary logs them
@@ -68,202 +70,79 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
 
         self.config = config
 
-    def init_train_eval_metrics(self, list_metrics_name):
-        """Init train and eval metrics to save it to tensorboard."""
-        self.train_metrics = {}
-        self.eval_metrics = {}
-        for name in list_metrics_name:
-            self.train_metrics.update(
-                {name: tf.keras.metrics.Mean(name="train_" + name, dtype=tf.float32)}
-            )
-            self.eval_metrics.update(
-                {name: tf.keras.metrics.Mean(name="eval_" + name, dtype=tf.float32)}
-            )
-
-    def reset_states_train(self):
-        """Reset train metrics after save it to tensorboard."""
-        for metric in self.train_metrics.keys():
-            self.train_metrics[metric].reset_states()
-
-    def reset_states_eval(self):
-        """Reset eval metrics after save it to tensorboard."""
-        for metric in self.eval_metrics.keys():
-            self.eval_metrics[metric].reset_states()
-
     def compile(self, model, optimizer):
         super().compile(model, optimizer)
-        self.mse_log = tf.keras.losses.MeanSquaredLogarithmicError()
-        self.mse = tf.keras.losses.MeanSquaredError()
-        self.mae = tf.keras.losses.MeanAbsoluteError()
-
-    def _train_step(self, batch):
-        """Train model one step."""
-        charactor, duration, mel = batch
-        self._one_step_fastspeech(charactor, duration, mel)
-
-        # update counts
-        self.steps += 1
-        self.tqdm.update(1)
-        self._check_train_finish()
-
-    @tf.function(
-        experimental_relax_shapes=True,
-        input_signature=[
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, None, 80], dtype=tf.float32),
-        ],
-    )
-    def _one_step_fastspeech(self, charactor, duration, mel):
-        with tf.GradientTape() as tape:
-            masked_mel_before, masked_mel_after, masked_duration_outputs = self.model(
-                charactor,
-                attention_mask=tf.math.not_equal(charactor, 0),
-                speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
-                duration_gts=duration,
-                training=True,
-            )
-            log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
-            duration_loss = self.mse(log_duration, masked_duration_outputs)
-            mel_loss_before = self.mae(mel, masked_mel_before)
-            mel_loss_after = self.mae(mel, masked_mel_after)
-            loss = duration_loss + mel_loss_before + mel_loss_after
-
-            if self.is_mixed_precision:
-                scaled_loss = self.optimizer.get_scaled_loss(loss)
-
-        if self.is_mixed_precision:
-            scaled_gradients = tape.gradient(
-                scaled_loss, self.model.trainable_variables
-            )
-            gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
-        else:
-            gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables), 5.0
+        self.mse = tf.keras.losses.MeanSquaredError(
+            reduction=tf.keras.losses.Reduction.NONE
+        )
+        self.mae = tf.keras.losses.MeanAbsoluteError(
+            reduction=tf.keras.losses.Reduction.NONE
         )
 
-        # accumulate loss into metrics
-        self.train_metrics["duration_loss"].update_state(duration_loss)
-        self.train_metrics["mel_loss_before"].update_state(mel_loss_before)
-        self.train_metrics["mel_loss_after"].update_state(mel_loss_after)
+    def compute_per_example_losses(self, batch, outputs):
+        """Compute per example losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
-    def _eval_epoch(self):
-        """Evaluate model one epoch."""
-        logging.info(f"(Steps: {self.steps}) Start evaluation.")
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
+        mel_before, mel_after, duration_outputs = outputs
 
-        # calculate loss for each batch
-        for eval_steps_per_epoch, batch in enumerate(
-            tqdm(self.eval_data_loader, desc="[eval]"), 1
-        ):
-            # eval one step
-            charactor, duration, mel = batch
-            self._eval_step(charactor, duration, mel)
-
-            if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
-                # save intermedia
-                self.generate_and_save_intermediate_result(batch)
-
-        logging.info(
-            f"(Steps: {self.steps}) Finished evaluation "
-            f"({eval_steps_per_epoch} steps per epoch)."
+        log_duration = tf.math.log(
+            tf.cast(tf.math.add(batch["duration_gts"], 1), tf.float32)
         )
+        duration_loss = self.mse(log_duration, duration_outputs)
+        mel_loss_before = calculate_3d_loss(batch["mel_gts"], mel_before, self.mae)
+        mel_loss_after = calculate_3d_loss(batch["mel_gts"], mel_after, self.mae)
 
-        # average loss
-        for key in self.eval_metrics.keys():
-            logging.info(
-                f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}."
-            )
+        per_example_losses = duration_loss + mel_loss_before + mel_loss_after
 
-        # record
-        self._write_to_tensorboard(self.eval_metrics, stage="eval")
+        dict_metrics_losses = {
+            "duration_loss": duration_loss,
+            "mel_loss_before": mel_loss_before,
+            "mel_loss_after": mel_loss_after,
+        }
 
-        # reset
-        self.reset_states_eval()
-
-    @tf.function(
-        experimental_relax_shapes=True,
-        input_signature=[
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, None, 80], dtype=tf.float32),
-        ],
-    )
-    def _eval_step(self, charactor, duration, mel):
-        """Evaluate model one step."""
-        masked_mel_before, masked_mel_after, masked_duration_outputs = self.model(
-            charactor,
-            attention_mask=tf.math.not_equal(charactor, 0),
-            speaker_ids=tf.zeros(shape=[tf.shape(mel)[0]]),
-            duration_gts=duration,
-            training=False,
-        )
-        log_duration = tf.math.log(tf.cast(tf.math.add(duration, 1), tf.float32))
-        duration_loss = self.mse(log_duration, masked_duration_outputs)
-        mel_loss_before = self.mae(mel, masked_mel_before)
-        mel_loss_after = self.mae(mel, masked_mel_after)
-
-        # accumulate loss into metrics
-        self.eval_metrics["duration_loss"].update_state(duration_loss)
-        self.eval_metrics["mel_loss_before"].update_state(mel_loss_before)
-        self.eval_metrics["mel_loss_after"].update_state(mel_loss_after)
-
-    def _check_log_interval(self):
-        """Log to tensorboard."""
-        if self.steps % self.config["log_interval_steps"] == 0:
-            for metric_name in self.list_metrics_name:
-                logging.info(
-                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}."
-                )
-            self._write_to_tensorboard(self.train_metrics, stage="train")
-
-            # reset
-            self.reset_states_train()
-
-    @tf.function(
-        experimental_relax_shapes=True,
-        input_signature=[
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None, None, 80], dtype=tf.float32),
-        ],
-    )
-    def predict(self, charactor, duration, mel):
-        """Predict."""
-        masked_mel_before, masked_mel_after, _ = self.model(
-            charactor,
-            attention_mask=tf.math.not_equal(charactor, 0),
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-            duration_gts=duration,
-            training=False,
-        )
-        return masked_mel_before, masked_mel_after
+        return per_example_losses, dict_metrics_losses
 
     def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
-        # unpack input.
-        charactor, duration, mel = batch
-
         # predict with tf.function.
-        masked_mel_before, masked_mel_after = self.predict(charactor, duration, mel)
+        outputs = self.one_step_predict(batch)
+
+        mels_before, mels_after, *_ = outputs
+        mel_gts = batch["mel_gts"]
+
+        # convert to tensor.
+        # here we just take a sample at first replica.
+        try:
+            mels_before = mels_before.values[0].numpy()
+            mels_after = mels_after.values[0].numpy()
+            mel_gts = mel_gts.values[0].numpy()
+        except Exception:
+            mels_before = mels_before.numpy()
+            mels_after = mels_after.numpy()
+            mel_gts = mel_gts.numpy()
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for idx, (mel_gt, mel_pred_before, mel_pred_after) in enumerate(
-            zip(mel, masked_mel_before, masked_mel_after), 1
+        for idx, (mel_gt, mel_before, mel_after) in enumerate(
+            zip(mel_gts, mels_before, mels_after), 1
         ):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
-            mel_pred_before = tf.reshape(
-                mel_pred_before, (-1, 80)
-            ).numpy()  # [length, 80]
-            mel_pred_after = tf.reshape(
-                mel_pred_after, (-1, 80)
-            ).numpy()  # [length, 80]
+            mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
+            mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
 
             # plit figure and save it
             figname = os.path.join(dirname, f"{idx}.png")
@@ -275,32 +154,14 @@ class FastSpeechTrainer(Seq2SeqBasedTrainer):
             ax1.set_title("Target Mel-Spectrogram")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax1)
             ax2.set_title("Predicted Mel-before-Spectrogram")
-            im = ax2.imshow(
-                np.rot90(mel_pred_before), aspect="auto", interpolation="none"
-            )
+            im = ax2.imshow(np.rot90(mel_before), aspect="auto", interpolation="none")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax2)
             ax3.set_title("Predicted Mel-after-Spectrogram")
-            im = ax3.imshow(
-                np.rot90(mel_pred_after), aspect="auto", interpolation="none"
-            )
+            im = ax3.imshow(np.rot90(mel_after), aspect="auto", interpolation="none")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax3)
             plt.tight_layout()
             plt.savefig(figname)
             plt.close()
-
-    def _check_train_finish(self):
-        """Check training finished."""
-        if self.steps >= self.config["train_max_steps"]:
-            self.finish_train = True
-
-    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
-        self.set_train_data_loader(train_data_loader)
-        self.set_eval_data_loader(valid_data_loader)
-        self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
-        if len(resume) > 1:
-            self.load_checkpoint(resume)
-            logging.info(f"Successfully resumed from {resume}.")
-        self.run()
 
 
 def main():
@@ -349,6 +210,9 @@ def main():
         help="using mixed precision for generator or not.",
     )
     args = parser.parse_args()
+
+    # return strategy
+    STRATEGY = return_strategy()
 
     # set mixed precision config
     if args.mixed_precision == 1:
@@ -424,11 +288,10 @@ def main():
         mel_load_fn=mel_load_fn,
         duration_load_fn=duration_load_fn,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"],
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
     )
 
     valid_dataset = CharactorDurationMelDataset(
@@ -439,48 +302,60 @@ def main():
         charactor_load_fn=charactor_load_fn,
         mel_load_fn=mel_load_fn,
         duration_load_fn=duration_load_fn,
-        mel_length_threshold=None,
-        return_utt_id=False,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"],
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
     )
-
-    fastspeech = TFFastSpeech(
-        config=FASTSPEECH_CONFIG.FastSpeechConfig(**config["fastspeech_params"])
-    )
-    fastspeech._build()
-    fastspeech.summary()
 
     # define trainer
     trainer = FastSpeechTrainer(
-        config=config, steps=0, epochs=0, is_mixed_precision=False
+        config=config,
+        strategy=STRATEGY,
+        steps=0,
+        epochs=0,
+        is_mixed_precision=args.mixed_precision,
     )
 
-    # AdamW for fastspeech
-    learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
-        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
-        decay_steps=config["optimizer_params"]["decay_steps"],
-        end_learning_rate=config["optimizer_params"]["end_learning_rate"],
-    )
+    with STRATEGY.scope():
+        # define model
+        fastspeech = TFFastSpeech(
+            config=FASTSPEECH_CONFIG.FastSpeechConfig(**config["fastspeech_params"])
+        )
+        fastspeech._build()
+        fastspeech.summary()
 
-    learning_rate_fn = WarmUp(
-        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
-        decay_schedule_fn=learning_rate_fn,
-        warmup_steps=int(
-            config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"]
-        ),
-    )
+        # AdamW for fastspeech
+        learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
+            initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+            decay_steps=config["optimizer_params"]["decay_steps"],
+            end_learning_rate=config["optimizer_params"]["end_learning_rate"],
+        )
 
-    optimizer = AdamWeightDecay(
-        learning_rate=learning_rate_fn,
-        weight_decay_rate=config["optimizer_params"]["weight_decay"],
-        beta_1=0.9,
-        beta_2=0.98,
-        epsilon=1e-6,
-        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"],
-    )
+        learning_rate_fn = WarmUp(
+            initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+            decay_schedule_fn=learning_rate_fn,
+            warmup_steps=int(
+                config["train_max_steps"]
+                * config["optimizer_params"]["warmup_proportion"]
+            ),
+        )
+
+        optimizer = AdamWeightDecay(
+            learning_rate=learning_rate_fn,
+            weight_decay_rate=config["optimizer_params"]["weight_decay"],
+            beta_1=0.9,
+            beta_2=0.98,
+            epsilon=1e-6,
+            exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"],
+        )
+
+        _ = optimizer.iterations
+
+        if args.mixed_precision:
+            optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                optimizer, "dynamic"
+            )
 
     # compile trainer
     trainer.compile(model=fastspeech, optimizer=optimizer)

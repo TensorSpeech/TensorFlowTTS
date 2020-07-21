@@ -20,13 +20,10 @@ import os
 
 import numpy as np
 import yaml
-
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.datasets import MelDataset
-from tensorflow_tts.datasets import AudioDataset
-
+from tensorflow_tts.datasets import AudioDataset, MelDataset
 from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -103,8 +100,8 @@ def main():
 
     # calculate statistics
     scaler = StandardScaler()
-    for mel, mel_length in tqdm(dataset):
-        mel = mel[0].numpy()
+    for data in tqdm(dataset):
+        mel = data["mels"][0].numpy()
         scaler.partial_fit(mel)
 
     # save to file
@@ -121,8 +118,8 @@ def main():
     ).create(batch_size=1)
 
     pitch_vecs = []
-    for f0, f0_length in tqdm(f0_dataset):
-        f0 = f0[0].numpy()  # [T]
+    for data in tqdm(f0_dataset):
+        f0 = data["audios"][0].numpy()  # [T]
         f0 = remove_outlier(f0)
         pitch_vecs.append(f0)
     nonzeros = np.concatenate([v[np.where(v != 0.0)[0]] for v in pitch_vecs])
@@ -142,8 +139,8 @@ def main():
     ).create(batch_size=1)
 
     energy_vecs = []
-    for e, e_length in tqdm(energy_dataset):
-        e = e[0].numpy()
+    for data in tqdm(energy_dataset):
+        e = data["audios"][0].numpy()
         e = remove_outlier(e)
         energy_vecs.append(e)
     nonzeros = np.concatenate([v[np.where(v != 0.0)[0]] for v in energy_vecs])

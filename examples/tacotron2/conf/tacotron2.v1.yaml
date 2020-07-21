@@ -67,9 +67,9 @@ optimizer_params:
 #                    INTERVAL SETTING                     #
 ###########################################################
 train_max_steps: 200000                 # Number of training steps.
-save_interval_steps: 5000               # Interval steps to save checkpoint.
+save_interval_steps: 2000               # Interval steps to save checkpoint.
 eval_interval_steps: 500                # Interval steps to evaluate the network.
-log_interval_steps: 100                 # Interval steps to record the training log.
+log_interval_steps: 200                 # Interval steps to record the training log.
 start_schedule_teacher_forcing: 200001  # don't need to apply schedule teacher forcing.
 start_ratio_value: 0.5                  # start ratio of scheduled teacher forcing.
 schedule_decay_steps: 50000             # decay step scheduled teacher forcing.

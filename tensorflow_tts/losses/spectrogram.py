@@ -76,4 +76,6 @@ class TFMelSpectrogram(tf.keras.layers.Layer):
         """
         y_mels = self._calculate_log_mels_spectrogram(y)
         x_mels = self._calculate_log_mels_spectrogram(x)
-        return tf.reduce_mean(tf.abs(y_mels - x_mels))
+        return tf.reduce_mean(
+            tf.abs(y_mels - x_mels), axis=list(range(1, len(x_mels.shape)))
+        )
