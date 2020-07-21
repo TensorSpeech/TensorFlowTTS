@@ -357,16 +357,6 @@ def main():
             learning_rate=discriminator_lr_fn, amsgrad=False
         )
 
-        if args.generator_mixed_precision:
-            gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                gen_optimizer, "dynamic"
-            )
-
-        if args.discriminator_mixed_precision:
-            dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                dis_optimizer, "dynamic"
-            )
-
     trainer.compile(
         gen_model=generator,
         dis_model=discriminator,

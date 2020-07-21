@@ -239,6 +239,10 @@ class GanBasedTrainer(BasedTrainer):
     def set_gen_optimizer(self, generator_optimizer):
         """Set generator optimizer (MUST)."""
         self._gen_optimizer = generator_optimizer
+        if self._is_generator_mixed_precision:
+            self._gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self._gen_optimizer, "dynamic"
+            )
 
     def get_gen_optimizer(self):
         """Get generator optimizer."""
@@ -247,6 +251,10 @@ class GanBasedTrainer(BasedTrainer):
     def set_dis_optimizer(self, discriminator_optimizer):
         """Set discriminator optimizer (MUST)."""
         self._dis_optimizer = discriminator_optimizer
+        if self._is_discriminator_mixed_precision:
+            self._dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self._dis_optimizer, "dynamic"
+            )
 
     def get_dis_optimizer(self):
         """Get discriminator optimizer."""

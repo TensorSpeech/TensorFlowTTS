@@ -382,11 +382,6 @@ def main():
 
         _ = optimizer.iterations
 
-        if args.mixed_precision:
-            optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                optimizer, "dynamic"
-            )
-
     # compile trainer
     trainer.compile(model=fastspeech, optimizer=optimizer)
 
