@@ -129,7 +129,6 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         # reset
         self.reset_states_eval()
         gc.collect()
-=======
         return per_example_losses, dict_metrics_losses
 
     def _check_train_finish(self):
