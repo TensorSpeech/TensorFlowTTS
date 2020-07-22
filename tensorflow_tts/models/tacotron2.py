@@ -757,7 +757,6 @@ class TFTacotron2(tf.keras.Model):
             training=True,
         )
 
-    @tf.function(experimental_relax_shapes=True)
     def call(
         self,
         input_ids,
