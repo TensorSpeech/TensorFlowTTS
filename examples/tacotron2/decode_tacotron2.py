@@ -23,6 +23,7 @@ import yaml
 import tensorflow as tf
 
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from tensorflow_tts.configs import Tacotron2Config
 from examples.tacotron2.tacotron_dataset import CharactorMelDataset
@@ -113,7 +114,7 @@ def main():
         mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2.inference(
             charactor,
             char_length,
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
+            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]], dtype=tf.int32),
         )
 
         # convert to numpy

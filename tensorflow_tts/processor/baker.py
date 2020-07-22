@@ -3,35 +3,45 @@ import re
 import numpy as np
 import librosa
 import soundfile as sf
-from pypinyin.style._utils import get_initials, get_finals
-from pypinyin import Style
-from pypinyin.contrib.neutral_tone import NeutralToneWith5Mixin
-from pypinyin.converter import DefaultConverter
-from pypinyin.core import Pinyin
 
 
-_pad = '_'
-_eos = '~'
-_special = '-'
-
-_initials = ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's',
-             'y', 'w']
-_finals = ['a', 'o', 'e', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'ang', 'eng', 'ong', 'i', 'ia', 'ie', 'iao', 'iou', 'ian',
-           'in', 'iang', 'ing', 'iong', 'u', 'ua', 'uo', 'uai', 'uei', 'uan', 'uen', 'uang', 'ueng', 'un', 'ui',
-           'ue', 'iu', 'v', 'vn', 've', 'van']
-_r = [i + 'r' for i in _finals]
-
+_pause = ['sil', 'sp1']
+_initials = ['b', 'c', 'ch', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 'sh', 't', 'x', 'z', 'zh']
 _tones = ['1', '2', '3', '4', '5']
+_finals = ['a', 'ai', 'an', 'ang', 'ao', 'e', 'ei', 'en', 'eng', 'er', 'i', 'ia', 'ian', 'iang', 'iao', 'ie',
+           'ii', 'iii', 'in', 'ing', 'iong', 'iou', 'o', 'ong', 'ou', 'u', 'ua', 'uai', 'uan', 'uang',
+           'uei', 'uen', 'ueng', 'uo', 'v', 'van', 've', 'vn']
+_special = ['io5']
+# _r = ['air2', 'air4', 'anr1', 'anr3', 'anr4', 'aor3', 'aor4', 'ar2', 'ar3', 'ar4', 'enr1', 'enr2', 'enr4', 'enr5',
+#       'iangr4', 'ianr1', 'ianr2', 'ianr3', 'iar1', 'iar3', 'iiir4', 'ingr2', 'ingr3', 'inr4', 'iour1',
+#       'ir1', 'ir2', 'ir3', 'ir4', 'ir5', 'ongr4', 'our2', 'uair4', 'uanr1', 'uanr2',
+#       'ueir1', 'ueir3', 'ueir4', 'uenr3', 'uenr4', 'uor2', 'uor3', 'ur3', 'ur4', 'vanr4']
 
-symbols = [_pad] + [_special] + _initials + [i + j for i in _finals + _r for j in _tones] + [_eos]
+symbols = _pause + _initials + [i + j for i in _finals for j in _tones] + _special
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 _id_to_symbol = {i: s for i, s in enumerate(symbols)}
 
 
-class MyConverter(NeutralToneWith5Mixin, DefaultConverter):
-    pass
+#
+# class MyConverter(NeutralToneWith5Mixin, DefaultConverter):
+#     pass
+
+def process_phonelabel(label_file):
+    with open(label_file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()[12:]
+    assert len(lines) % 3 == 0
+
+    text = []
+    for i in range(0, len(lines), 3):
+        begin = float(lines[i].strip())
+        if i == 0:
+            assert begin == 0.
+        phone = lines[i + 2].strip()
+        text.append(phone.replace('"', ''))
+
+    return text
 
 
 class BakerProcessor(object):
@@ -40,37 +50,47 @@ class BakerProcessor(object):
         self.root_path = root_path
         self.target_rate = target_rate
 
-        my_pinyin = Pinyin(MyConverter())
-        pinyin = my_pinyin.pinyin
-
         items = []
         self.speaker_name = "baker"
         if root_path is not None:
             with open(os.path.join(root_path, 'ProsodyLabeling/000001-010000.txt'), encoding='utf-8') as ttf:
                 lines = ttf.readlines()
                 for idx in range(0, len(lines), 2):
-                    utt_id, text = lines[idx].strip().split()
-                    text = lines[idx+1].strip()
-                    # text = re.sub(r'#\d', '', text)  # remove prosody, To Do
-                    # text = re.sub(r'[。，；“”？#、：！…——]', '', text)
-                    # text = pinyin(text, style=Style.TONE3)
-                    text = self.get_initials_and_finals(text)
+                    utt_id, _ = lines[idx].strip().split()
+                    phonemes = process_phonelabel(os.path.join(root_path, f'PhoneLabeling/{utt_id}.interval'))
+                    phonemes = self.deal_r(phonemes)
+                    if 'pl' in phonemes or 'ng1' in phonemes:
+                        print(f'Skip this: {utt_id} {phonemes}')
+                        continue
                     wav_path = os.path.join(root_path, 'Wave', '%s.wav' % utt_id)
-                    items.append([text, wav_path, self.speaker_name, utt_id])
-
+                    items.append([' '.join(phonemes), wav_path, self.speaker_name, utt_id])
             self.items = items
 
     @staticmethod
-    def get_initials_and_finals(text):
+    def deal_r(phonemes):
         result = []
-        for x in text.split():
-            initials = get_initials(x.strip(), False)
-            finals = get_finals(x.strip(), False)
-            if initials != "":
-                result.append(initials)
-            if finals != "":
-                result.append(finals)
-        return ' '.join(result)
+        for p in phonemes:
+            if p[-1].isdigit() and p[-2] == 'r' and p[:2] != 'er':
+                result.append(p[:-2] + p[-1])
+                result.append('er5')
+            else:
+                result.append(p)
+        return result
+
+    # @staticmethod
+    # def get_initials_and_finals(text):
+    #     result = []
+    #     for x in text.split():
+    #         initials = get_initials(x.strip(), False)
+    #         finals = get_finals(x.strip(), False)
+    #         if initials != "":
+    #             result.append(initials)
+    #         if finals != "":
+    #             # we replace ar4 to a4 er5
+    #             if finals[-2] == 'r' and finals[:2] != 'er':
+    #                 finals = finals[:-2] + finals[-1] + ' er5'
+    #             result.append(finals)
+    #     return ' '.join(result)
 
     def get_one_sample(self, idx):
         text, wav_file, speaker_name, utt_id = self.items[idx]
@@ -85,8 +105,11 @@ class BakerProcessor(object):
         # convert text to ids
         try:
             text_ids = np.asarray(self.text_to_sequence(text), np.int32)
-        except:
+        except Exception as e:
+            print(e, utt_id, text)
             return None
+
+        # return None
         sample = {
             "raw_text": text,
             "text_ids": text_ids,

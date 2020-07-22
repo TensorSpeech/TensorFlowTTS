@@ -54,7 +54,7 @@ class Tacotron2Config(object):
             postnet_dropout_rate=0.1):
         """Init parameters for Tacotron-2 model."""
         if dataset == 'ljspeech':
-            self.vocab_size = len(lj_symbols)
+            self.vocab_size = vocab_size
         elif dataset == 'baker':
             self.vocab_size = len(bk_symbols)
         else:

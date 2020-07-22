@@ -16,7 +16,7 @@ format: "npy"
 tacotron2_params:
     dataset: baker
     embedding_hidden_size: 512
-    initializer_range: 0.02
+    initializer_range: 0.5
     embedding_dropout_prob: 0.1
     n_speakers: 1
     n_conv_encoder: 5
