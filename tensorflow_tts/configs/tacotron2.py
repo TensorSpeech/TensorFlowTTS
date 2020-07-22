@@ -14,7 +14,8 @@
 # limitations under the License.
 """Tacotron-2 Config object."""
 
-from tensorflow_tts.processor.ljspeech import symbols
+from tensorflow_tts.processor.ljspeech import symbols as lj_symbols
+from tensorflow_tts.processor.baker import symbols as bk_symbols
 
 
 class Tacotron2Config(object):
@@ -22,7 +23,8 @@ class Tacotron2Config(object):
 
     def __init__(
         self,
-        vocab_size=len(symbols),
+        dataset='ljspeech',
+        vocab_size=len(lj_symbols),
         embedding_hidden_size=512,
         initializer_range=0.02,
         layer_norm_eps=1e-6,
@@ -52,7 +54,13 @@ class Tacotron2Config(object):
         postnet_dropout_rate=0.1,
     ):
         """Init parameters for Tacotron-2 model."""
-        self.vocab_size = vocab_size
+        if dataset == 'ljspeech':
+            self.vocab_size = vocab_size
+        elif dataset == 'baker':
+            self.vocab_size = len(bk_symbols)
+        else:
+            raise ValueError('no such dataset: {}'.format(dataset))
+
         self.embedding_hidden_size = embedding_hidden_size
         self.initializer_range = initializer_range
         self.layer_norm_eps = layer_norm_eps

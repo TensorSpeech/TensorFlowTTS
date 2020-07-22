@@ -26,7 +26,7 @@ from pathos.multiprocessing import ProcessingPool as Pool
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import LJSpeechProcessor, BakerProcessor
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -83,6 +83,9 @@ def main():
         description="Preprocess audio and then extract features (See detail in tensorflow_tts/bin/preprocess.py)."
     )
     parser.add_argument(
+        "--dataset", default="ljspeech", type=str, help="which processor will use"
+    )
+    parser.add_argument(
         "--rootdir", default=None, type=str, required=True, help="root path."
     )
     parser.add_argument(
@@ -136,9 +139,15 @@ def main():
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
 
-    processor = LJSpeechProcessor(
-        root_path=args.rootdir, cleaner_names="english_cleaners"
-    )
+    if args.dataset == "ljspeech":
+        processor = LJSpeechProcessor(
+            root_path=args.rootdir,
+            cleaner_names="english_cleaners"
+        )
+    elif args.dataset == "baker":
+        processor = BakerProcessor(root_path=args.rootdir, target_rate=config['sampling_rate'])
+    else:
+        raise ValueError("we do not support this dataset: {}".format(args.dataset))
 
     # check directly existence
     if not os.path.exists(args.outdir):
@@ -169,11 +178,13 @@ def main():
     valid_utt_ids = []
 
     for idx in range(len(processor.items)):
-        utt_ids = processor.get_one_sample(idx)["utt_id"]
-        if idx in idx_train:
-            train_utt_ids.append(utt_ids)
-        elif idx in idx_valid:
-            valid_utt_ids.append(utt_ids)
+        sample = processor.get_one_sample(idx)
+        if sample is not None:
+            utt_ids = sample["utt_id"]
+            if idx in idx_train:
+                train_utt_ids.append(utt_ids)
+            elif idx in idx_valid:
+                valid_utt_ids.append(utt_ids)
 
     # save train and valid utt_ids to track later.
     np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
@@ -184,6 +195,8 @@ def main():
     # process each data
     def save_to_file(idx):
         sample = processor.get_one_sample(idx)
+        if sample is None:
+            return
 
         # get info from sample.
         audio = sample["audio"]
