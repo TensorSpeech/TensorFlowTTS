@@ -35,6 +35,14 @@ CUDA_VISIBLE_DEVICES=0 python examples/melgan/train_melgan.py \
   --resume ./examples/melgan.stft/exp/train.melgan.stft.v1/checkpoints/ckpt-100000
 ```
 
+IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode.
+
+In case you want to resume the training progress, please following below example command line:
+
+```bash
+--resume ./examples/melgan.stft/exp/train.melgan.stft.v1/checkpoints/ckpt-100000
+```
+
 **IMPORTANT NOTES**:
 
 - When training generator only, we enable mixed precision to speed-up training progress.

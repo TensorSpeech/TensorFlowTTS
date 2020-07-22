@@ -18,19 +18,18 @@ import argparse
 import logging
 import os
 import sys
+
 sys.path.append(".")
 
+import matplotlib.pyplot as plt
 import numpy as np
-import yaml
 import tensorflow as tf
-
+import yaml
 from tqdm import tqdm
 
-from tensorflow_tts.configs import Tacotron2Config
 from examples.tacotron2.tacotron_dataset import CharactorMelDataset
+from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
-
-import matplotlib.pyplot as plt
 
 
 def get_duration_from_alignment(alignment):
@@ -127,8 +126,6 @@ def main():
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
-        return_utt_id=True,
-        return_guided_attention=False,
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
@@ -142,16 +139,14 @@ def main():
     tacotron2.load_weights(args.checkpoint)
 
     for data in tqdm(dataset, desc="[Extract Duration]"):
-        utt_id, charactor, char_length, mel, mel_length = data
-        utt_id = utt_id.numpy()
+        utt_ids = data["utt_ids"]
+        input_lengths = data["input_lengths"]
+        mel_lengths = data["mel_lengths"]
+        utt_ids = utt_ids.numpy()
 
         # tacotron2 inference.
         mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2(
-            charactor,
-            char_length,
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-            mel_outputs=mel,
-            mel_lengths=mel_length,
+            **data,
             use_window_mask=True,
             win_front=args.win_front,
             win_back=args.win_back,
@@ -163,13 +158,13 @@ def main():
 
         for i, alignment in enumerate(alignment_historys):
             real_char_length = (
-                char_length[i].numpy() - 1
+                input_lengths[i].numpy() - 1
             )  # minus 1 because char have eos tokens.
             real_mel_length = mel_length[i].numpy()
             alignment = alignment[:real_char_length, :real_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
 
-            saved_name = utt_id[i].decode("utf-8")
+            saved_name = utt_ids[i].decode("utf-8")
 
             # check a length compatible
             assert (

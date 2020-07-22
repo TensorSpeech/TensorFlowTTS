@@ -20,9 +20,11 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from tensorflow_tts.models.melgan import TFReflectionPad1d
-from tensorflow_tts.models.melgan import TFConvTranspose1d
-from tensorflow_tts.models.melgan import TFResidualStack
+from tensorflow_tts.models.melgan import (
+    TFConvTranspose1d,
+    TFReflectionPad1d,
+    TFResidualStack,
+)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 

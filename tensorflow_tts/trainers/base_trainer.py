@@ -17,9 +17,9 @@
 import abc
 import logging
 import os
-from tqdm import tqdm
 
 import tensorflow as tf
+from tqdm import tqdm
 
 
 class BasedTrainer(metaclass=abc.ABCMeta):
@@ -32,6 +32,40 @@ class BasedTrainer(metaclass=abc.ABCMeta):
         self.finish_train = False
         self.writer = tf.summary.create_file_writer(config["outdir"])
         self.train_data_loader = None
+        self.eval_data_loader = None
+        self.train_metrics = None
+        self.eval_metrics = None
+        self.list_metrics_name = None
+
+    def init_train_eval_metrics(self, list_metrics_name):
+        """Init train and eval metrics to save it to tensorboard."""
+        self.train_metrics = {}
+        self.eval_metrics = {}
+        for name in list_metrics_name:
+            self.train_metrics.update(
+                {name: tf.keras.metrics.Mean(name="train_" + name, dtype=tf.float32)}
+            )
+            self.eval_metrics.update(
+                {name: tf.keras.metrics.Mean(name="eval_" + name, dtype=tf.float32)}
+            )
+
+    def reset_states_train(self):
+        """Reset train metrics after save it to tensorboard."""
+        for metric in self.train_metrics.keys():
+            self.train_metrics[metric].reset_states()
+
+    def reset_states_eval(self):
+        """Reset eval metrics after save it to tensorboard."""
+        for metric in self.eval_metrics.keys():
+            self.eval_metrics[metric].reset_states()
+
+    def update_train_metrics(self, dict_metrics_losses):
+        for name, value in dict_metrics_losses.items():
+            self.train_metrics[name].update_state(value)
+
+    def update_eval_metrics(self, dict_metrics_losses):
+        for name, value in dict_metrics_losses.items():
+            self.eval_metrics[name].update_state(value)
 
     def set_train_data_loader(self, train_dataset):
         """Set train data loader (MUST)."""
@@ -116,11 +150,6 @@ class BasedTrainer(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def _eval_step(self, batch):
-        """One eval step."""
-        pass
-
-    @abc.abstractmethod
     def _check_log_interval(self):
         """Save log interval."""
         pass
@@ -160,6 +189,7 @@ class GanBasedTrainer(BasedTrainer):
         steps,
         epochs,
         config,
+        strategy,
         is_generator_mixed_precision=False,
         is_discriminator_mixed_precision=False,
     ):
@@ -172,54 +202,286 @@ class GanBasedTrainer(BasedTrainer):
 
         """
         super().__init__(steps, epochs, config)
-        self.is_generator_mixed_precision = is_generator_mixed_precision
-        self.is_discriminator_mixed_precision = is_discriminator_mixed_precision
+        self._is_generator_mixed_precision = is_generator_mixed_precision
+        self._is_discriminator_mixed_precision = is_discriminator_mixed_precision
+        self._strategy = strategy
+        self._already_apply_input_signature = False
+
+    def init_train_eval_metrics(self, list_metrics_name):
+        with self._strategy.scope():
+            super().init_train_eval_metrics(list_metrics_name)
+
+    def get_n_gpus(self):
+        return self._strategy.num_replicas_in_sync
+
+    def _get_train_element_signature(self):
+        return self.train_data_loader.element_spec
+
+    def _get_eval_element_signature(self):
+        return self.eval_data_loader.element_spec
 
     def set_gen_model(self, generator_model):
         """Set generator class model (MUST)."""
-        self.generator = generator_model
+        self._generator = generator_model
 
     def get_gen_model(self):
         """Get generator model."""
-        return self.generator
+        return self._generator
 
     def set_dis_model(self, discriminator_model):
         """Set discriminator class model (MUST)."""
-        self.discriminator = discriminator_model
+        self._discriminator = discriminator_model
 
     def get_dis_model(self):
         """Get discriminator model."""
-        return self.discriminator
+        return self._discriminator
 
     def set_gen_optimizer(self, generator_optimizer):
         """Set generator optimizer (MUST)."""
-        self.gen_optimizer = generator_optimizer
-        if self.is_generator_mixed_precision:
-            self.gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                self.gen_optimizer, "dynamic"
+        self._gen_optimizer = generator_optimizer
+        if self._is_generator_mixed_precision:
+            self._gen_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self._gen_optimizer, "dynamic"
             )
 
     def get_gen_optimizer(self):
         """Get generator optimizer."""
-        return self.gen_optimizer
+        return self._gen_optimizer
 
     def set_dis_optimizer(self, discriminator_optimizer):
         """Set discriminator optimizer (MUST)."""
-        self.dis_optimizer = discriminator_optimizer
-        if self.is_discriminator_mixed_precision:
-            self.dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                self.dis_optimizer, "dynamic"
+        self._dis_optimizer = discriminator_optimizer
+        if self._is_discriminator_mixed_precision:
+            self._dis_optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self._dis_optimizer, "dynamic"
             )
 
     def get_dis_optimizer(self):
         """Get discriminator optimizer."""
-        return self.dis_optimizer
+        return self._dis_optimizer
 
     def compile(self, gen_model, dis_model, gen_optimizer, dis_optimizer):
         self.set_gen_model(gen_model)
         self.set_dis_model(dis_model)
         self.set_gen_optimizer(gen_optimizer)
         self.set_dis_optimizer(dis_optimizer)
+
+    def _train_step(self, batch):
+        if self._already_apply_input_signature is False:
+            train_element_signature = self._get_train_element_signature()
+            eval_element_signature = self._get_eval_element_signature()
+            self.one_step_forward = tf.function(
+                self._one_step_forward, input_signature=[train_element_signature]
+            )
+            self.one_step_evaluate = tf.function(
+                self._one_step_evaluate, input_signature=[eval_element_signature]
+            )
+            self.one_step_predict = tf.function(
+                self._one_step_predict, input_signature=[eval_element_signature]
+            )
+            self._already_apply_input_signature = True
+
+        # run one_step_forward
+        self.one_step_forward(batch)
+
+        # update counts
+        self.steps += 1
+        self.tqdm.update(1)
+        self._check_train_finish()
+
+    def _one_step_forward(self, batch):
+        per_replica_losses = self._strategy.run(
+            self._one_step_forward_per_replica, args=(batch,)
+        )
+        return self._strategy.reduce(
+            tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None
+        )
+
+    @abc.abstractmethod
+    def compute_per_example_generator_losses(self, batch, outputs):
+        """Compute per example generator losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
+        per_example_losses = 0.0
+        dict_metrics_losses = {}
+        return per_example_losses, dict_metrics_losses
+
+    @abc.abstractmethod
+    def compute_per_example_discriminator_losses(self, batch, gen_outputs):
+        """Compute per example discriminator losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
+        per_example_losses = 0.0
+        dict_metrics_losses = {}
+        return per_example_losses, dict_metrics_losses
+
+    def _one_step_forward_per_replica(self, batch):
+        per_replica_gen_losses = 0.0
+        per_replica_dis_losses = 0.0
+
+        # one step generator.
+        with tf.GradientTape() as g_tape:
+            outputs = self._generator(**batch, training=True)
+            (
+                per_example_losses,
+                dict_metrics_losses,
+            ) = self.compute_per_example_generator_losses(batch, outputs)
+
+            per_replica_gen_losses = tf.nn.compute_average_loss(
+                per_example_losses,
+                global_batch_size=self.config["batch_size"] * self.get_n_gpus(),
+            )
+
+            if self._is_generator_mixed_precision:
+                scaled_per_replica_gen_losses = self._gen_optimizer.get_scaled_loss(
+                    per_replica_gen_losses
+                )
+
+        if self._is_generator_mixed_precision:
+            scaled_gradients = g_tape.gradient(
+                scaled_per_replica_gen_losses, self._generator.trainable_variables
+            )
+            gradients = self._gen_optimizer.get_unscaled_gradients(scaled_gradients)
+        else:
+            gradients = g_tape.gradient(
+                per_replica_gen_losses, self._generator.trainable_variables
+            )
+
+        self._gen_optimizer.apply_gradients(
+            zip(gradients, self._generator.trainable_variables)
+        )
+
+        # accumulate loss into metrics
+        self.update_train_metrics(dict_metrics_losses)
+
+        # one step discriminator
+        # recompute y_hat after 1 step generator for discriminator training.
+        if self.steps >= self.config["discriminator_train_start_steps"]:
+            with tf.GradientTape() as d_tape:
+                (
+                    per_example_losses,
+                    dict_metrics_losses,
+                ) = self.compute_per_example_discriminator_losses(
+                    batch, self._generator(**batch)
+                )
+
+                per_replica_dis_losses = tf.nn.compute_average_loss(
+                    per_example_losses,
+                    global_batch_size=self.config["batch_size"] * self.get_n_gpus(),
+                )
+
+                if self._is_discriminator_mixed_precision:
+                    scaled_per_replica_dis_losses = self._dis_optimizer.get_scaled_loss(
+                        per_replica_dis_losses
+                    )
+
+            if self._is_discriminator_mixed_precision:
+                scaled_gradients = d_tape.gradient(
+                    scaled_per_replica_dis_losses,
+                    self._discriminator.trainable_variables,
+                )
+                gradients = self._dis_optimizer.get_unscaled_gradients(scaled_gradients)
+            else:
+                gradients = d_tape.gradient(
+                    per_replica_dis_losses, self._discriminator.trainable_variables
+                )
+
+            self._dis_optimizer.apply_gradients(
+                zip(gradients, self._discriminator.trainable_variables)
+            )
+
+            # accumulate loss into metrics
+            self.update_train_metrics(dict_metrics_losses)
+
+        return per_replica_gen_losses + per_replica_dis_losses
+
+    def _eval_epoch(self):
+        """Evaluate model one epoch."""
+        logging.info(f"(Steps: {self.steps}) Start evaluation.")
+
+        # calculate loss for each batch
+        for eval_steps_per_epoch, batch in enumerate(
+            tqdm(self.eval_data_loader, desc="[eval]"), 1
+        ):
+            # eval one step
+            self.one_step_evaluate(batch)
+
+            if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
+                # save intermedia
+                self.generate_and_save_intermediate_result(batch)
+
+        logging.info(
+            f"(Steps: {self.steps}) Finished evaluation "
+            f"({eval_steps_per_epoch} steps per epoch)."
+        )
+
+        # average loss
+        for key in self.eval_metrics.keys():
+            logging.info(
+                f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}."
+            )
+
+        # record
+        self._write_to_tensorboard(self.eval_metrics, stage="eval")
+
+        # reset
+        self.reset_states_eval()
+
+    def _one_step_evalute_per_replica(self, batch):
+        ################################################
+        # one step generator.
+        outputs = self._generator(**batch, training=False)
+        _, dict_metrics_losses = self.compute_per_example_generator_losses(
+            batch, outputs
+        )
+
+        # accumulate loss into metrics
+        self.update_eval_metrics(dict_metrics_losses)
+
+        ################################################
+        # one step discriminator
+        if self.steps >= self.config["discriminator_train_start_steps"]:
+            _, dict_metrics_losses = self.compute_per_example_discriminator_losses(
+                batch, outputs
+            )
+
+            # accumulate loss into metrics
+            self.update_eval_metrics(dict_metrics_losses)
+
+    ################################################
+
+    def _one_step_evaluate(self, batch):
+        self._strategy.run(self._one_step_evalute_per_replica, args=(batch,))
+
+    def _one_step_predict_per_replica(self, batch):
+        outputs = self._generator(**batch, training=False)
+        return outputs
+
+    def _one_step_predict(self, batch):
+        outputs = self._strategy.run(self._one_step_predict_per_replica, args=(batch,))
+        return outputs
+
+    @abc.abstractmethod
+    def generate_and_save_intermediate_result(self, batch):
+        return
 
     def create_checkpoint_manager(self, saved_path=None, max_to_keep=10):
         """Create checkpoint management."""
@@ -244,10 +506,10 @@ class GanBasedTrainer(BasedTrainer):
         self.ckpt.steps.assign(self.steps)
         self.ckpt.epochs.assign(self.epochs)
         self.ckp_manager.save(checkpoint_number=self.steps)
-        self.generator.save_weights(
+        self._generator.save_weights(
             self.saved_path + "generator-{}.h5".format(self.steps)
         )
-        self.discriminator.save_weights(
+        self._discriminator.save_weights(
             self.saved_path + "discriminator-{}.h5".format(self.steps)
         )
 
@@ -256,9 +518,9 @@ class GanBasedTrainer(BasedTrainer):
         self.ckpt.restore(pretrained_path)
         self.steps = self.ckpt.steps.numpy()
         self.epochs = self.ckpt.epochs.numpy()
-        self.gen_optimizer = self.ckpt.gen_optimizer
+        self._gen_optimizer = self.ckpt.gen_optimizer
         # re-assign iterations (global steps) for gen_optimizer.
-        self.gen_optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
+        self._gen_optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
         # re-assign iterations (global steps) for dis_optimizer.
         try:
             discriminator_train_start_steps = self.config[
@@ -269,25 +531,67 @@ class GanBasedTrainer(BasedTrainer):
             )
         except Exception:
             discriminator_train_start_steps = self.steps
-        self.dis_optimizer = self.ckpt.dis_optimizer
-        self.dis_optimizer.iterations.assign(
+        self._dis_optimizer = self.ckpt.dis_optimizer
+        self._dis_optimizer.iterations.assign(
             tf.cast(discriminator_train_start_steps, tf.int64)
         )
 
         # load weights.
-        self.generator.load_weights(
+        self._generator.load_weights(
             self.saved_path + "generator-{}.h5".format(self.steps)
         )
-        self.discriminator.load_weights(
+        self._discriminator.load_weights(
             self.saved_path + "discriminator-{}.h5".format(self.steps)
         )
 
+    def _check_train_finish(self):
+        """Check training finished."""
+        if self.steps >= self.config["train_max_steps"]:
+            self.finish_train = True
 
-class Seq2SeqBasedTrainer(BasedTrainer):
+        if (
+            self.steps != 0
+            and self.steps == self.config["discriminator_train_start_steps"]
+        ):
+            self.finish_train = True
+            logging.info(
+                f"Finished training only generator at {self.steps}steps, pls resume and continue training."
+            )
+
+    def _check_log_interval(self):
+        """Log to tensorboard."""
+        if self.steps % self.config["log_interval_steps"] == 0:
+            for metric_name in self.list_metrics_name:
+                logging.info(
+                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}."
+                )
+            self._write_to_tensorboard(self.train_metrics, stage="train")
+
+            # reset
+            self.reset_states_train()
+
+    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
+        self.set_train_data_loader(train_data_loader)
+        self.set_eval_data_loader(valid_data_loader)
+        self.train_data_loader = self._strategy.experimental_distribute_dataset(
+            self.train_data_loader
+        )
+        self.eval_data_loader = self._strategy.experimental_distribute_dataset(
+            self.eval_data_loader
+        )
+        with self._strategy.scope():
+            self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
+            if len(resume) > 1:
+                self.load_checkpoint(resume)
+                logging.info(f"Successfully resumed from {resume}.")
+        self.run()
+
+
+class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
     """Customized trainer module for Seq2Seq TTS training (Tacotron, FastSpeech)."""
 
     def __init__(
-        self, steps, epochs, config, is_mixed_precision=False,
+        self, steps, epochs, config, strategy, is_mixed_precision=False,
     ):
         """Initialize trainer.
 
@@ -295,34 +599,190 @@ class Seq2SeqBasedTrainer(BasedTrainer):
             steps (int): Initial global steps.
             epochs (int): Initial global epochs.
             config (dict): Config dict loaded from yaml format configuration file.
+            strategy (tf.distribute): Strategy for distributed training.
+            is_mixed_precision (bool): Use mixed_precision training or not.
 
         """
         super().__init__(steps, epochs, config)
-        self.is_mixed_precision = is_mixed_precision
+        self._is_mixed_precision = is_mixed_precision
+        self._strategy = strategy
+
+        # check if we already apply input_signature for train_step.
+        self._already_apply_input_signature = False
+
+    def init_train_eval_metrics(self, list_metrics_name):
+        with self._strategy.scope():
+            super().init_train_eval_metrics(list_metrics_name)
 
     def set_model(self, model):
         """Set generator class model (MUST)."""
-        self.model = model
+        self._model = model
 
     def get_model(self):
         """Get generator model."""
-        return self.model
+        return self._model
 
     def set_optimizer(self, optimizer):
         """Set optimizer (MUST)."""
-        self.optimizer = optimizer
-        if self.is_mixed_precision:
-            self.optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-                self.optimizer, "dynamic"
+        self._optimizer = optimizer
+        if self._is_mixed_precision:
+            self._optimizer = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+                self._optimizer, "dynamic"
             )
 
     def get_optimizer(self):
         """Get optimizer."""
-        return self.optimizer
+        return self._optimizer
+
+    def get_n_gpus(self):
+        return self._strategy.num_replicas_in_sync
 
     def compile(self, model, optimizer):
         self.set_model(model)
         self.set_optimizer(optimizer)
+
+    def _get_train_element_signature(self):
+        return self.train_data_loader.element_spec
+
+    def _get_eval_element_signature(self):
+        return self.eval_data_loader.element_spec
+
+    def _train_step(self, batch):
+        if self._already_apply_input_signature is False:
+            train_element_signature = self._get_train_element_signature()
+            eval_element_signature = self._get_eval_element_signature()
+            self.one_step_forward = tf.function(
+                self._one_step_forward, input_signature=[train_element_signature]
+            )
+            self.one_step_evaluate = tf.function(
+                self._one_step_evaluate, input_signature=[eval_element_signature]
+            )
+            self.one_step_predict = tf.function(
+                self._one_step_predict, input_signature=[eval_element_signature]
+            )
+            self._already_apply_input_signature = True
+
+        # run one_step_forward
+        self.one_step_forward(batch)
+
+        # update counts
+        self.steps += 1
+        self.tqdm.update(1)
+        self._check_train_finish()
+
+    def _one_step_forward(self, batch):
+        per_replica_losses = self._strategy.run(
+            self._one_step_forward_per_replica, args=(batch,)
+        )
+        return self._strategy.reduce(
+            tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None
+        )
+
+    def _one_step_forward_per_replica(self, batch):
+        with tf.GradientTape() as tape:
+            outputs = self._model(**batch, training=True)
+            per_example_losses, dict_metrics_losses = self.compute_per_example_losses(
+                batch, outputs
+            )
+            per_replica_losses = tf.nn.compute_average_loss(
+                per_example_losses,
+                global_batch_size=self.config["batch_size"] * self.get_n_gpus(),
+            )
+
+            if self._is_mixed_precision:
+                scaled_per_replica_losses = self._optimizer.get_scaled_loss(
+                    per_replica_losses
+                )
+
+        if self._is_mixed_precision:
+            scaled_gradients = tape.gradient(
+                scaled_per_replica_losses, self._model.trainable_variables
+            )
+            gradients = self._optimizer.get_unscaled_gradients(scaled_gradients)
+        else:
+            gradients = tape.gradient(
+                per_replica_losses, self._model.trainable_variables
+            )
+
+        self._optimizer.apply_gradients(
+            zip(gradients, self._model.trainable_variables), 1.0
+        )
+
+        # accumulate loss into metrics
+        self.update_train_metrics(dict_metrics_losses)
+
+        return per_replica_losses
+
+    @abc.abstractmethod
+    def compute_per_example_losses(self, batch, outputs):
+        """Compute per example losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
+        per_example_losses = 0.0
+        dict_metrics_losses = {}
+        return per_example_losses, dict_metrics_losses
+
+    def _eval_epoch(self):
+        """Evaluate model one epoch."""
+        logging.info(f"(Steps: {self.steps}) Start evaluation.")
+
+        # calculate loss for each batch
+        for eval_steps_per_epoch, batch in enumerate(
+            tqdm(self.eval_data_loader, desc="[eval]"), 1
+        ):
+            # eval one step
+            self.one_step_evaluate(batch)
+
+            if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
+                # save intermedia
+                self.generate_and_save_intermediate_result(batch)
+
+        logging.info(
+            f"(Steps: {self.steps}) Finished evaluation "
+            f"({eval_steps_per_epoch} steps per epoch)."
+        )
+
+        # average loss
+        for key in self.eval_metrics.keys():
+            logging.info(
+                f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}."
+            )
+
+        # record
+        self._write_to_tensorboard(self.eval_metrics, stage="eval")
+
+        # reset
+        self.reset_states_eval()
+
+    def _one_step_evalute_per_replica(self, batch):
+        outputs = self._model(**batch, training=False)
+        _, dict_metrics_losses = self.compute_per_example_losses(batch, outputs)
+
+        self.update_eval_metrics(dict_metrics_losses)
+
+    def _one_step_evaluate(self, batch):
+        self._strategy.run(self._one_step_evalute_per_replica, args=(batch,))
+
+    def _one_step_predict_per_replica(self, batch):
+        outputs = self._model(**batch, training=False)
+        return outputs
+
+    def _one_step_predict(self, batch):
+        outputs = self._strategy.run(self._one_step_predict_per_replica, args=(batch,))
+        return outputs
+
+    @abc.abstractmethod
+    def generate_and_save_intermediate_result(self, batch):
+        return
 
     def create_checkpoint_manager(self, saved_path=None, max_to_keep=10):
         """Create checkpoint management."""
@@ -344,16 +804,49 @@ class Seq2SeqBasedTrainer(BasedTrainer):
         self.ckpt.steps.assign(self.steps)
         self.ckpt.epochs.assign(self.epochs)
         self.ckp_manager.save(checkpoint_number=self.steps)
-        self.model.save_weights(self.saved_path + "model-{}.h5".format(self.steps))
+        self._model.save_weights(self.saved_path + "model-{}.h5".format(self.steps))
 
     def load_checkpoint(self, pretrained_path):
         """Load checkpoint."""
         self.ckpt.restore(pretrained_path)
         self.steps = self.ckpt.steps.numpy()
         self.epochs = self.ckpt.epochs.numpy()
-        self.optimizer = self.ckpt.optimizer
+        self._optimizer = self.ckpt.optimizer
         # re-assign iterations (global steps) for optimizer.
-        self.optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
+        self._optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
 
         # load weights.
-        self.model.load_weights(self.saved_path + "model-{}.h5".format(self.steps))
+        self._model.load_weights(self.saved_path + "model-{}.h5".format(self.steps))
+
+    def _check_train_finish(self):
+        """Check training finished."""
+        if self.steps >= self.config["train_max_steps"]:
+            self.finish_train = True
+
+    def _check_log_interval(self):
+        """Log to tensorboard."""
+        if self.steps % self.config["log_interval_steps"] == 0:
+            for metric_name in self.list_metrics_name:
+                logging.info(
+                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}."
+                )
+            self._write_to_tensorboard(self.train_metrics, stage="train")
+
+            # reset
+            self.reset_states_train()
+
+    def fit(self, train_data_loader, valid_data_loader, saved_path, resume=None):
+        self.set_train_data_loader(train_data_loader)
+        self.set_eval_data_loader(valid_data_loader)
+        self.train_data_loader = self._strategy.experimental_distribute_dataset(
+            self.train_data_loader
+        )
+        self.eval_data_loader = self._strategy.experimental_distribute_dataset(
+            self.eval_data_loader
+        )
+        with self._strategy.scope():
+            self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
+            if len(resume) > 1:
+                self.load_checkpoint(resume)
+                logging.info(f"Successfully resumed from {resume}.")
+        self.run()

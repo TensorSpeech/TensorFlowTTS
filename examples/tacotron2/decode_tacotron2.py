@@ -18,16 +18,16 @@ import argparse
 import logging
 import os
 import sys
+
 sys.path.append(".")
 
 import numpy as np
-import yaml
 import tensorflow as tf
-
+import yaml
 from tqdm import tqdm
 
-from tensorflow_tts.configs import Tacotron2Config
 from examples.tacotron2.tacotron_dataset import CharactorMelDataset
+from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
 
 
@@ -114,7 +114,6 @@ def main():
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
-        return_utt_id=True,
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
@@ -131,8 +130,8 @@ def main():
     tacotron2.setup_window(win_front=args.win_front, win_back=args.win_back)
 
     for data in tqdm(dataset, desc="[Decoding]"):
-        utt_id, charactor, char_length, mel, mel_length, g_attention = data
-        utt_id = utt_id.numpy()
+        utt_ids = data["utt_ids"]
+        utt_ids = utt_ids.numpy()
 
         # tacotron2 inference.
         (
@@ -141,9 +140,9 @@ def main():
             stop_outputs,
             alignment_historys,
         ) = tacotron2.inference(
-            charactor,
-            char_length,
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]], dtype=tf.int32),
+            input_ids=data["input_ids"], 
+            input_lengths=data["input_lengths"], 
+            speaker_ids=data["speaker_ids"],
         )
 
         # convert to numpy
@@ -156,7 +155,7 @@ def main():
             )
             post_mel_output = post_mel_output[:real_length, :]
 
-            saved_name = utt_id[i].decode("utf-8")
+            saved_name = utt_ids[i].decode("utf-8")
 
             # save D to folder.
             np.save(

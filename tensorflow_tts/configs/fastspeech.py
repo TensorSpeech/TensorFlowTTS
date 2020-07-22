@@ -14,10 +14,9 @@
 # limitations under the License.
 """FastSpeech Config object."""
 
-from tensorflow_tts.processor.kss import symbols
-
 import collections
 
+from tensorflow_tts.processor.kss import symbols
 
 SelfAttentionParams = collections.namedtuple(
     "SelfAttentionParams",
@@ -36,7 +35,7 @@ SelfAttentionParams = collections.namedtuple(
         "hidden_dropout_prob",
         "attention_probs_dropout_prob",
         "layer_norm_eps",
-        "max_position_embeddings"
+        "max_position_embeddings",
     ],
 )
 
@@ -45,40 +44,40 @@ class FastSpeechConfig(object):
     """Initialize FastSpeech Config."""
 
     def __init__(
-            self,
-            vocab_size=len(symbols),
-            n_speakers=1,
-            encoder_hidden_size=384,
-            encoder_num_hidden_layers=4,
-            encoder_num_attention_heads=2,
-            encoder_attention_head_size=192,
-            encoder_intermediate_size=1024,
-            encoder_intermediate_kernel_size=3,
-            encoder_hidden_act="mish",
-            decoder_hidden_size=384,
-            decoder_num_hidden_layers=4,
-            decoder_num_attention_heads=2,
-            decoder_attention_head_size=192,
-            decoder_intermediate_size=1024,
-            decoder_intermediate_kernel_size=3,
-            decoder_hidden_act="mish",
-            output_attentions=True,
-            output_hidden_states=True,
-            hidden_dropout_prob=0.1,
-            attention_probs_dropout_prob=0.1,
-            initializer_range=0.02,
-            layer_norm_eps=1e-5,
-            max_position_embeddings=2048,
-            num_duration_conv_layers=2,
-            duration_predictor_filters=256,
-            duration_predictor_kernel_sizes=3,
-            num_mels=80,
-            duration_predictor_dropout_probs=0.1,
-            n_conv_postnet=5,
-            postnet_conv_filters=512,
-            postnet_conv_kernel_sizes=5,
-            postnet_dropout_rate=0.1,
-            **kwargs
+        self,
+        vocab_size=len(symbols),
+        n_speakers=1,
+        encoder_hidden_size=384,
+        encoder_num_hidden_layers=4,
+        encoder_num_attention_heads=2,
+        encoder_attention_head_size=192,
+        encoder_intermediate_size=1024,
+        encoder_intermediate_kernel_size=3,
+        encoder_hidden_act="mish",
+        decoder_hidden_size=384,
+        decoder_num_hidden_layers=4,
+        decoder_num_attention_heads=2,
+        decoder_attention_head_size=192,
+        decoder_intermediate_size=1024,
+        decoder_intermediate_kernel_size=3,
+        decoder_hidden_act="mish",
+        output_attentions=True,
+        output_hidden_states=True,
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        initializer_range=0.02,
+        layer_norm_eps=1e-5,
+        max_position_embeddings=2048,
+        num_duration_conv_layers=2,
+        duration_predictor_filters=256,
+        duration_predictor_kernel_sizes=3,
+        num_mels=80,
+        duration_predictor_dropout_probs=0.1,
+        n_conv_postnet=5,
+        postnet_conv_filters=512,
+        postnet_conv_kernel_sizes=5,
+        postnet_dropout_rate=0.1,
+        **kwargs
     ):
         """Init parameters for Fastspeech model."""
         # encoder params
@@ -123,7 +122,7 @@ class FastSpeechConfig(object):
             hidden_dropout_prob=hidden_dropout_prob,
             attention_probs_dropout_prob=attention_probs_dropout_prob,
             layer_norm_eps=layer_norm_eps,
-            max_position_embeddings=max_position_embeddings
+            max_position_embeddings=max_position_embeddings,
         )
 
         self.duration_predictor_dropout_probs = duration_predictor_dropout_probs
