@@ -96,14 +96,14 @@ def main():
         type=int,
         default=4,
         required=False,
-        help="yaml format configuration file.",
+        help="number of CPUs to use for multi-processing.",
     )
     parser.add_argument(
         "--test_size",
         type=float,
         default=0.05,
         required=False,
-        help="yaml format configuration file.",
+        help="the proportion of the dataset to include in the test split. (default=0.05)",
     )
     parser.add_argument(
         "--verbose",
