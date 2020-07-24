@@ -83,7 +83,7 @@ class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
             padding="same",
             name="conv_._{}".format(name_idx),
         )
-        self.norm = tf.keras.layers.BatchNormalization(
+        self.norm = tf.keras.layers.experimental.SyncBatchNormalization(
             axis=-1, name="batch_norm_._{}".format(name_idx)
         )
         self.dropout = tf.keras.layers.Dropout(
@@ -757,7 +757,6 @@ class TFTacotron2(tf.keras.Model):
             training=True,
         )
 
-    @tf.function(experimental_relax_shapes=True)
     def call(
         self,
         input_ids,

@@ -134,10 +134,10 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
         ) = outputs
 
         mel_loss_before = calculate_3d_loss(
-            batch["mel_outputs"], decoder_output, loss_fn=self.mae
+            batch["mel_gts"], decoder_output, loss_fn=self.mae
         )
         mel_loss_after = calculate_3d_loss(
-            batch["mel_outputs"], post_mel_outputs, loss_fn=self.mae
+            batch["mel_gts"], post_mel_outputs, loss_fn=self.mae
         )
 
         # calculate stop_loss
@@ -196,7 +196,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             stop_token_predictions,
             alignment_historys,
         ) = outputs
-        mel_gts = batch["mel_outputs"]
+        mel_gts = batch["mel_gts"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
