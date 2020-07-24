@@ -1,9 +1,9 @@
-###########################################################
+###########################################################base_preprocess
 #                FEATURE EXTRACTION SETTING               #
 ###########################################################
 sampling_rate: 22050     # Sampling rate.
 fft_size: 1024           # FFT size.
-hop_size: 256            # Hop size. (fixed value, don't change)
+hop_size: 221            # Hop size. (fixed value, don't change)
 win_length: null         # Window length.
                          # If set to null, it will be the same as fft_size.
 window: "hann"           # Window function.
