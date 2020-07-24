@@ -239,7 +239,6 @@ def main():
         griffin_lim_tf = TFGriffinLim(config["dataset_config_path"])
 
     for batch in tqdm(ds, desc="[Decoding]"):
-        bs, _ = tf.shape(batch["input_ids"])
         # tacotron2 inference
         _, mel_preds, stop_preds, _ = tacotron2.inference(
             batch["input_ids"],

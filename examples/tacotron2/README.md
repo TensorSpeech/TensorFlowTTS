@@ -21,10 +21,9 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/train_tacotron2.py \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --use_norm \
   --mixed_precision \
+  --stats_path ./dump/stats.npy \
   --resume ""
 ```
-
-If you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU has support for the training but not yet for decoding.
 
 In case you want to resume the training process, please follow the example below:
 
@@ -32,28 +31,34 @@ In case you want to resume the training process, please follow the example below
 --resume ./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/ckpt-100000
 ```
 
-### Step 3: Decode mel-spectrogram from folder ids
-To running inference on folder ids (charactor), run below command line:
+If you want to output audio in the predictions, use `--dataset_config_path ./preprocess/ljspeech_preprocess.yaml` (if using default path configuration).
+
+If you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU has support for the training but not yet for decoding.
+
+### Step 3: Decode mel spectrogram from folder ids
+To run inference on folder `ids` (processed characters), run this command line:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/decode_tacotron2.py \
-  --rootdir ./dump/valid/ \
+  --data_dir ./dump/valid/ \
   --outdir ./prediction/tacotron2-120k/ \
   --checkpoint ./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-120000.h5 \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --batch_size 32
 ```
 
-Or to decode sentences in a file:
+Or to decode sentences from a text file:
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/decode_tacotron2.py \
-  --rootdir ./dump/sentences.txt \
+  --data_dir ./dump/sentences.txt \
   --outdir ./prediction/tacotron2-120k \
   --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-120000.h5 \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --batch_size 32
 ```
+
+You can generate an audio file by passing the `--dataset_config_path ./preprocess/ljspeech_preprocess.yaml` argument. Remember to use `--inverse_norm` if your model is using normalized features or audio output will have bad audio ranges.
 
 ### Step 4: Extract duration from alignments for FastSpeech
 
@@ -62,7 +67,7 @@ You may need to extract durations for student models like FastSpeech. Here we us
 Extract for validation dataset:
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
-  --rootdir ./dump/valid \
+  --data_dir ./dump/valid \
   --outdir ./dump/valid/durations \
   --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-120000.h5 \
   --use_norm \
@@ -76,7 +81,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
 Extract for training dataset:
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
-  --rootdir ./dump/train \
+  --data_dir ./dump/train \
   --outdir ./dump/train/durations \
   --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-120000.h5 \
   --use_norm \
@@ -89,7 +94,9 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
 
 You also can download my extracted durations at 40k steps at [link](https://drive.google.com/drive/u/1/folders/1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_?usp=drive_open).
 
-## Finetune Tacotron 2 with ljspeech pretrained on other languages
+Remember to check whether your checkpoint has been trained with standardized features, and therefore your inputs should be correctly preprocessed.
+
+## Finetune Tacotron 2 with LJSpeech pretrained on other languages
 
 Here is an example on how to use pretrained LJSpeech models to train on other languages. This does not guarantee a better model or faster convergence in all cases, but it will improve if there is a correlation between target language and pretrained language. The only thing you need to do before finetuning on other languages is redefine embedding layers. You can do it with the following code:
 
@@ -129,7 +136,7 @@ Here is a result of Tacotron 2 based on this config [`tacotron2.v1.yaml`](https:
 * Using `input_signature` for Tacotron 2 makes training slower, don't know why, so only use `experimental_relax_shapes=True`.
 * The implementation supports both variable and fixed shape batches, meaning that batches will be padded to the largest element in the batch or the largest in the dataset, respectively. Use `use_fixed_shapes: false` in the config file to change the behavior.
 
-## Pretrained Models and Audio samples
+## Pretrained models and audio samples
 
 | Model | Conf  | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters | Reduction factor|
 | :---- | :---: | :---: | :-----: | :------------: | :------------------: | :-----: | :-------------: |
