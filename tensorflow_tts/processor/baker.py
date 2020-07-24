@@ -5,6 +5,8 @@ import librosa
 import soundfile as sf
 
 
+_pad = ['_']
+_eos = ['~']
 _pause = ['sil', 'sp1']
 _initials = ['b', 'c', 'ch', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 'sh', 't', 'x', 'z', 'zh']
 _tones = ['1', '2', '3', '4', '5']
@@ -12,21 +14,13 @@ _finals = ['a', 'ai', 'an', 'ang', 'ao', 'e', 'ei', 'en', 'eng', 'er', 'i', 'ia'
            'ii', 'iii', 'in', 'ing', 'iong', 'iou', 'o', 'ong', 'ou', 'u', 'ua', 'uai', 'uan', 'uang',
            'uei', 'uen', 'ueng', 'uo', 'v', 'van', 've', 'vn']
 _special = ['io5']
-# _r = ['air2', 'air4', 'anr1', 'anr3', 'anr4', 'aor3', 'aor4', 'ar2', 'ar3', 'ar4', 'enr1', 'enr2', 'enr4', 'enr5',
-#       'iangr4', 'ianr1', 'ianr2', 'ianr3', 'iar1', 'iar3', 'iiir4', 'ingr2', 'ingr3', 'inr4', 'iour1',
-#       'ir1', 'ir2', 'ir3', 'ir4', 'ir5', 'ongr4', 'our2', 'uair4', 'uanr1', 'uanr2',
-#       'ueir1', 'ueir3', 'ueir4', 'uenr3', 'uenr4', 'uor2', 'uor3', 'ur3', 'ur4', 'vanr4']
 
-symbols = _pause + _initials + [i + j for i in _finals for j in _tones] + _special
+symbols = _pad + _pause + _initials + [i + j for i in _finals for j in _tones] + _special + _eos
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 _id_to_symbol = {i: s for i, s in enumerate(symbols)}
 
-
-#
-# class MyConverter(NeutralToneWith5Mixin, DefaultConverter):
-#     pass
 
 def process_phonelabel(label_file):
     with open(label_file, 'r', encoding='utf-8') as f:
