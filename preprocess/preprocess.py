@@ -143,32 +143,32 @@ def main():
     [Path(Path(args.outdir).joinpath(f"train/{i}")).mkdir(parents=True, exist_ok=True) for i in out_dirs]
     [Path(Path(args.outdir).joinpath(f"valid/{i}")).mkdir(parents=True, exist_ok=True) for i in out_dirs]
 
-    # train test split
-    idx_train, idx_valid = train_test_split(
-        range(len(processor.items)),
-        shuffle=True,
-        test_size=args.test_size,
-        random_state=42,
-    )
-
-    # train/valid utt_ids
-    train_utt_ids = []
-    valid_utt_ids = []
-
-    for idx in range(len(processor.items)):
-        utt_ids = processor.get_one_sample(idx)["utt_id"]
-        if idx in idx_train:
-            train_utt_ids.append(utt_ids)
-        elif idx in idx_valid:
-            valid_utt_ids.append(utt_ids)
-
-    # save train and valid utt_ids to track later.
-    np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
-    np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
+    # # train test split
+    # idx_train, idx_valid = train_test_split(
+    #     range(len(processor.items)),
+    #     shuffle=True,
+    #     test_size=args.test_size,
+    #     random_state=42,
+    # )
+    #
+    # # train/valid utt_ids
+    # train_utt_ids = []
+    # valid_utt_ids = []
+    #
+    # for idx in range(len(processor.items)):
+    #     utt_ids = processor.get_one_sample(idx)["utt_id"]
+    #     if idx in idx_train:
+    #         train_utt_ids.append(utt_ids)
+    #     elif idx in idx_valid:
+    #         valid_utt_ids.append(utt_ids)
+    #
+    # # save train and valid utt_ids to track later.
+    # np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
+    # np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
 
     # process each data
-    def save_to_file(idx):
-        sample = processor.get_one_sample(idx)
+    def save_to_file(sample):
+        # sample = processor.get_one_sample(idx)
 
         # get info from sample.
         audio = sample["audio"]
@@ -254,10 +254,10 @@ def main():
 
         # save
         if config["format"] == "npy":
-            if idx in idx_train:
-                subdir = "train"
-            elif idx in idx_valid:
-                subdir = "valid"
+            # if idx in idx_train: # TODO FIX
+            subdir = "train"
+            # elif idx in idx_valid:
+            #     subdir = "valid"
 
             np.save(
                 os.path.join(args.outdir, subdir, "wavs", f"{utt_id}-wave.npy"),
@@ -291,11 +291,21 @@ def main():
         else:
             raise ValueError("support only npy format.")
 
+    before_split = {}
+    max_samples = 100  # TODO FIX LATER
+    samples = []
 
-    # apply multi-processing Pool
     p = Pool(nodes=args.n_cpus)
-    for _ in tqdm(p.imap(save_to_file, range(len(processor.items))), total=len(processor.items)):
-        pass
+    p_bar = tqdm(total=len(processor.items))
+
+    for idx in range(len(processor.items)):
+        sample = processor.get_one_sample(idx)
+        before_split[sample["speaker_name"]] = sample["utt_id"]
+        samples.append(sample)
+        if len(samples) >= max_samples:
+            for _ in p.imap(save_to_file, samples):
+                p_bar.update(1)
+            samples = []
 
 
 if __name__ == "__main__":
