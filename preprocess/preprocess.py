@@ -300,7 +300,9 @@ def main():
 
     for idx in range(len(processor.items)):
         sample = processor.get_one_sample(idx)
-        before_split[sample["speaker_name"]] = sample["utt_id"]
+        if sample["speaker_name"] not in before_split:
+            before_split[sample["speaker_name"]] = [sample["utt_id"]]
+        before_split[sample["speaker_name"]].append(sample["utt_id"])
         samples.append(sample)
         if len(samples) >= max_samples:
             for _ in p.imap(save_to_file, samples):
