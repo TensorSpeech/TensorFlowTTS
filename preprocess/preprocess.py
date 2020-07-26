@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Perform preprocessing, raw feature extraction and train/valid split."""
-
+import random
 import argparse
 import logging
 import os
@@ -23,7 +23,7 @@ import numpy as np
 import pyworld as pw
 import yaml
 from pathos.multiprocessing import ProcessingPool as Pool
-from sklearn.model_selection import train_test_split
+import shutil
 from tqdm import tqdm
 from experiment.example_dataset import LJSpeechProcessor
 from experiment.example_dataset import _symbol_to_id
@@ -145,27 +145,7 @@ def main():
     [Path(Path(args.outdir).joinpath(f"valid/{i}")).mkdir(parents=True, exist_ok=True) for i in out_dirs]
 
     # # train test split
-    # idx_train, idx_valid = train_test_split(
-    #     range(len(processor.items)),
-    #     shuffle=True,
-    #     test_size=args.test_size,
-    #     random_state=42,
-    # )
-    #
-    # # train/valid utt_ids
-    # train_utt_ids = []
-    # valid_utt_ids = []
-    #
-    # for idx in range(len(processor.items)):
-    #     utt_ids = processor.get_one_sample(idx)["utt_id"]
-    #     if idx in idx_train:
-    #         train_utt_ids.append(utt_ids)
-    #     elif idx in idx_valid:
-    #         valid_utt_ids.append(utt_ids)
-    #
-    # # save train and valid utt_ids to track later.
-    # np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
-    # np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
+
 
     def ph_based_trim(utt_id: str, text_ids: np.array, raw_text: str, audio: np.array, hop_size: int):
 
@@ -342,11 +322,35 @@ def main():
         if sample["speaker_name"] not in before_split:
             before_split[sample["speaker_name"]] = [sample["utt_id"]]
         before_split[sample["speaker_name"]].append(sample["utt_id"])
-        samples.append(sample)
-        if len(samples) >= max_samples:
-            for _ in p.imap(save_to_file, samples):
-                p_bar.update(1)
-            samples = []
+        # samples.append(sample)
+        # if len(samples) >= max_samples:
+        #     for _ in p.imap(save_to_file, samples):
+        #         p_bar.update(1)
+        #     samples = []
+
+    train_utt_ids = []
+    valid_utt_ids = []
+    val_size = args.test_size
+    for speaker in before_split.keys():
+
+        random.shuffle(before_split[speaker])
+        examples = before_split[speaker]
+
+        split_idx = int(len(examples) * val_size)
+
+        train_utt_ids.extend(examples[split_idx:])
+        valid_utt_ids.extend(examples[:split_idx])
+
+
+    np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
+    np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
+
+    train_path = os.path.join(args.outdir, "train")
+    val_path = os.path.join(args.outdir, "valid")
+    for f_path in os.listdir(train_path):
+        for k in os.listdir(f"{train_path}/{f_path}"):
+            if k.split("-")[0] in valid_utt_ids:
+                shutil.move(f"{train_path}/{f_path}/{k}", f"{val_path}/{f_path}/{k}")
 
 
 if __name__ == "__main__":
