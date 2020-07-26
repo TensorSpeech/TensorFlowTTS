@@ -79,7 +79,7 @@ class KSSProcessor(object):
                 )
                 break
             sequence += _symbols_to_sequence(
-                _clean_text(m.group(1), self.cleaner_names)
+                _clean_text(m.group(1), [self.cleaner_names])
             )
             sequence += _arpabet_to_sequence(m.group(2))
             text = m.group(3)
