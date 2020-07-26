@@ -4,7 +4,7 @@ import numpy as np
 import soundfile as sf
 from g2p_en import g2p as grapheme_to_phonem
 
-from base_dataset import BaseDataset
+from .base_dataset import BaseDataset
 
 g2p = grapheme_to_phonem.G2p()
 
@@ -27,11 +27,10 @@ class LJSpeechProcessor(BaseDataset):
     mode: str = "train"
 
     def get_one_sample(self, idx: int):
-        text, wav_file, speaker_name = self.items[idx]
-        audio, rate = sf.read(wav_file)
-        audio = audio.astype(np.float32)
 
-        # convert text to ids
+        text, wav_file, speaker_name = self.items[idx]
+        audio, rate = sf.read(wav_file, dtype="float32")
+
         text_ids = np.asarray(self.text_to_sequence(text), np.int32)
 
         sample = {
@@ -64,9 +63,10 @@ def clean_g2p(g2p_text: list):
     data = []
     for i, txt in enumerate(g2p_text):
         if i == len(g2p_text) - 1:
-            if txt != " ":
+            if txt != " " and txt != "SIL":
                 data.append("@" + txt)
-            data.append("@END")  # TODO try learning without end token and compare results
+            else:
+                data.append("@END")  # TODO try learning without end token and compare results
             break
         data.append("@" + txt) if txt != " " else "@SIL"
     return data
