@@ -115,10 +115,12 @@ def main():
     # calculate statistic of f0
     f0_dataset = AudioDataset(
         args.rootdir, audio_query=f0_query, audio_load_fn=np.load,
-    ).create(batch_size=1)
+    )
+    f0_len = f0_dataset.get_len_dataset()
+    f0_dataset = f0_dataset.create(batch_size=1)
 
     pitch_vecs = []
-    for data in tqdm(f0_dataset, total=len(f0_dataset)):
+    for data in tqdm(f0_dataset, total=f0_len):
         f0 = data["audios"][0].numpy()  # [T]
         f0 = remove_outlier(f0)
         pitch_vecs.append(f0)
@@ -136,10 +138,12 @@ def main():
     # calculate statistic of energy
     energy_dataset = AudioDataset(
         args.rootdir, audio_query=energy_query, audio_load_fn=np.load,
-    ).create(batch_size=1)
+    )
+    energy_len = energy_dataset.get_len_dataset()
+    energy_dataset = energy_dataset.create(batch_size=1)
 
     energy_vecs = []
-    for data in tqdm(energy_dataset, total=len(energy_dataset)):
+    for data in tqdm(energy_dataset, total=energy_len):
         e = data["audios"][0].numpy()
         e = remove_outlier(e)
         energy_vecs.append(e)
