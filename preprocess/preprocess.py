@@ -322,11 +322,11 @@ def main():
         if sample["speaker_name"] not in before_split:
             before_split[sample["speaker_name"]] = [sample["utt_id"]]
         before_split[sample["speaker_name"]].append(sample["utt_id"])
-        # samples.append(sample)
-        # if len(samples) >= max_samples:
-        #     for _ in p.imap(save_to_file, samples):
-        #         p_bar.update(1)
-        #     samples = []
+        samples.append(sample)
+        if len(samples) >= max_samples:
+            for _ in p.imap(save_to_file, samples):
+                p_bar.update(1)
+            samples = []
 
     train_utt_ids = []
     valid_utt_ids = []
