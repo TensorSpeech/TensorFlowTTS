@@ -150,7 +150,7 @@ def main():
             use_window_mask=False,
             win_front=args.win_front,
             win_back=args.win_back,
-            training=False,
+            training=True,
         )
 
         # convert to numpy
