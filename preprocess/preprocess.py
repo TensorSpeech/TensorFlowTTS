@@ -25,7 +25,8 @@ import yaml
 from pathos.multiprocessing import ProcessingPool as Pool
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from example_dataset import LJSpeechProcessor
+from experiment.example_dataset import LJSpeechProcessor
+from experiment.example_dataset import _symbol_to_id
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -166,6 +167,39 @@ def main():
     # np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
     # np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
 
+    def ph_based_trim(utt_id: str, text_ids: np.array, raw_text: str, audio: np.array, hop_size: int):
+
+        duration_path = config.get("duration_path", "dataset/durations")
+        duration_fixed_path = config.get("duration_fixed_path", "dataset/trimmed-durations")
+        sil_ph = ["SIL", "END"]  # TODO FIX hardcoded values
+        text = raw_text.split(" ")
+
+        trim_start, trim_end = False, False
+
+        if text[0] in sil_ph:
+            trim_start = True
+
+        if text[-1] in sil_ph:
+            trim_end = True
+
+        if not trim_start and not trim_end:
+            return False, text_ids, audio
+
+        idx_start, idx_end = 0 if not trim_start else 1, text_ids.__len__() if not trim_end else -1
+        text_ids = text_ids[idx_start:idx_end]
+        durations = np.load(f"{duration_path}/{utt_id}-durations.npy")
+        if trim_start:
+            s_trim = int(durations[0] * hop_size)
+            audio = audio[s_trim:]
+        if trim_end:
+            e_trim = int(durations[-1] * hop_size)
+            audio = audio[:-e_trim]
+
+        durations = durations[idx_start:idx_end]
+        np.save(f"{duration_fixed_path}/{utt_id}-durations.npy", durations)
+        return True, text_ids, audio
+
+
     # process each data
     def save_to_file(sample):
         # sample = processor.get_one_sample(idx)
@@ -186,13 +220,18 @@ def main():
         ), f"{utt_id} seems to have a different sampling rate."
 
         # trim silence
+
         if config["trim_silence"]:
-            audio, _ = librosa.effects.trim(
-                audio,
-                top_db=config["trim_threshold_in_db"],
-                frame_length=config["trim_frame_size"],
-                hop_length=config["trim_hop_size"],
-            )
+            if config.get("ph_based_trim", True):  # TODO FIX
+                _, text_ids, audio = ph_based_trim(utt_id, text_ids,
+                                                   sample["raw_text"], audio, config["hop_size"])
+            else:
+                audio, _ = librosa.effects.trim(
+                    audio,
+                    top_db=config["trim_threshold_in_db"],
+                    frame_length=config["trim_frame_size"],
+                    hop_length=config["trim_hop_size"],
+                )
 
         if "sampling_rate_for_feats" not in config:
             x = audio
@@ -291,7 +330,7 @@ def main():
         else:
             raise ValueError("support only npy format.")
 
-    before_split = {}
+    before_split = {}  # {speaker_name: [utt_ids, ...]}
     max_samples = 100  # TODO FIX LATER
     samples = []
 
