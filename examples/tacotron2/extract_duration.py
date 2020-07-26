@@ -147,10 +147,10 @@ def main():
         # tacotron2 inference.
         mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2(
             **data,
-            use_window_mask=True,
+            use_window_mask=False,
             win_front=args.win_front,
             win_back=args.win_back,
-            training=True,
+            training=False,
         )
 
         # convert to numpy
