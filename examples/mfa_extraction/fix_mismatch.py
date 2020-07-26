@@ -5,9 +5,10 @@ import click
 
 
 @click.command()
-@click.option("--base_path", default="dump")
-@click.option("--dur_path", default="dataset")
-def fix(base_path: str, dur_path: str):
+@click.option("--base_path", default="dump3")
+@click.option("--trimmed_dur_path", default="dataset/trimmed-durations")
+@click.option("--dur_path", default="dataset/durations")
+def fix(base_path: str, dur_path: str, trimmed_dur_path: str):
     for t in ["train", "valid"]:
         mfa_longer = []
         mfa_shorter = []
@@ -19,7 +20,11 @@ def fix(base_path: str, dur_path: str):
         print(f"FIXING {t}")
         for i in tqdm(os.listdir(f"{pre_path}/ids")):
             mel = np.load(f"{pre_path}/norm-feats/{i.split('-')[0]}-norm-feats.npy")
-            dur = np.load(f"{dur_path}/durations/{i.split('-')[0]}-durations.npy")
+            try:
+                dur = np.load(f"{trimmed_dur_path}/{i.split('-')[0]}-durations.npy")
+            except:
+                dur = np.load(f"{dur_path}/{i.split('-')[0]}-durations.npy")
+
             l_mel = len(mel)
             dur_s = np.sum(dur)
             cloned = np.array(dur, copy=True)
@@ -53,10 +58,12 @@ def fix(base_path: str, dur_path: str):
             np.save(f"{pre_path}/fix_dur/{i.split('-')[0]}-durations.npy", cloned)
 
         print(
-            f"\n {t} stats: number of mfa with longer duration => {len(mfa_longer)} total hop diff => {sum(mfa_longer)}"
+            f"\n{t} stats: number of mfa with longer duration => {len(mfa_longer)} total diff => {sum(mfa_longer)}"
+            f" mean diff => {sum(mfa_longer)/len(mfa_longer)}"
         )
         print(
-            f"{t} stats: number of mfa with shorter duration => {len(mfa_shorter)} total hop diff => {sum(mfa_shorter)}"
+            f"{t} stats: number of mfa with shorter duration => {len(mfa_shorter)} total diff => {sum(mfa_shorter)}"
+            f" mean diff => {sum(mfa_shorter)/len(mfa_shorter)}"
         )
         print(
             f"{t} stats: number of files with a ''big'' duration diff => {len(big_diff)} if number>1 you should check it"
