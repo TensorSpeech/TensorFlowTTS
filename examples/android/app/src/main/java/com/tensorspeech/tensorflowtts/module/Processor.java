@@ -16,7 +16,6 @@ import java.util.regex.Pattern;
  * @author {@link "mailto:yusufsarigoz@gmail.com" "M. Yusuf Sarıgöz"}
  * Created 2020-07-25 17:25
  *
- * TODO Code for expanding numbers in the original Python code has not been implemented in Java yet.
  */
 public class Processor {
 
@@ -119,6 +118,12 @@ public class Processor {
     public static final Map<String, Integer> SYMBOL_TO_ID = new HashMap<>();
 
     public static final Pattern CURLY_RE = Pattern.compile("(.*?)\\{(.+?)\\}(.*)");
+    public static final Pattern COMMA_NUMBER_RE = Pattern.compile("([0-9][0-9\\,]+[0-9])");
+    public static final Pattern DECIMAL_RE = Pattern.compile("([0-9]+\\.[0-9]+)");
+    public static final Pattern POUNDS_RE = Pattern.compile("£([0-9\\,]*[0-9]+)");
+    public static final Pattern DOLLARS_RE = Pattern.compile("\\$([0-9\\.\\,]*[0-9]+)");
+    public static final Pattern ORDINAL_RE = Pattern.compile("[0-9]+(st|nd|rd|th)");
+    public static final Pattern NUMBER_RE = Pattern.compile("[0-9]+");
 
     public static final Map<String, String> ABBREVIATIONS = new HashMap<>();
 
@@ -199,11 +204,91 @@ public class Processor {
         return text;
     }
 
+    private static String removeCommasFromNumbers(String text) {
+        Matcher m = COMMA_NUMBER_RE.matcher(text);
+        while (m.find()) {
+            String s = m.group().replaceAll(",", "");
+            text = text.replaceFirst(m.group(), s);
+        }
+        return text;
+    }
+
+    private static String expandPounds(String text) {
+        Matcher m = POUNDS_RE.matcher(text);
+        while (m.find()) {
+            text = text.replaceFirst(m.group(), m.group() + " pounds");
+        }
+        return text;
+    }
+
+    private static String expandDollars(String text) {
+        Matcher m = DOLLARS_RE.matcher(text);
+        while (m.find()) {
+String dollars = "0";
+String cents = "0";
+String spelling = "";
+            String s = m.group().substring(1, m.group().length());
+            String[] parts = s.split("\\.");
+            if(!s.startsWith(".")) dollars = parts[0];
+            if(!s.endsWith(".") && parts.length > 1) cents = parts[1];
+            if(!dollars.equals("0")) spelling += parts[0] + " dollars ";
+            if(!cents.equals("0") && !cents.equals("00")) spelling += parts[1] + " cents ";
+            text = text.replaceFirst("\\" + m.group(), spelling);
+        }
+        return text;
+    }
+
+    private static String expandDecimals(String text) {
+        Matcher m = DECIMAL_RE.matcher(text);
+        while (m.find()) {
+            String s = m.group().replaceAll("\\.", " point ");
+            text = text.replaceFirst(m.group(), s);
+        }
+        return text;
+    }
+
+    private static String expandOrdinals(String text) {
+        Matcher m = ORDINAL_RE.matcher(text);
+        while (m.find()) {
+            String s = m.group().substring(0, m.group().length() - 2);
+            long l = Long.valueOf(s);
+            String spelling = NumberNorm.toOrdinal(l);
+            text = text.replaceFirst(m.group(), spelling);
+        }
+        return text;
+    }
+
+    private static String expandCardinals(String text) {
+        Matcher m = NUMBER_RE.matcher(text);
+        while (m.find()) {
+            long l = Long.valueOf(m.group());
+            String spelling = NumberNorm.numToString(l);
+            text = text.replaceFirst(m.group(), spelling);
+        }
+        return text;
+    }
+
+    public static String expandNumbers(String text) {
+                text = removeCommasFromNumbers(text);
+                text = expandPounds(text);
+                text = expandDollars(text);
+                text = expandDecimals(text);
+                text = expandOrdinals(text);
+                text = expandCardinals(text);
+                return text;
+    }
+
     public static String cleanTextForEnglish(String text) {
         text = convertToAscii(text);
         text = text.toLowerCase();
         text = expandAbbreviations(text);
+        try {
+            text = expandNumbers(text);
+        } catch(Exception e) {
+            Log.d(TAG, "Failed to convert numbers", e);
+        }
         text = collapseWhitespace(text);
+        Log.d(TAG, "text preprocessed: " + text);
         return text;
     }
 
