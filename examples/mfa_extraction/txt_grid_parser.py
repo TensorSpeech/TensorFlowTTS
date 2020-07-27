@@ -84,7 +84,7 @@ class TxtGridParser:
 @click.option("--dataset_path", default="dataset", type=str, help="Dataset directory")
 @click.option("--text_grid_path", default="mfa/parsed", type=str)
 @click.option("--durations_path", default="dataset/durations")
-@click.option("--sample_rate", default=22050, type=int)
+@click.option("--sample_rate", default=24000, type=int)
 @click.option("--multi_speakers", default=1, type=int, help="Use multi-speaker version")
 @click.option("--train_file", default="train.txt")
 def main(
@@ -99,9 +99,7 @@ def main(
 
     with open(yaml_path) as file:
         attrs = yaml.load(file)
-        hop_size = attrs.get(
-            "hop_size", 221
-        )  # 221 is closest to MFA using 22050 sample rate
+        hop_size = attrs["hop_size"]
 
     Path(durations_path).mkdir(parents=True, exist_ok=True)
 
