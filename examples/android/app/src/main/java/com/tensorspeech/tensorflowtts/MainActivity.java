@@ -2,9 +2,11 @@ package com.tensorspeech.tensorflowtts;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.EditText;
 
 import com.tensorspeech.tensorflowtts.module.FastSpeech2;
 import com.tensorspeech.tensorflowtts.module.MBMelGan;
+import com.tensorspeech.tensorflowtts.module.Processor;
 
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
 
@@ -13,6 +15,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -28,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private Player player;
 
 
-    private final static int[] INPUT_EXAMPLE = {55, 42, 40, 42, 51, 57, 11, 55, 42, 56, 42, 38, 55, 40, 45, 11, 38, 57, 11, 45, 38, 55, 59, 38, 55, 41, 11, 45, 38, 56, 11, 56, 45, 52, 60, 51, 11, 50, 42, 41, 46, 57, 38, 57, 46, 51, 44, 43, 52, 55, 11, 38, 56, 11, 49, 46, 57, 57, 49, 42, 11, 38, 56, 11, 42, 46, 44, 45, 57, 11, 60, 42, 42, 48, 56, 6, 11};
+    private static final String DEFAULT_INPUT_TEXT = "You can type something else in the edit box to give it a try.";
     private final static String FASTSPEECH2_MODULE = "fastspeech2_quant.tflite";
     private final static String VOCODER_MODULE = "mbmelgan.tflite";
 
@@ -39,9 +42,14 @@ public class MainActivity extends AppCompatActivity {
 
         init();
 
+        EditText input = (EditText) findViewById(R.id.input);
+
         findViewById(R.id.start).setOnClickListener(v ->
                 new Thread(() -> {
-                    TensorBuffer output = fastSpeech2.getMelSpectrogram(INPUT_EXAMPLE);
+                    String inputText = input.getText().toString();
+                    if (inputText.equals("")) inputText = DEFAULT_INPUT_TEXT;
+                    int[] inputIds = Processor.textToIds(inputText);
+                    TensorBuffer output = fastSpeech2.getMelSpectrogram(inputIds);
 
                     float[] audioData = mbMelGan.getAudio(output);
 
