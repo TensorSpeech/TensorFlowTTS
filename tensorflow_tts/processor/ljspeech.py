@@ -122,24 +122,22 @@ _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 class LJSpeechProcessor(object):
     """LJSpeech processor."""
 
-    def __init__(self, root_path, cleaner_names):
-        self.root_path = root_path
+    def __init__(self, data_dir, cleaner_names, metadata_filename="metadata.csv"):
+        self.data_dir = data_dir
         self.cleaner_names = cleaner_names
 
-        items = []
         self.speaker_name = "ljspeech"
-        if root_path is not None:
-            with open(os.path.join(root_path, "metadata.csv"), encoding="utf-8") as ttf:
-                for line in ttf:
-                    parts = line.strip().split("|")
-                    wav_path = os.path.join(root_path, "wavs", "%s.wav" % parts[0])
-                    text = parts[2]
-                    items.append([text, wav_path, self.speaker_name])
+        if data_dir:
+            with open(os.path.join(data_dir, metadata_filename), encoding="utf-8") as f:
+                self.items = [self.split_line(data_dir, line, "|") for line in f]
 
-            self.items = items
+    def split_line(self, data_dir, line, split):
+        wav_file, _, text_norm = line.strip().split(split)
+        wav_path = os.path.join(data_dir, "wavs", f"{wav_file}.wav")
+        return text_norm, wav_path, self.speaker_name
 
-    def get_one_sample(self, idx):
-        text, wav_file, speaker_name = self.items[idx]
+    def get_one_sample(self, item):
+        text, wav_file, speaker_name = item
 
         # normalize audio signal to be [-1, 1], soundfile already norm.
         audio, rate = sf.read(wav_file)
@@ -152,7 +150,7 @@ class LJSpeechProcessor(object):
             "raw_text": text,
             "text_ids": text_ids,
             "audio": audio,
-            "utt_id": self.items[idx][1].split("/")[-1].split(".")[0],
+            "utt_id": os.path.split(wav_file)[-1].split(".")[0],
             "speaker_name": speaker_name,
             "rate": rate,
         }
