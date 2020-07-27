@@ -12,307 +12,405 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Perform preprocessing, raw feature extraction and train/valid split."""
+"""Perform preprocessing, with raw feature extraction and normalization of train/valid split."""
 
 import argparse
+import glob
 import logging
 import os
+import yaml
 
 import librosa
 import numpy as np
 import pyworld as pw
-import yaml
-from pathos.multiprocessing import ProcessingPool as Pool
+
+from functools import partial
+from multiprocessing import Pool
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
-def logmelfilterbank(
-    audio,
-    sampling_rate,
-    fft_size=1024,
-    hop_size=256,
-    win_length=None,
-    window="hann",
-    num_mels=80,
-    fmin=None,
-    fmax=None,
-    eps=1e-10,
-):
-    """Compute log-Mel filterbank feature.
-    Args:
-        audio (ndarray): Audio signal (T,).
-        sampling_rate (int): Sampling rate.
-        fft_size (int): FFT size.
-        hop_size (int): Hop size.
-        win_length (int): Window length. If set to None, it will be the same as fft_size.
-        window (str): Window function type.
-        num_mels (int): Number of mel basis.
-        fmin (int): Minimum frequency in mel basis calculation.
-        fmax (int): Maximum frequency in mel basis calculation.
-        eps (float): Epsilon value to avoid inf in log calculation.
-    Returns:
-        ndarray: Log Mel filterbank feature (#frames, num_mels).
-    """
-    # get amplitude spectrogram
-    x_stft = librosa.stft(
-        audio,
-        n_fft=fft_size,
-        hop_length=hop_size,
-        win_length=win_length,
-        window=window,
-        pad_mode="reflect",
-    )
-    spc = np.abs(x_stft).T  # (#frames, #bins)
-
-    # get mel basis
-    fmin = 0 if fmin is None else fmin
-    fmax = sampling_rate / 2 if fmax is None else fmax
-    mel_basis = librosa.filters.mel(sampling_rate, fft_size, num_mels, fmin, fmax)
-
-    return np.log10(np.maximum(eps, np.dot(spc, mel_basis.T))), x_stft
-
-
-def main():
-    """Run preprocessing process."""
+def parse_and_config():
+    """Parse arguments and set configuration parameters."""
     parser = argparse.ArgumentParser(
-        description="Preprocess audio and then extract features (See detail in tensorflow_tts/bin/preprocess.py)."
+        description="Preprocess audio and text features "
+        "(See detail in tensorflow_tts/bin/preprocess_dataset.py)."
     )
     parser.add_argument(
-        "--rootdir", default=None, type=str, required=True, help="root path."
+        "--rootdir",
+        default=None,
+        type=str,
+        required=True,
+        help="Directory containing the dataset files.",
     )
     parser.add_argument(
-        "--outdir", default=None, type=str, required=True, help="output dir."
+        "--outdir",
+        default=None,
+        type=str,
+        required=True,
+        help="Output directory where features will be saved.",
     )
     parser.add_argument(
-        "--config", type=str, required=True, help="yaml format configuration file."
+        "--dataset",
+        type=str,
+        default="ljspeech",
+        choices=["ljspeech"],
+        help="Dataset to preprocess. Currently only LJSpeech.",
+    )
+    parser.add_argument(
+        "--config", type=str, required=True, help="YAML format configuration file."
     )
     parser.add_argument(
         "--n_cpus",
         type=int,
         default=4,
         required=False,
-        help="number of CPUs to use for multi-processing.",
+        help="Number of CPUs to use in parallel.",
     )
     parser.add_argument(
         "--test_size",
         type=float,
         default=0.05,
         required=False,
-        help="the proportion of the dataset to include in the test split. (default=0.05)",
+        help="Proportion of files to use as test dataset.",
     )
     parser.add_argument(
         "--verbose",
         type=int,
-        default=1,
-        help="logging level. higher is more logging. (default=1)",
+        default=0,
+        choices=[0, 1, 2],
+        help="Logging level. 0: DEBUG, 1: INFO and WARNING, 2: INFO, WARNING, and ERROR",
     )
     args = parser.parse_args()
 
     # set logger
-    if args.verbose > 1:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-    elif args.verbose > 0:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-    else:
-        logging.basicConfig(
-            level=logging.WARN,
-            format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
-        )
-        logging.warning("Skip DEBUG/INFO messages")
+    FORMAT = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
+    log_level = {0: logging.DEBUG, 1: logging.WARNING, 2: logging.ERROR}
+    logging.basicConfig(level=log_level[args.verbose], format=FORMAT)
 
     # load config
-    with open(args.config) as f:
-        config = yaml.load(f, Loader=yaml.Loader)
+    config = yaml.load(open(args.config), Loader=yaml.Loader)
     config.update(vars(args))
+    # config checks
+    assert config["format"] == "npy", "'npy' is the only supported format."
+    return config
 
-    processor = LJSpeechProcessor(
-        root_path=args.rootdir, cleaner_names="english_cleaners"
-    )
 
-    # check directly existence
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir, exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "valid"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "valid", "raw-feats"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "valid", "wavs"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "valid", "ids"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "valid", "raw-f0"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "valid", "raw-energies"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "train"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "train", "raw-feats"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "train", "wavs"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "train", "ids"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "train", "raw-f0"), exist_ok=True)
-        os.makedirs(os.path.join(args.outdir, "train", "raw-energies"), exist_ok=True)
+def gen_audio_features(item, config):
+    """Generate audio features and transformations
+    Args:
+        item (Dict): dictionary containing the attributes to encode.
+        config (Dict): configuration dictionary.
+    Returns:
+        mel (ndarray): mel matrix in np.float32.
+        energy (ndarray): energy audio profile.
+        f0 (ndarray): fundamental frequency.
+        item (Dict): dictionary containing the updated attributes.
+    """
+    # get info from sample.
+    audio = item["audio"]
+    utt_id = item["utt_id"]
+    rate = item["rate"]
 
-    # train test split
-    idx_train, idx_valid = train_test_split(
-        range(len(processor.items)),
-        shuffle=True,
-        test_size=args.test_size,
-        random_state=42,
-    )
+    # check audio properties
+    assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
+    assert np.abs(audio).max() <= 1.0, f"{utt_id} is different from 16 bit PCM."
+    assert (
+        rate == config["sampling_rate"]
+    ), f"{utt_id} sampling rate is not {config['sampling_rate']}."
 
-    # train/valid utt_ids
-    train_utt_ids = []
-    valid_utt_ids = []
-
-    for idx in range(len(processor.items)):
-        utt_ids = processor.get_one_sample(idx)["utt_id"]
-        if idx in idx_train:
-            train_utt_ids.append(utt_ids)
-        elif idx in idx_valid:
-            valid_utt_ids.append(utt_ids)
-
-    # save train and valid utt_ids to track later.
-    np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
-    np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
-
-    pbar = tqdm(initial=0, total=len(processor.items), desc="[Preprocessing]")
-
-    # process each data
-    def save_to_file(idx):
-        sample = processor.get_one_sample(idx)
-
-        # get info from sample.
-        audio = sample["audio"]
-        text_ids = sample["text_ids"]
-        utt_id = sample["utt_id"]
-        rate = sample["rate"]
-
-        # check
-        assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
-        assert (
-            np.abs(audio).max() <= 1.0
-        ), f"{utt_id} seems to be different from 16 bit PCM."
-        assert (
-            rate == config["sampling_rate"]
-        ), f"{utt_id} seems to have a different sampling rate."
-
-        # trim silence
-        if config["trim_silence"]:
-            audio, _ = librosa.effects.trim(
-                audio,
-                top_db=config["trim_threshold_in_db"],
-                frame_length=config["trim_frame_size"],
-                hop_length=config["trim_hop_size"],
-            )
-
-        if "sampling_rate_for_feats" not in config:
-            x = audio
-            sampling_rate = config["sampling_rate"]
-            hop_size = config["hop_size"]
-        else:
-            x = librosa.resample(audio, rate, config["sampling_rate_for_feats"])
-            sampling_rate = config["sampling_rate_for_feats"]
-            assert (
-                config["hop_size"] * config["sampling_rate_for_feats"] % rate == 0
-            ), "hop_size must be int value. please check sampling_rate_for_feats is correct."
-            hop_size = config["hop_size"] * config["sampling_rate_for_feats"] // rate
-
-        # extract feature
-        mel, x_stft = logmelfilterbank(
-            x,
-            sampling_rate=sampling_rate,
-            hop_size=hop_size,
-            fft_size=config["fft_size"],
-            win_length=config["win_length"],
-            window=config["window"],
-            num_mels=config["num_mels"],
-            fmin=config["fmin"],
-            fmax=config["fmax"],
+    # trim silence
+    if config["trim_silence"]:
+        audio, _ = librosa.effects.trim(
+            audio,
+            top_db=config["trim_threshold_in_db"],
+            frame_length=config["trim_frame_size"],
+            hop_length=config["trim_hop_size"],
         )
 
-        # make sure the audio length and feature length
-        audio = np.pad(audio, (0, config["fft_size"]), mode="edge")
-        audio = audio[: len(mel) * config["hop_size"]]
+    # resample audio if necessary
+    if "sampling_rate_for_feats" in config:
+        audio = librosa.resample(audio, rate, config["sampling_rate_for_feats"])
+        sampling_rate = config["sampling_rate_for_feats"]
+        assert (
+            config["hop_size"] * config["sampling_rate_for_feats"] % rate == 0
+        ), "'hop_size' must be 'int' value. Please check if 'sampling_rate_for_feats' is correct."
+        hop_size = config["hop_size"] * config["sampling_rate_for_feats"] // rate
+    else:
+        sampling_rate = config["sampling_rate"]
+        hop_size = config["hop_size"]
 
-        # extract raw pitch
-        f0, _ = pw.dio(
-            x.astype(np.double),
-            fs=config["sampling_rate"],
-            f0_ceil=config["fmax"],
-            frame_period=1000 * config["hop_size"] / config["sampling_rate"],
+    # get spectrogram
+    D = librosa.stft(
+        audio,
+        n_fft=config["fft_size"],
+        hop_length=hop_size,
+        win_length=config["win_length"],
+        window=config["window"],
+        pad_mode="reflect",
+    )
+    S, _ = librosa.magphase(D)  # (#bins, #frames)
+
+    # get mel basis
+    fmin = 0 if config["fmin"] is None else config["fmin"]
+    fmax = sampling_rate // 2 if config["fmax"] is None else config["fmax"]
+    mel_basis = librosa.filters.mel(
+        sr=sampling_rate,
+        n_fft=config["fft_size"],
+        n_mels=config["num_mels"],
+        fmin=fmin,
+        fmax=fmax,
+    )
+    mel = np.log10(np.maximum(np.dot(mel_basis, S), 1e-10)).T  # (#frames, #bins)
+
+    # check audio and feature length
+    audio = np.pad(audio, (0, config["fft_size"]), mode="edge")
+    audio = audio[: len(mel) * hop_size]
+    assert len(mel) * hop_size == len(audio)
+
+    # extract raw pitch
+    f0, _ = pw.dio(
+        audio.astype(np.double),
+        fs=sampling_rate,
+        f0_ceil=fmax,
+        frame_period=1000 * hop_size / sampling_rate,
+    )
+    if len(f0) >= len(mel):
+        f0 = f0[: len(mel)]
+    else:
+        f0 = np.pad(f0, (0, len(mel) - len(f0)))
+
+    # extract energy
+    energy = np.sqrt(np.sum(S ** 2, axis=0))
+    assert len(mel) == len(f0) == len(energy)
+
+    # apply global gain
+    if config["global_gain_scale"] > 0.0:
+        audio *= config["global_gain_scale"]
+    if np.abs(audio).max() >= 1.0:
+        logging.warn(
+            f"{utt_id} causes clipping. It is better to reconsider global gain scale value."
+        )
+    item["audio"] = audio
+    item["mel"] = mel
+    item["f0"] = f0
+    item["energy"] = energy
+    return mel, energy, f0, item
+
+
+def save_statistics_to_file(scaler_list, config):
+    """Save computed statistics to disk.
+    Args:
+        scaler_list (List): List of scalers containing statistics to save.
+        config (Dict): configuration dictionary.
+    """
+    for scaler, name in scaler_list:
+        stats = np.stack((scaler.mean_, scaler.scale_))
+        np.save(
+            os.path.join(config["outdir"], f"stats{name}.npy"),
+            stats.astype(np.float32),
+            allow_pickle=False,
         )
 
-        if len(f0) >= len(mel):
-            f0 = f0[: len(mel)]
-        else:
-            f0 = np.pad(f0, ((0, len(mel) - len(f0))))
 
-        # extract energy
-        S = librosa.magphase(x_stft)[0]
-        energy = np.sqrt(np.sum(S ** 2, axis=0))
+def save_features_to_file(features, subdir, config):
+    """Save transformed dataset features in disk.
+    Args:
+        features (Dict): dictionary containing the attributes to save.
+        subdir (str): data split folder where features will be saved.
+        config (Dict): configuration dictionary.
+    """
+    utt_id = features["utt_id"]
 
-        assert len(mel) * config["hop_size"] == len(audio)
-        assert len(mel) == len(f0) == len(energy)
-
-        # apply global gain
-        if config["global_gain_scale"] > 0.0:
-            audio *= config["global_gain_scale"]
-        if np.abs(audio).max() >= 1.0:
-            logging.warn(
-                f"{utt_id} causes clipping. "
-                f"it is better to re-consider global gain scale."
-            )
-
-        # save
-        if config["format"] == "npy":
-            if idx in idx_train:
-                subdir = "train"
-            elif idx in idx_valid:
-                subdir = "valid"
-
-            np.save(
-                os.path.join(args.outdir, subdir, "wavs", f"{utt_id}-wave.npy"),
-                audio.astype(np.float32),
-                allow_pickle=False,
-            )
+    if config["format"] == "npy":
+        save_list = [
+            (features["audio"], "wavs", "wave", np.float32),
+            (features["mel"], "raw-feats", "raw-feats", np.float32),
+            (features["text_ids"], "ids", "ids", np.int32),
+            (features["f0"], "raw-f0", "raw-f0", np.float32),
+            (features["energy"], "raw-energies", "raw-energy", np.float32),
+        ]
+        for item, name_dir, name_file, fmt in save_list:
             np.save(
                 os.path.join(
-                    args.outdir, subdir, "raw-feats", f"{utt_id}-raw-feats.npy"
+                    config["outdir"], subdir, name_dir, f"{utt_id}-{name_file}.npy"
                 ),
-                mel.astype(np.float32),
+                item.astype(fmt),
                 allow_pickle=False,
             )
-            np.save(
-                os.path.join(args.outdir, subdir, "ids", f"{utt_id}-ids.npy"),
-                text_ids.astype(np.int32),
-                allow_pickle=False,
-            )
-            np.save(
-                os.path.join(args.outdir, subdir, "raw-f0", f"{utt_id}-raw-f0.npy"),
-                f0.astype(np.float32),
-                allow_pickle=False,
-            )
-            np.save(
-                os.path.join(
-                    args.outdir, subdir, "raw-energies", f"{utt_id}-raw-energy.npy"
-                ),
-                energy.astype(np.float32),
-                allow_pickle=False,
-            )
-        else:
-            raise ValueError("support only npy format.")
-
-        pbar.update(1)
-
-    # apply multi-processing Pool
-    p = Pool(nodes=args.n_cpus)
-    p.map(save_to_file, range(len(processor.items)))
-    pbar.close()
+    else:
+        raise ValueError("'npy' is the only supported format.")
 
 
-if __name__ == "__main__":
-    main()
+def preprocess():
+    """Run preprocessing process and compute statistics for normalizing."""
+    config = parse_and_config()
+
+    dataset_processor = {
+        "ljspeech": LJSpeechProcessor,
+    }
+
+    logging.info(f"Selected '{config['dataset']}' processor.")
+    processor = dataset_processor[config["dataset"]](
+        config["rootdir"], cleaner_names="english_cleaners"
+    )
+
+    # check output directories
+    build_dir = lambda x: [
+        os.makedirs(os.path.join(config["outdir"], x, y), exist_ok=True)
+        for y in ["raw-feats", "wavs", "ids", "raw-f0", "raw-energies"]
+    ]
+    build_dir("train")
+    build_dir("valid")
+
+    # build train test split
+    train_split, valid_split = train_test_split(
+        processor.items, test_size=config["test_size"], random_state=42, shuffle=True,
+    )
+    logging.info(f"Training items: {len(train_split)}")
+    logging.info(f"Validation items: {len(valid_split)}")
+
+    get_utt_id = lambda x: os.path.split(x[1])[-1].split(".")[0]
+    train_utt_ids = [get_utt_id(x) for x in train_split]
+    valid_utt_ids = [get_utt_id(x) for x in valid_split]
+
+    # save train and valid utt_ids to track later
+    np.save(os.path.join(config["outdir"], "train_utt_ids.npy"), train_utt_ids)
+    np.save(os.path.join(config["outdir"], "valid_utt_ids.npy"), valid_utt_ids)
+
+    # define map iterator
+    def iterator_data(items_list):
+        for item in items_list:
+            yield processor.get_one_sample(item)
+
+    train_iterator_data = iterator_data(train_split)
+    valid_iterator_data = iterator_data(valid_split)
+
+    p = Pool(config["n_cpus"])
+
+    # preprocess train files and get statistics for normalizing
+    partial_fn = partial(gen_audio_features, config=config)
+    train_map = p.imap_unordered(
+        partial_fn,
+        tqdm(train_iterator_data, total=len(train_split), desc="[Preprocessing train]"),
+        chunksize=10,
+    )
+    # init scaler for multiple features
+    scaler_mel = StandardScaler(copy=False)
+    scaler_energy = StandardScaler(copy=False)
+    scaler_f0 = StandardScaler(copy=False)
+
+    for mel, energy, f0, features in train_map:
+        save_features_to_file(features, "train", config)
+        # remove outliers
+        energy = remove_outlier(energy)
+        f0 = remove_outlier(f0)
+        # partial fitting of scalers
+        scaler_mel.partial_fit(mel)
+        scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))
+        scaler_f0.partial_fit(f0[f0 != 0].reshape(-1, 1))
+
+    # save statistics to file
+    logging.info("Saving computed statistics.")
+    scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
+    save_statistics_to_file(scaler_list, config)
+
+    # preprocess valid files
+    partial_fn = partial(gen_audio_features, config=config)
+    valid_map = p.imap_unordered(
+        partial_fn,
+        tqdm(valid_iterator_data, total=len(valid_split), desc="[Preprocessing valid]"),
+        chunksize=10,
+    )
+    for *_, features in valid_map:
+        save_features_to_file(features, "valid", config)
+
+
+def gen_normal_mel(mel_path, scaler, config):
+    """Normalize the mel spectrogram and save it to the corresponding path.
+    Args:
+        mel_path (string): path of the mel spectrogram to normalize.
+        scaler (sklearn.base.BaseEstimator): scaling function to use for normalize.
+        config (Dict): configuration dictionary.
+    """
+    mel = np.load(mel_path)
+    mel_norm = scaler.transform(mel)
+    path, file_name = os.path.split(mel_path)
+    *_, subdir, suffix = path.split(os.sep)
+    utt_id = file_name.strip(f"-{suffix}.npy")
+    np.save(
+        os.path.join(
+            config["outdir"], subdir, "norm-feats", f"{utt_id}-norm-feats.npy"
+        ),
+        mel_norm.astype(np.float32),
+        allow_pickle=False,
+    )
+
+
+def normalize():
+    """Normalize mel spectrogram with pre-computed statistics."""
+    config = parse_and_config()
+    if config["format"] == "npy":
+        # init scaler with saved values
+        scaler = StandardScaler()
+        scaler.mean_, scaler.scale_ = np.load(
+            os.path.join(config["outdir"], "stats.npy")
+        )
+        scaler.n_features_in_ = config["num_mels"]
+    else:
+        raise ValueError("'npy' is the only supported format.")
+
+    # find all "raw-feats" files in both train and valid folders
+    glob_path = os.path.join(config["rootdir"], "**", "raw-feats", "*.npy")
+    mel_raw_feats = glob.glob(glob_path, recursive=True)
+    logging.info(f"Files to normalize: {len(mel_raw_feats)}")
+
+    # check for output directories
+    os.makedirs(os.path.join(config["outdir"], "train", "norm-feats"), exist_ok=True)
+    os.makedirs(os.path.join(config["outdir"], "valid", "norm-feats"), exist_ok=True)
+
+    p = Pool(config["n_cpus"])
+    partial_fn = partial(gen_normal_mel, scaler=scaler, config=config)
+    list(p.map(partial_fn, tqdm(mel_raw_feats, desc="[Normalizing]")))
+
+
+def compute_statistics():
+    """Compute mean / std statistics of some features for later normalization."""
+    config = parse_and_config()
+
+    # find features files for the train split
+    glob_fn = lambda x: glob.glob(os.path.join(config["rootdir"], "train", x, "*.npy"))
+    glob_mel = glob_fn("raw-feats")
+    glob_f0 = glob_fn("raw-f0")
+    glob_energy = glob_fn("raw-energies")
+    assert (
+        len(glob_mel) == len(glob_f0) == len(glob_energy)
+    ), "Features, f0 and energies have different files in training split."
+
+    logging.info(f"Computing statistics for {len(glob_mel)} files.")
+    # init scaler for multiple features
+    scaler_mel = StandardScaler(copy=False)
+    scaler_energy = StandardScaler(copy=False)
+    scaler_f0 = StandardScaler(copy=False)
+
+    for mel, f0, energy in tqdm(
+        zip(glob_mel, glob_f0, glob_energy), total=len(glob_mel)
+    ):
+        # remove outliers
+        energy = remove_outlier(np.load(energy))
+        f0 = remove_outlier(np.load(f0))
+        # partial fitting of scalers
+        scaler_mel.partial_fit(np.load(mel))
+        scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))
+        scaler_f0.partial_fit(f0[f0 != 0].reshape(-1, 1))
+
+    # save statistics to file
+    logging.info("Saving computed statistics.")
+    scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
+    save_statistics_to_file(scaler_list, config)
