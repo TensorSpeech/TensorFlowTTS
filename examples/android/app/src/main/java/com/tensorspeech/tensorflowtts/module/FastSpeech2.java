@@ -21,23 +21,23 @@ import java.util.Map;
  */
 public class FastSpeech2 extends AbstractModule {
     private static final String TAG = "FastSpeech2";
-    private Interpreter encoder = null;
+    private Interpreter mModule;
 
     public FastSpeech2(String modulePath) {
         try {
-            encoder = new Interpreter(new File(modulePath), getOption());
-            int input = encoder.getInputTensorCount();
+            mModule = new Interpreter(new File(modulePath), getOption());
+            int input = mModule.getInputTensorCount();
             for (int i = 0; i < input; i++) {
-                Tensor inputTensor = encoder.getInputTensor(i);
+                Tensor inputTensor = mModule.getInputTensor(i);
                 Log.d(TAG, "input:" + i +
                         " name:" + inputTensor.name() +
                         " shape:" + Arrays.toString(inputTensor.shape()) +
                         " dtype:" + inputTensor.dataType());
             }
 
-            int output = encoder.getOutputTensorCount();
+            int output = mModule.getOutputTensorCount();
             for (int i = 0; i < output; i++) {
-                Tensor outputTensor = encoder.getOutputTensor(i);
+                Tensor outputTensor = mModule.getOutputTensor(i);
                 Log.d(TAG, "output:" + i +
                         " name:" + outputTensor.name() +
                         " shape:" + Arrays.toString(outputTensor.shape()) +
@@ -51,8 +51,8 @@ public class FastSpeech2 extends AbstractModule {
 
     public TensorBuffer getMelSpectrogram(int[] inputIds) {
         Log.d(TAG, "input id length: " + inputIds.length);
-        encoder.resizeInput(0, new int[]{1, inputIds.length});
-        encoder.allocateTensors();
+        mModule.resizeInput(0, new int[]{1, inputIds.length});
+        mModule.allocateTensors();
 
         @SuppressLint("UseSparseArrays")
         Map<Integer, Object> outputMap = new HashMap<>();
@@ -64,12 +64,12 @@ public class FastSpeech2 extends AbstractModule {
         inputs[0] = inputIds;
 
         long time = System.currentTimeMillis();
-        encoder.runForMultipleInputsOutputs(
+        mModule.runForMultipleInputsOutputs(
                 new Object[]{inputs, new int[1][1], new int[]{0}, new float[]{1F}, new float[]{1F}, new float[]{1F}},
                 outputMap);
         Log.d(TAG, "time cost: " + (System.currentTimeMillis() - time));
 
-        int size = encoder.getOutputTensor(0).shape()[2];
+        int size = mModule.getOutputTensor(0).shape()[2];
         int[] shape = {1, outputBuffer.position() / size, size};
         TensorBuffer spectrogram = TensorBuffer.createFixedSize(shape, DataType.FLOAT32);
         float[] outputArray = new float[outputBuffer.position()];
