@@ -56,13 +56,13 @@ class TFAutoModel(object):
 
     @classmethod
     def from_pretrained(cls, config, pretrained_path=None, **kwargs):
-        is_build = kwargs.pop("is_build", False)
+        is_build = kwargs.pop("is_build", True)
         for config_class, model_class in TF_MODEL_MAPPING.items():
             if isinstance(config, config_class) and str(config_class.__name__) in str(config):
                 model = model_class(config=config, **kwargs)
                 if is_build:
                     model._build()
-                if pretrained_path is not None:
+                if pretrained_path is not None and ".h5" in pretrained_path:
                     model.load_weights(pretrained_path)
                 return model
         raise ValueError(

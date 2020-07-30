@@ -158,6 +158,7 @@ class TFPQMF(tf.keras.layers.Layer):
 
 class TFMBMelGANGenerator(TFMelGANGenerator):
     """Tensorflow MBMelGAN generator module."""
+
     def __init__(self, config, **kwargs):
         super().__init__(config, **kwargs)
         self.pqmf = TFPQMF(config=config, name="pqmf")
