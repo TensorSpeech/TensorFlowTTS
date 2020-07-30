@@ -324,12 +324,12 @@ def main():
     with STRATEGY.scope():
         # define generator and discriminator
         generator = TFMelGANGenerator(
-            MELGAN_CONFIG.MelGANGeneratorConfig(**config["generator_params"]),
+            MELGAN_CONFIG.MelGANGeneratorConfig(**config["melgan_generator_params"]),
             name="melgan_generator",
         )
 
         discriminator = TFMelGANMultiScaleDiscriminator(
-            MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["discriminator_params"]),
+            MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["melgan_discriminator_params"]),
             name="melgan_discriminator",
         )
 
