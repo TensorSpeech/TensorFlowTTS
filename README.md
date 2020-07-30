@@ -236,27 +236,23 @@ import tensorflow as tf
 
 from tensorflow_tts.processor import LJSpeechProcessor
 
-from tensorflow_tts.configs import FastSpeechConfig
-from tensorflow_tts.configs import MelGANGeneratorConfig
-
-from tensorflow_tts.models import TFFastSpeech
-from tensorflow_tts.models import TFMelGANGenerator
+from tensorflow_tts.inference import AutoConfig
+from tensorflow_tts.inference import TFAutoModel
 
 # initialize fastspeech model.
-with open('./examples/fastspeech/conf/fastspeech.v1.yaml') as f:
-    fs_config = yaml.load(f, Loader=yaml.Loader)
-fs_config = FastSpeechConfig(**fs_config["fastspeech_params"])
-fastspeech = TFFastSpeech(config=fs_config, name="fastspeech")
-fastspeech._build()
-fastspeech.load_weights("./examples/fastspeech/pretrained/model-195000.h5")
+fs_config = AutoConfig.from_pretrained('/examples/fastspeech/conf/fastspeech.v1.yaml')
+fastspeech = TFAutoModel.from_pretrained(
+    config=config,
+    pretrained_path="./examples/fastspeech/pretrained/model-195000.h5"
+)
+
 
 # initialize melgan model
-with open('./examples/melgan/conf/melgan.v1.yaml') as f:
-    melgan_config = yaml.load(f, Loader=yaml.Loader)
-melgan_config = MelGANGeneratorConfig(**melgan_config["generator_params"])
-melgan = TFMelGANGenerator(config=melgan_config, name='melgan_generator')
-melgan._build()
-melgan.load_weights("./examples/melgan/pretrained/generator-1500000.h5")
+melgan_config = AutoConfig.from_pretrained('./examples/melgan/conf/melgan.v1.yaml')
+melgan = TFAutoModel.from_pretrained(
+    config=config,
+    pretrained_path="./examples/melgan/checkpoint/generator-1500000.h5"
+)
 
 
 # inference
@@ -273,8 +269,8 @@ masked_mel_before, masked_mel_after, duration_outputs = fastspeech.inference(
 )
 
 # melgan inference
-audio_before = melgan(masked_mel_before)[0, :, 0]
-audio_after = melgan(masked_mel_after)[0, :, 0]
+audio_before = melgan.inference(masked_mel_before)[0, :, 0]
+audio_after = melgan.inference(masked_mel_after)[0, :, 0]
 
 # save to file
 sf.write('./audio_before.wav', audio_before, 22050, "PCM_16")
