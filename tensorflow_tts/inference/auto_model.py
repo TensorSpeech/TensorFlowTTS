@@ -56,10 +56,12 @@ class TFAutoModel(object):
 
     @classmethod
     def from_pretrained(cls, config, pretrained_path=None, **kwargs):
+        is_build = kwargs.pop("is_build", False)
         for config_class, model_class in TF_MODEL_MAPPING.items():
-            if isinstance(config, config_class):
+            if isinstance(config, config_class) and str(config_class.__name__) in str(config):
                 model = model_class(config=config, **kwargs)
-                model._build()
+                if is_build:
+                    model._build()
                 if pretrained_path is not None:
                     model.load_weights(pretrained_path)
                 return model

@@ -34,7 +34,9 @@ logging.basicConfig(
     "config_path", 
     [
         "./examples/fastspeech/conf/fastspeech.v1.yaml", 
-        "./examples/fastspeech2/conf/fastspeech2.v1.yaml", 
+        "./examples/fastspeech/conf/fastspeech.v3.yaml", 
+        "./examples/fastspeech2/conf/fastspeech2.v1.yaml",
+        "./examples/fastspeech2/conf/fastspeech2.v2.yaml",
         "./examples/melgan/conf/melgan.v1.yaml",
         "./examples/melgan.stft/conf/melgan.stft.v1.yaml",
         "./examples/multiband_melgan/conf/multiband_melgan.v1.yaml",
