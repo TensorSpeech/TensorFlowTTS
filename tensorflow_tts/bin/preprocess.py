@@ -87,12 +87,6 @@ def parse_and_config():
         choices=[0, 1, 2],
         help="Logging level. 0: DEBUG, 1: INFO and WARNING, 2: INFO, WARNING, and ERROR",
     )
-    parser.add_argument(
-       "--trimlist",
-        type=str,
-        default="",
-        help="MFA Trimlist.",
-    )
     args = parser.parse_args()
 
     # set logger
@@ -253,27 +247,11 @@ def save_features_to_file(features, subdir, config):
     else:
         raise ValueError("'npy' is the only supported format.")
 
-    # save train and valid utt_ids to track later.
-    trimids = np.empty(1)
-    trimlens = np.empty(1)
-    if len(args.trimlist) > 1:
-        print("Loading trimfile...")
-        trimfile = np.load(args.trimlist)
-        trimids = trimfile[0]
-        trimlens = trimfile[1]
-        print(str(len(trimids)) + " - " + str(len(trimlens)))
-
-    np.save(os.path.join(args.outdir, "train_utt_ids.npy"), train_utt_ids)
-    np.save(os.path.join(args.outdir, "valid_utt_ids.npy"), valid_utt_ids)
 
 def preprocess():
     """Run preprocessing process and compute statistics for normalizing."""
     config = parse_and_config()
 
-
-    # process each data
-    def save_to_file(idx):
-        sample = processor.get_one_sample(idx)
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
     }
@@ -283,28 +261,6 @@ def preprocess():
         config["rootdir"], cleaner_names="english_cleaners"
     )
 
-        # check
-        assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
-        assert (
-            np.abs(audio).max() <= 1.0
-        ), f"{utt_id} seems to be different from 16 bit PCM."
-        assert (
-            rate == config["sampling_rate"]
-        ), f"{utt_id} seems to have a different sampling rate."
-
-        # trim silence
-        if config["trim_silence"] and len(args.trimlist) == 0:
-            audio, _ = librosa.effects.trim(
-                audio,
-                top_db=config["trim_threshold_in_db"],
-                frame_length=config["trim_frame_size"],
-                hop_length=config["trim_hop_size"],
-            )
-        sarate = config["sampling_rate"]
-        if len(args.trimlist) > 1:
-            uttidx = np.where(trimids == utt_id)[0]
-            calca = int(float(trimlens[uttidx]) * sarate) # if we do not wrap the number in float first we get numpy ufunc error
-            audio = audio[0:calca]
     # check output directories
     build_dir = lambda x: [
         os.makedirs(os.path.join(config["outdir"], x, y), exist_ok=True)
