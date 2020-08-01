@@ -15,7 +15,9 @@ format: "npy"
 ###########################################################
 #         GENERATOR NETWORK ARCHITECTURE SETTING          #
 ###########################################################
-generator_params:
+model_type: "multiband_melgan_generator"
+
+multiband_melgan_generator_params:
     out_channels: 4               # Number of output channels (number of subbands).
     kernel_size: 7                # Kernel size of initial and final conv layers.
     filters: 384                  # Initial number of channels for conv layers.
@@ -27,7 +29,7 @@ generator_params:
 ###########################################################
 #       DISCRIMINATOR NETWORK ARCHITECTURE SETTING        #
 ###########################################################
-discriminator_params:
+multiband_melgan_discriminator_params:
     out_channels: 1                   # Number of output channels.
     scales: 3                         # Number of multi-scales.
     downsample_pooling: "AveragePooling1D"   # Pooling type for the input downsampling.

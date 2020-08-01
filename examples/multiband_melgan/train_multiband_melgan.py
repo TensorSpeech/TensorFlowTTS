@@ -427,17 +427,17 @@ def main():
     with STRATEGY.scope():
         # define generator and discriminator
         generator = TFMelGANGenerator(
-            MultiBandMelGANGeneratorConfig(**config["generator_params"]),
+            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator"]),
             name="multi_band_melgan_generator",
         )
 
         discriminator = TFMelGANMultiScaleDiscriminator(
-            MultiBandMelGANDiscriminatorConfig(**config["discriminator_params"]),
+            MultiBandMelGANDiscriminatorConfig(**config["multiband_discriminator_params"]),
             name="multi_band_melgan_discriminator",
         )
 
         pqmf = TFPQMF(
-            MultiBandMelGANGeneratorConfig(**config["generator_params"]), name="pqmf"
+            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator"]), name="pqmf"
         )
 
         # dummy input to build model.

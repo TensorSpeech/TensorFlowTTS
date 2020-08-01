@@ -706,8 +706,10 @@ class TFTacotronDecoder(Decoder):
 class TFTacotron2(tf.keras.Model):
     """Tensorflow tacotron-2 model."""
 
-    def __init__(self, config, training, enable_tflite_convertible=False, **kwargs):
+    def __init__(self, config, **kwargs):
         """Initalize tacotron-2 layers."""
+        training = kwargs.pop("training", False)
+        enable_tflite_convertible = kwargs.pop("enable_tflite_convertible", False)
         super().__init__(self, **kwargs)
         self.encoder = TFTacotronEncoder(config, name="encoder")
         self.decoder_cell = TFTacotronDecoderCell(
@@ -847,9 +849,9 @@ class TFTacotron2(tf.keras.Model):
     @tf.function(
         experimental_relax_shapes=True,
         input_signature=[
-            tf.TensorSpec([None, None], dtype=tf.int32),
-            tf.TensorSpec([None,], dtype=tf.int32),
-            tf.TensorSpec([None,], dtype=tf.int32),
+            tf.TensorSpec([None, None], dtype=tf.int32, name="input_ids"),
+            tf.TensorSpec([None,], dtype=tf.int32, name="input_lengths"),
+            tf.TensorSpec([None,], dtype=tf.int32, name="speaker_ids"),
         ],
     )
     def inference(self, input_ids, input_lengths, speaker_ids, **kwargs):
@@ -915,9 +917,9 @@ class TFTacotron2(tf.keras.Model):
     @tf.function(
         experimental_relax_shapes=True,
         input_signature=[
-            tf.TensorSpec([1, None], dtype=tf.int32),
-            tf.TensorSpec([1,], dtype=tf.int32),
-            tf.TensorSpec([1,], dtype=tf.int32),
+            tf.TensorSpec([1, None], dtype=tf.int32, name="input_ids"),
+            tf.TensorSpec([1,], dtype=tf.int32, name="input_lengths"),
+            tf.TensorSpec([1,], dtype=tf.int32, name="speaker_ids"),
         ],
     )
     def inference_tflite(self, input_ids, input_lengths, speaker_ids, **kwargs):
