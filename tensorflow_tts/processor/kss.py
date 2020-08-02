@@ -39,8 +39,8 @@ class KSSProcessor(object):
                 self.items = [self.split_line(data_dir, line, "|") for line in f]
 
     def split_line(self, data_dir, line, split):
-        wav_file, _, text_norm = line.strip().split(split)
-        wav_path = os.path.join(data_dir, "wavs", f"{wav_file}.wav")
+        wav_file, _, text_norm, _, _ = line.strip().split(split)
+        wav_path = os.path.join(data_dir, wav_file)
         return text_norm, wav_path, self.speaker_name
     
     def get_one_sample(self, item):
