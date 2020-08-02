@@ -22,7 +22,7 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 # TODO(@dathudeptrai) update requirement if needed.
 requirements = {
     "install": [
-        "tensorflow-gpu>=2.3.0rc1",
+        "tensorflow-gpu==2.3.0",
         "tensorflow-addons>=0.10.0",
         "setuptools>=38.5.1",
         "librosa>=0.7.0",
@@ -31,7 +31,6 @@ requirements = {
         "PyYAML>=3.12",
         "tqdm>=4.26.1",
         "h5py>=2.10.0",
-        "pathos>=0.2.5",
         "unidecode>=1.1.1",
         "inflect>=4.1.0",
         "scikit-learn>=0.22.0",
@@ -49,9 +48,9 @@ requirements = {
 # TODO(@dathudeptrai) update console_scripts.
 entry_points = {
     "console_scripts": [
-        "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:main",
-        "tensorflow-tts-compute-statistics=tensorflow_tts.bin.compute_statistics:main",
-        "tensorflow-tts-normalize=tensorflow_tts.bin.normalize:main",
+        "tensorflow-tts-preprocess=tensorflow_tts.bin.preprocess:preprocess",
+        "tensorflow-tts-compute-statistics=tensorflow_tts.bin.preprocess:compute_statistics",
+        "tensorflow-tts-normalize=tensorflow_tts.bin.preprocess:normalize",
     ]
 }
 

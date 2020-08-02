@@ -116,7 +116,7 @@ def main():
 
     # define model and load checkpoint
     fastspeech2 = TFFastSpeech2(
-        config=FastSpeech2Config(**config["fastspeech_params"]), name="fastspeech2"
+        config=FastSpeech2Config(**config["fastspeech2_params"]), name="fastspeech2"
     )
     fastspeech2._build()
     fastspeech2.load_weights(args.checkpoint)

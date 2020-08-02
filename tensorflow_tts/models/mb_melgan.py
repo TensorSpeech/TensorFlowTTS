@@ -21,6 +21,8 @@ import numpy as np
 import tensorflow as tf
 from scipy.signal import kaiser
 
+from tensorflow_tts.models import TFMelGANGenerator
+
 
 def design_prototype_filter(taps=62, cutoff_ratio=0.15, beta=9.0):
     """Design prototype filter for PQMF.
@@ -152,3 +154,34 @@ class TFPQMF(tf.keras.layers.Layer):
         )
         x = tf.pad(x, [[0, 0], [self.taps // 2, self.taps // 2], [0, 0]])
         return tf.nn.conv1d(x, self.synthesis_filter, stride=1, padding="VALID")
+
+
+class TFMBMelGANGenerator(TFMelGANGenerator):
+    """Tensorflow MBMelGAN generator module."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        self.pqmf = TFPQMF(config=config, name="pqmf")
+
+    def call(self, mels, **kwargs):
+        """Calculate forward propagation.
+        Args:
+            c (Tensor): Input tensor (B, T, channels)
+        Returns:
+            Tensor: Output tensor (B, T ** prod(upsample_scales), out_channels)
+        """
+        return self.inference(mels)
+
+    @tf.function(
+        input_signature=[tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")]
+    )
+    def inference(self, mels):
+        mb_audios = self.melgan(mels)
+        return self.pqmf.synthesis(mb_audios)
+
+    @tf.function(
+        input_signature=[tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")]
+    )
+    def inference_tflite(self, mels):
+        mb_audios = self.melgan(mels)
+        return self.pqmf.synthesis(mb_audios)

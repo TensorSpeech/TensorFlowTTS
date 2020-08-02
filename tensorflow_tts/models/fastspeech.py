@@ -844,9 +844,9 @@ class TFFastSpeech(tf.keras.Model):
             self._inference,
             experimental_relax_shapes=True,
             input_signature=[
-                tf.TensorSpec(shape=[None, None], dtype=tf.int32),
-                tf.TensorSpec(shape=[None,], dtype=tf.int32),
-                tf.TensorSpec(shape=[None,], dtype=tf.float32),
+                tf.TensorSpec(shape=[None, None], dtype=tf.int32, name="input_ids"),
+                tf.TensorSpec(shape=[None,], dtype=tf.int32, name="speaker_ids"),
+                tf.TensorSpec(shape=[None,], dtype=tf.float32, name="speed_ratios"),
             ],
         )
 
@@ -854,8 +854,8 @@ class TFFastSpeech(tf.keras.Model):
             self._inference,
             experimental_relax_shapes=True,
             input_signature=[
-                tf.TensorSpec(shape=[1, None], dtype=tf.int32),
-                tf.TensorSpec(shape=[1,], dtype=tf.int32),
-                tf.TensorSpec(shape=[1,], dtype=tf.float32),
+                tf.TensorSpec(shape=[1, None], dtype=tf.int32, name="input_ids"),
+                tf.TensorSpec(shape=[1,], dtype=tf.int32, name="speaker_ids"),
+                tf.TensorSpec(shape=[1,], dtype=tf.float32, name="speed_ratios"),
             ],
         )
