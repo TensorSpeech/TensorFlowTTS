@@ -61,8 +61,8 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech"],
-        help="Dataset to preprocess. Currently only LJSpeech.",
+        choices=["ljspeech", "kss"],
+        help="Dataset to preprocess.",
     )
     parser.add_argument(
         "--config", type=str, required=True, help="YAML format configuration file."
