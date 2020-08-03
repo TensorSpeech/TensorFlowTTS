@@ -113,7 +113,7 @@ def main():
 
     # define model and load checkpoint
     melgan = TFMelGANGenerator(
-        config=MelGANGeneratorConfig(**config["generator_params"]), name="melgan"
+        config=MelGANGeneratorConfig(**config["melgan_generator_params"]), name="melgan_generator"
     )
     melgan._build()
     melgan.load_weights(args.checkpoint)
