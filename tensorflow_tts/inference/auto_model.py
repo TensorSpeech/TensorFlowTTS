@@ -39,8 +39,8 @@ TF_MODEL_MAPPING = OrderedDict(
     [
         (FastSpeechConfig, TFFastSpeech),
         (FastSpeech2Config, TFFastSpeech2),
-        (MultiBandMelGANGeneratorConfig, TFMBMelGANGenerator),
         (MelGANGeneratorConfig, TFMelGANGenerator),
+        (MultiBandMelGANGeneratorConfig, TFMBMelGANGenerator),
         (Tacotron2Config, TFTacotron2)
     ]
 )
