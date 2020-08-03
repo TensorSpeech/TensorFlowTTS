@@ -160,7 +160,7 @@ def main():
             real_char_length = (
                 input_lengths[i].numpy() - 1
             )  # minus 1 because char have eos tokens.
-            real_mel_length = mel_length[i].numpy()
+            real_mel_length = mel_lengths[i].numpy()
             alignment = alignment[:real_char_length, :real_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
 

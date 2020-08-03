@@ -40,23 +40,23 @@ def process_phonelabel(label_file):
 
 class BakerProcessor(object):
 
-    def __init__(self, root_path, target_rate):
-        self.root_path = root_path
+    def __init__(self, data_dir, target_rate=None, cleaner_names=None):
+        self.root_path = data_dir
         self.target_rate = target_rate
 
         items = []
         self.speaker_name = "baker"
-        if root_path is not None:
-            with open(os.path.join(root_path, 'ProsodyLabeling/000001-010000.txt'), encoding='utf-8') as ttf:
+        if data_dir is not None:
+            with open(os.path.join(data_dir, 'ProsodyLabeling/000001-010000.txt'), encoding='utf-8') as ttf:
                 lines = ttf.readlines()
                 for idx in range(0, len(lines), 2):
                     utt_id, _ = lines[idx].strip().split()
-                    phonemes = process_phonelabel(os.path.join(root_path, f'PhoneLabeling/{utt_id}.interval'))
+                    phonemes = process_phonelabel(os.path.join(data_dir, f'PhoneLabeling/{utt_id}.interval'))
                     phonemes = self.deal_r(phonemes)
                     if 'pl' in phonemes or 'ng1' in phonemes:
                         print(f'Skip this: {utt_id} {phonemes}')
                         continue
-                    wav_path = os.path.join(root_path, 'Wave', '%s.wav' % utt_id)
+                    wav_path = os.path.join(data_dir, 'Wave', '%s.wav' % utt_id)
                     items.append([' '.join(phonemes), wav_path, self.speaker_name, utt_id])
             self.items = items
 
@@ -86,8 +86,8 @@ class BakerProcessor(object):
     #             result.append(finals)
     #     return ' '.join(result)
 
-    def get_one_sample(self, idx):
-        text, wav_file, speaker_name, utt_id = self.items[idx]
+    def get_one_sample(self, item):
+        text, wav_file, speaker_name, utt_id = item
 
         # normalize audio signal to be [-1, 1], soundfile already norm.
         audio, rate = sf.read(wav_file)

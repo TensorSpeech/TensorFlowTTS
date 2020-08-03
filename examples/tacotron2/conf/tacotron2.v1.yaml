@@ -13,6 +13,8 @@ format: "npy"
 ###########################################################
 #              NETWORK ARCHITECTURE SETTING               #
 ###########################################################
+model_type: "tacotron2"
+
 tacotron2_params:
     dataset: ljspeech
     embedding_hidden_size: 512

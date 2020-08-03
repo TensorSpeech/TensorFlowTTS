@@ -46,7 +46,7 @@ class FastSpeechConfig(object):
 
     def __init__(
         self,
-        dataset='ljpseech',
+        dataset='ljspeech',
         vocab_size=len(lj_symbols),
         n_speakers=1,
         encoder_hidden_size=384,

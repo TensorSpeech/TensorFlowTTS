@@ -13,7 +13,9 @@ format: "npy"
 ###########################################################
 #              NETWORK ARCHITECTURE SETTING               #
 ###########################################################
-fastspeech_params:
+model_type: "fastspeech2"
+
+fastspeech2_params:
     n_speakers: 1
     encoder_hidden_size: 384
     encoder_num_hidden_layers: 4
