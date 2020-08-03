@@ -44,6 +44,7 @@ def parse_and_config():
     parser = argparse.ArgumentParser(
         description="Preprocess audio and text features "
         "(See detail in tensorflow_tts/bin/preprocess_dataset.py)."
+    )
     parser.add_argument(
         "--rootdir",
         default=None,
@@ -254,10 +255,7 @@ def preprocess():
     """Run preprocessing process and compute statistics for normalizing."""
     config = parse_and_config()
 
-    dataset_processor = {
-        "ljspeech": LJSpeechProcessor,
-        "baker": BakerProcessor
-    }
+    dataset_processor = {"ljspeech": LJSpeechProcessor, "baker": BakerProcessor}
 
     logging.info(f"Selected '{config['dataset']}' processor.")
     processor = dataset_processor[config["dataset"]](
@@ -416,4 +414,3 @@ def compute_statistics():
     logging.info("Saving computed statistics.")
     scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
     save_statistics_to_file(scaler_list, config)
-
