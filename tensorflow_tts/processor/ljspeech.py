@@ -122,7 +122,7 @@ _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 class LJSpeechProcessor(object):
     """LJSpeech processor."""
 
-    def __init__(self, data_dir, cleaner_names, target_rate=22050, metadata_filename="metadata.csv"):
+    def __init__(self, data_dir, cleaner_names, metadata_filename="metadata.csv"):
         self.data_dir = data_dir
         self.cleaner_names = cleaner_names
 
