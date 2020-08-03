@@ -17,23 +17,23 @@ import java.util.Arrays;
  */
 public class MBMelGan extends AbstractModule {
     private static final String TAG = "MBMelGan";
-    private Interpreter vocoder;
+    private Interpreter mModule;
 
     public MBMelGan(String modulePath) {
         try {
-            vocoder = new Interpreter(new File(modulePath), getOption());
-            int input = vocoder.getInputTensorCount();
+            mModule = new Interpreter(new File(modulePath), getOption());
+            int input = mModule.getInputTensorCount();
             for (int i = 0; i < input; i++) {
-                Tensor inputTensor = vocoder.getInputTensor(i);
+                Tensor inputTensor = mModule.getInputTensor(i);
                 Log.d(TAG, "input:" + i
                         + " name:" + inputTensor.name()
                         + " shape:" + Arrays.toString(inputTensor.shape()) +
                         " dtype:" + inputTensor.dataType());
             }
 
-            int output = vocoder.getOutputTensorCount();
+            int output = mModule.getOutputTensorCount();
             for (int i = 0; i < output; i++) {
-                Tensor outputTensor = vocoder.getOutputTensor(i);
+                Tensor outputTensor = mModule.getOutputTensor(i);
                 Log.d(TAG, "output:" + i
                         + " name:" + outputTensor.name()
                         + " shape:" + Arrays.toString(outputTensor.shape())
@@ -47,13 +47,13 @@ public class MBMelGan extends AbstractModule {
 
 
     public float[] getAudio(TensorBuffer input) {
-        vocoder.resizeInput(0, input.getShape());
-        vocoder.allocateTensors();
+        mModule.resizeInput(0, input.getShape());
+        mModule.allocateTensors();
 
         FloatBuffer outputBuffer = FloatBuffer.allocate(350000);
 
         long time = System.currentTimeMillis();
-        vocoder.run(input.getBuffer(), outputBuffer);
+        mModule.run(input.getBuffer(), outputBuffer);
         Log.d(TAG, "time cost: " + (System.currentTimeMillis() - time));
 
         float[] audioArray = new float[outputBuffer.position()];
