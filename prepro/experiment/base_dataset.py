@@ -7,7 +7,7 @@ import os
 @dataclass
 class BaseDataset(abc.ABC):
     root_path: str
-    speakers_map: dict
+    speakers_map = {}
     train_f_name: str = "train.txt"
     delimiter: str = "|"
     positions = {"file": 0, "text": 1, "speaker_name": 2}  # positions of file,text,speaker_name after split line
@@ -16,7 +16,16 @@ class BaseDataset(abc.ABC):
 
     def __post_init__(self):
         self.create_items()
+        self.create_speaker_map()
         self.reverse_speaker = {v: k for k, v in self.speakers_map.items()}
+
+    def create_speaker_map(self):
+        sp_id = 0
+        for i in self.items:
+            speaker_name = i[-1]
+            if speaker_name not in self.speakers_map:
+                self.speakers_map[speaker_name] = sp_id
+                sp_id += 1
 
     def get_speaker_id(self, name: str) -> int:
         return self.speakers_map[name]

@@ -26,9 +26,9 @@ class LJSpeechProcessor(BaseDataset):
 
     mode: str = "train"
 
-    def get_one_sample(self, idx: int):
+    def get_one_sample(self, item):
 
-        text, wav_file, speaker_name = self.items[idx]
+        text, wav_file, speaker_name = item
         audio, rate = sf.read(wav_file, dtype="float32")
 
         text_ids = np.asarray(self.text_to_sequence(text), np.int32)
@@ -37,7 +37,7 @@ class LJSpeechProcessor(BaseDataset):
             "raw_text": text,
             "text_ids": text_ids,
             "audio": audio,
-            "utt_id": self.items[idx][1].split("/")[-1].split(".")[0],
+            "utt_id": wav_file.split("/")[-1].split(".")[0],
             "speaker_name": speaker_name,
             "rate": rate,
         }
@@ -52,7 +52,7 @@ class LJSpeechProcessor(BaseDataset):
 
     @staticmethod
     def inference_text_to_seq(text: str):
-        symbols_to_ids(text_to_ph(text))
+        return symbols_to_ids(text_to_ph(text))
 
 
 def text_to_ph(text: str):
@@ -68,7 +68,7 @@ def clean_g2p(g2p_text: list):
             else:
                 data.append("@END")  # TODO try learning without end token and compare results
             break
-        data.append("@" + txt) if txt != " " else "@SIL"
+        data.append("@" + txt) if txt != " " else data.append("@SIL")  # TODO change it in inference
     return data
 
 
