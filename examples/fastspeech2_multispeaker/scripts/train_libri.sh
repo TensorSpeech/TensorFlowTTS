@@ -1,0 +1,11 @@
+CUDA_VISIBLE_DEVICES=0 python examples/fastspeech2_multispeaker/train_fastspeech2.py \
+  --train-dir ./dump_libri/train/ \
+  --dev-dir ./dump_libri/valid/ \
+  --outdir ./examples/fastspeech2_multispeaker/outdir_libri/ \
+  --config ./examples/fastspeech2_multispeaker/conf/fastspeech2libritts.yaml \
+  --use-norm 1 \
+  --f0-stat ./dump_libri/stats_f0.npy \
+  --energy-stat ./dump_libri/stats_energy.npy \
+  --mixed_precision 1 \
+  --dataset_config prepro/libri_prepro.yaml \
+  --dataset_stats dump_libri/stats.npy
