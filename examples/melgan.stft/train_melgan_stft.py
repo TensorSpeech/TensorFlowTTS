@@ -260,7 +260,7 @@ def main():
     if config["remove_short_samples"]:
         mel_length_threshold = config["batch_max_steps"] // config[
             "hop_size"
-        ] + 2 * config["generator_params"].get("aux_context_window", 0)
+        ] + 2 * config["melgan_generator_params"].get("aux_context_window", 0)
     else:
         mel_length_threshold = None
 

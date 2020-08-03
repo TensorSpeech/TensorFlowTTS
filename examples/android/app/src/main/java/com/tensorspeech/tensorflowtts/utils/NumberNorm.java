@@ -1,4 +1,4 @@
-package com.tensorspeech.tensorflowtts.module;
+package com.tensorspeech.tensorflowtts.utils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,11 +21,11 @@ public class NumberNorm {
         String spelling = numToString(n);
         String[] split = spelling.split(" ");
         String last = split[split.length - 1];
-        String replace = "";
+        String replace;
         if ( last.contains("-") ) {
             String[] lastSplit = last.split("-");
             String lastWithDash = lastSplit[1];
-            String lastReplace = "";
+            String lastReplace;
             if ( ordinalMap.containsKey(lastWithDash) ) {
                 lastReplace = ordinalMap.get(lastWithDash);
             }
