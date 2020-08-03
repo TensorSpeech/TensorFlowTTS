@@ -117,7 +117,13 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         self.energy_load_fn = energy_load_fn
         self.mel_length_threshold = mel_length_threshold
 
-        self.speakers_map = {"": 0}  # TODO
+        self.speakers_map = {}  # TODO
+        sp_id = 0
+        for i in self.utt_ids:
+            sp_name = i.split("_")[0]
+            if sp_name not in self.speakers_map:
+                self.speakers_map[sp_name] = sp_id
+                sp_id += 1
         self.speakers = [self.speakers_map[i.split("_")[0]] for i in self.utt_ids]  # TODO change but at the moment mfa folder name = speaker name
 
         self.f0_stat = np.load(f0_stat)

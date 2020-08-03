@@ -39,14 +39,15 @@ from tensorflow_tts.models import TFFastSpeech2
 from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
 from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
-                                  return_strategy)
+                                  return_strategy, TFGriffinLim)
 
 
 class FastSpeech2Trainer(Seq2SeqBasedTrainer):
     """FastSpeech2 Trainer class based on FastSpeechTrainer."""
 
     def __init__(
-        self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
+        self, config, strategy, steps=0, epochs=0, is_mixed_precision=False, stats_path: str = "",
+            dataset_config: str = ""
     ):
         """Initialize trainer.
         Args:
@@ -73,6 +74,16 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
         self.reset_states_eval()
+        self.use_griffin = config.get("use_griffin", False)
+        self.griffin_lim_tf = None
+        if self.use_griffin:
+            self.griff_conf = yaml.load(open(dataset_config), Loader=yaml.Loader)
+            self.prepare_grim(stats_path, self.griff_conf)
+
+    def prepare_grim(self, stats_path, config):
+        if not stats_path:
+            raise KeyError("stats path need to exist")
+        self.griffin_lim_tf = TFGriffinLim(stats_path, config)
 
     def compile(self, model, optimizer):
         super().compile(model, optimizer)
@@ -143,6 +154,11 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             mel_gts = mel_gts.numpy()
 
         # check directory
+        if self.use_griffin:
+            griff_dir_name = os.path.join(self.config["outdir"], f"predictions/{self.steps}_wav")
+            if not os.path.exists(griff_dir_name):
+                os.makedirs(griff_dir_name)
+
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -150,9 +166,19 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         for idx, (mel_gt, mel_before, mel_after) in enumerate(
             zip(mel_gts, mels_before, mels_after), 1
         ):
+
+            if self.use_griffin:
+                grif_before = self.griffin_lim_tf(tf.reshape(mel_before, [-1, 80])[tf.newaxis, :], n_iter=32)
+                grif_after = self.griffin_lim_tf(tf.reshape(mel_after, [-1, 80])[tf.newaxis, :], n_iter=32)
+                grif_gt = self.griffin_lim_tf(tf.reshape(mel_gt, [-1, 80])[tf.newaxis, :], n_iter=32)
+                self.griffin_lim_tf.save_wav(grif_before, griff_dir_name, f"{idx}_before.wav")
+                self.griffin_lim_tf.save_wav(grif_after, griff_dir_name, f"{idx}_after.wav")
+                self.griffin_lim_tf.save_wav(grif_gt, griff_dir_name, f"{idx}_gt.wav")
+
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
             mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
+
 
             # plit figure and save it
             figname = os.path.join(dirname, f"{idx}.png")
@@ -229,6 +255,18 @@ def main():
         "--mixed_precision",
         default=1,
         type=int,
+        help="using mixed precision for generator or not.",
+    )
+    parser.add_argument(
+        "--dataset_config",
+        default="prepro/libri_prepro.yaml",
+        type=str,
+        help="using mixed precision for generator or not.",
+    )
+    parser.add_argument(
+        "--dataset_stats",
+        default="dump_libri/stats.npy",
+        type=str,
         help="using mixed precision for generator or not.",
     )
     args = parser.parse_args()
@@ -339,6 +377,8 @@ def main():
         steps=0,
         epochs=0,
         is_mixed_precision=args.mixed_precision,
+        stats_path=args.dataset_stats,
+        dataset_config=args.dataset_config
     )
 
     with STRATEGY.scope():
