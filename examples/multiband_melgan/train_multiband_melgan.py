@@ -363,7 +363,7 @@ def main():
     if config["remove_short_samples"]:
         mel_length_threshold = config["batch_max_steps"] // config[
             "hop_size"
-        ] + 2 * config["generator_params"].get("aux_context_window", 0)
+        ] + 2 * config["multiband_melgan_generator"].get("aux_context_window", 0)
     else:
         mel_length_threshold = None
 
@@ -432,7 +432,7 @@ def main():
         )
 
         discriminator = TFMelGANMultiScaleDiscriminator(
-            MultiBandMelGANDiscriminatorConfig(**config["multiband_discriminator_params"]),
+            MultiBandMelGANDiscriminatorConfig(**config["multiband_melgan_discriminator_params"]),
             name="multi_band_melgan_discriminator",
         )
 
