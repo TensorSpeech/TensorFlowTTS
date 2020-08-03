@@ -171,9 +171,9 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
                 grif_before = self.griffin_lim_tf(tf.reshape(mel_before, [-1, 80])[tf.newaxis, :], n_iter=32)
                 grif_after = self.griffin_lim_tf(tf.reshape(mel_after, [-1, 80])[tf.newaxis, :], n_iter=32)
                 grif_gt = self.griffin_lim_tf(tf.reshape(mel_gt, [-1, 80])[tf.newaxis, :], n_iter=32)
-                self.griffin_lim_tf.save_wav(grif_before, griff_dir_name, f"{idx}_before.wav")
-                self.griffin_lim_tf.save_wav(grif_after, griff_dir_name, f"{idx}_after.wav")
-                self.griffin_lim_tf.save_wav(grif_gt, griff_dir_name, f"{idx}_gt.wav")
+                self.griffin_lim_tf.save_wav(grif_before, griff_dir_name, f"{idx}_before")
+                self.griffin_lim_tf.save_wav(grif_after, griff_dir_name, f"{idx}_after")
+                self.griffin_lim_tf.save_wav(grif_gt, griff_dir_name, f"{idx}_gt")
 
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
