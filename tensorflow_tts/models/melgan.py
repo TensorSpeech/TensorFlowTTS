@@ -376,8 +376,8 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
                 discriminator += [
                     GroupConv1D(
                         filters=out_chs,
-                        kernel_size=downsample_scale,
-                        strides=downsample_scale * 10 + 1,
+                        kernel_size=downsample_scale * 10 + 1,
+                        strides=downsample_scale,
                         padding="same",
                         use_bias=use_bias,
                         groups=in_chs // 4,
