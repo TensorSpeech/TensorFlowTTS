@@ -85,13 +85,13 @@ public class TtsManager {
         mWorker.interrupt();
     }
 
-    public void speak(String inputText, boolean interrupt) {
+    public void speak(String inputText, float speed, boolean interrupt) {
         if (interrupt) {
             stopTts();
         }
 
         ThreadPoolManager.getInstance().execute(() ->
-                mWorker.processInput(inputText));
+                mWorker.processInput(inputText, speed));
     }
 
 }

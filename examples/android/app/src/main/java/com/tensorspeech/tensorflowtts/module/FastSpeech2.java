@@ -49,7 +49,7 @@ public class FastSpeech2 extends AbstractModule {
         }
     }
 
-    public TensorBuffer getMelSpectrogram(int[] inputIds) {
+    public TensorBuffer getMelSpectrogram(int[] inputIds, float speed) {
         Log.d(TAG, "input id length: " + inputIds.length);
         mModule.resizeInput(0, new int[]{1, inputIds.length});
         mModule.allocateTensors();
@@ -65,7 +65,7 @@ public class FastSpeech2 extends AbstractModule {
 
         long time = System.currentTimeMillis();
         mModule.runForMultipleInputsOutputs(
-                new Object[]{inputs, new int[1][1], new int[]{0}, new float[]{1F}, new float[]{1F}, new float[]{1F}},
+                new Object[]{inputs, new int[1][1], new int[]{0}, new float[]{speed}, new float[]{1F}, new float[]{1F}},
                 outputMap);
         Log.d(TAG, "time cost: " + (System.currentTimeMillis() - time));
 

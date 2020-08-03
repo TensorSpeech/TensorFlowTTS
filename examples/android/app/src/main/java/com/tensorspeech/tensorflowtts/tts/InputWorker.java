@@ -49,9 +49,9 @@ class InputWorker {
         });
     }
 
-    void processInput(String inputText) {
+    void processInput(String inputText, float speed) {
         Log.d(TAG, "add to queue: " + inputText);
-        mInputQueue.offer(new InputText(inputText));
+        mInputQueue.offer(new InputText(inputText, speed));
     }
 
     void interrupt() {
@@ -65,10 +65,12 @@ class InputWorker {
 
     private class InputText {
         private final String INPUT_TEXT;
+        private final float SPEED;
         private boolean isInterrupt;
 
-        private InputText(String inputText) {
+        private InputText(String inputText, float speed) {
             this.INPUT_TEXT = inputText;
+            this.SPEED = speed;
         }
 
         private void proceed() {
@@ -81,7 +83,7 @@ class InputWorker {
 
                 int[] inputIds = mProcessor.textToIds(sentence);
 
-                TensorBuffer output = mFastSpeech2.getMelSpectrogram(inputIds);
+                TensorBuffer output = mFastSpeech2.getMelSpectrogram(inputIds, SPEED);
 
                 if (isInterrupt) {
                     Log.d(TAG, "proceed: interrupt");
