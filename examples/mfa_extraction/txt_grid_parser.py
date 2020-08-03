@@ -81,9 +81,9 @@ class TxtGridParser:
 @click.option(
     "--yaml_path", default="examples/fastspeech2_multispeaker/conf/fastspeech2.v1.yaml"
 )
-@click.option("--dataset_path", default="dataset", type=str, help="Dataset directory")
+@click.option("--dataset_path", default="libritts", type=str, help="Dataset directory")
 @click.option("--text_grid_path", default="mfa/parsed", type=str)
-@click.option("--durations_path", default="dataset/durations")
+@click.option("--durations_path", default="libritts/durations")
 @click.option("--sample_rate", default=24000, type=int)
 @click.option("--multi_speakers", default=1, type=int, help="Use multi-speaker version")
 @click.option("--train_file", default="train.txt")

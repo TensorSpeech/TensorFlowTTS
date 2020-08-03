@@ -5,9 +5,9 @@ import click
 
 
 @click.command()
-@click.option("--base_path", default="dump3")
-@click.option("--trimmed_dur_path", default="dataset/trimmed-durations")
-@click.option("--dur_path", default="dataset/durations")
+@click.option("--base_path", default="dump_libri")
+@click.option("--trimmed_dur_path", default="libritts/trimmed-durations")
+@click.option("--dur_path", default="libritts/durations")
 def fix(base_path: str, dur_path: str, trimmed_dur_path: str):
     for t in ["train", "valid"]:
         mfa_longer = []
@@ -63,7 +63,7 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str):
         )
         print(
             f"{t} stats: number of mfa with shorter duration => {len(mfa_shorter)} total diff => {sum(mfa_shorter)}"
-            f" mean diff => {sum(mfa_shorter)/len(mfa_shorter)}"
+            f" mean diff => {sum(mfa_shorter)/len(mfa_shorter) if len(mfa_shorter) > 0 else 0}"
         )
         print(
             f"{t} stats: number of files with a ''big'' duration diff => {len(big_diff)} if number>1 you should check it"

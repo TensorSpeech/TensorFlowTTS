@@ -6,11 +6,11 @@ import click
 
 @click.command()
 @click.option("--mfa_path", default="mfa/montreal-forced-aligner/bin/mfa_align")
-@click.option("--corpus_directory", default="dataset")
+@click.option("--corpus_directory", default="libritts")
 @click.option("--lexicon", default="mfa/lexicon/librispeech-lexicon.txt")
 @click.option("--acoustic_model_path", default="mfa/montreal-forced-aligner/pretrained_models/english.zip")
 @click.option("--output_directory", default="mfa/parsed")
-@click.option("--jobs", default="3")
+@click.option("--jobs", default="8")
 def run_mfa(
     mfa_path: str,
     corpus_directory: str,
