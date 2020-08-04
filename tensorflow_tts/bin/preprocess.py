@@ -30,7 +30,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
-from tensorflow_tts.processor import LJSpeechProcessor, BakerProcessor
+from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import BakerProcessor
+
 from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -60,8 +62,8 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "baker"],
-        help="Dataset to preprocess. Currently only LJSpeech.",
+        choices=["ljspeech, baker"],
+        help="Dataset to preprocess. Currently only (LJSpeech, baker)",
     )
     parser.add_argument(
         "--config", type=str, required=True, help="YAML format configuration file."
@@ -252,15 +254,11 @@ def preprocess():
     """Run preprocessing process and compute statistics for normalizing."""
     config = parse_and_config()
 
-    dataset_processor = {
-        "ljspeech": LJSpeechProcessor,
-        "baker": BakerProcessor
-    }
+    dataset_processor = {"ljspeech": LJSpeechProcessor, "baker": BakerProcessor}
 
     logging.info(f"Selected '{config['dataset']}' processor.")
     processor = dataset_processor[config["dataset"]](
-        config["rootdir"], cleaner_names="english_cleaners",
-        target_rate=config["sampling_rate"]
+        config["rootdir"], cleaner_names="english_cleaners"
     )
 
     # check output directories
@@ -289,9 +287,7 @@ def preprocess():
     # define map iterator
     def iterator_data(items_list):
         for item in items_list:
-            sample = processor.get_one_sample(item)
-            if sample is not None:
-                yield sample
+            yield processor.get_one_sample(item)
 
     train_iterator_data = iterator_data(train_split)
     valid_iterator_data = iterator_data(valid_split)
@@ -418,3 +414,4 @@ def compute_statistics():
     logging.info("Saving computed statistics.")
     scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
     save_statistics_to_file(scaler_list, config)
+

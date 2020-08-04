@@ -40,7 +40,7 @@ def process_phonelabel(label_file):
 
 class BakerProcessor(object):
 
-    def __init__(self, data_dir, target_rate=None, cleaner_names=None):
+    def __init__(self, data_dir, target_rate=24000, cleaner_names=None):
         self.root_path = data_dir
         self.target_rate = target_rate
 
