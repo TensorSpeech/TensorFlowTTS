@@ -14,6 +14,8 @@ format: "npy"
 ###########################################################
 #              NETWORK ARCHITECTURE SETTING               #
 ###########################################################
+model_type: "fastspeech2"
+
 fastspeech_params:
     dataset: baker
     n_speakers: 1

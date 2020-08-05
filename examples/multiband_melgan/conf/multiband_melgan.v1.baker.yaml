@@ -15,6 +15,8 @@ format: "npy"
 ###########################################################
 #         GENERATOR NETWORK ARCHITECTURE SETTING          #
 ###########################################################
+model_type: "multiband_melgan_generator"
+
 generator_params:
     out_channels: 4               # Number of output channels (number of subbands).
     kernel_size: 7                # Kernel size of initial and final conv layers.
