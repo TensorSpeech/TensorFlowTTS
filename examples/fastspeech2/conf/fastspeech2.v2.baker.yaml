@@ -16,7 +16,7 @@ format: "npy"
 ###########################################################
 model_type: "fastspeech2"
 
-fastspeech_params:
+fastspeech2_params:
     dataset: baker
     n_speakers: 1
     encoder_hidden_size: 256
