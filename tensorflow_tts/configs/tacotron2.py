@@ -15,6 +15,7 @@
 """Tacotron-2 Config object."""
 
 from tensorflow_tts.processor.ljspeech import symbols as lj_symbols
+from tensorflow_tts.processor.kss import symbols as kss_symbols
 from tensorflow_tts.processor.baker import symbols as bk_symbols
 
 
@@ -54,13 +55,14 @@ class Tacotron2Config(object):
         postnet_dropout_rate=0.1,
     ):
         """Init parameters for Tacotron-2 model."""
-        if dataset == 'ljspeech':
+        if dataset == "ljspeech":
             self.vocab_size = vocab_size
+        elif dataset == "kss":
+            self.vocab_size = len(kss_symbols)
         elif dataset == 'baker':
             self.vocab_size = len(bk_symbols)
         else:
-            raise ValueError('no such dataset: {}'.format(dataset))
-
+            raise ValueError('No such dataset: {}'.format(dataset))
         self.embedding_hidden_size = embedding_hidden_size
         self.initializer_range = initializer_range
         self.layer_norm_eps = layer_norm_eps

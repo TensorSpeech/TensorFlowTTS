@@ -32,6 +32,7 @@ from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
 from tensorflow_tts.processor import BakerProcessor
+from tensorflow_tts.processor import KSSProcessor
 
 from tensorflow_tts.utils import remove_outlier
 
@@ -62,8 +63,8 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech, baker"],
-        help="Dataset to preprocess. Currently only (LJSpeech, baker)",
+        choices=["ljspeech, kss, baker"],
+        help="Dataset to preprocess. Currently only (ljspeech, kss, baker)",
     )
     parser.add_argument(
         "--config", type=str, required=True, help="YAML format configuration file."
@@ -254,11 +255,21 @@ def preprocess():
     """Run preprocessing process and compute statistics for normalizing."""
     config = parse_and_config()
 
-    dataset_processor = {"ljspeech": LJSpeechProcessor, "baker": BakerProcessor}
+    dataset_processor = {
+        "ljspeech": LJSpeechProcessor,
+        "kss": KSSProcessor,
+        "baker": BakerProcessor
+    }
+
+    dataset_cleaner = {
+        "ljspeech": "english_cleaners",
+        "kss": "korean_cleaners",
+        "baker": None
+    }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
     processor = dataset_processor[config["dataset"]](
-        config["rootdir"], cleaner_names="english_cleaners"
+        config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
     )
 
     # check output directories

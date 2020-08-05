@@ -17,7 +17,9 @@
 import collections
 
 from tensorflow_tts.processor.ljspeech import symbols as lj_symbols
+from tensorflow_tts.processor.kss import symbols as kss_symbols
 from tensorflow_tts.processor.baker import symbols as bk_symbols
+
 
 SelfAttentionParams = collections.namedtuple(
     "SelfAttentionParams",
@@ -83,12 +85,14 @@ class FastSpeechConfig(object):
     ):
         """Init parameters for Fastspeech model."""
         # encoder params
-        if dataset == 'ljspeech':
+        if dataset == "ljspeech":
             self.vocab_size = vocab_size
-        elif dataset == 'baker':
+        elif dataset == "kss":
+            self.vocab_size = len(kss_symbols)
+        elif dataset == "baker":
             self.vocab_size = len(bk_symbols)
         else:
-            raise ValueError('no such dataset: {}'.format(dataset))
+            raise ValueError('No such dataset: {}'.format(dataset))
         self.initializer_range = initializer_range
         self.max_position_embeddings = max_position_embeddings
         self.n_speakers = n_speakers
