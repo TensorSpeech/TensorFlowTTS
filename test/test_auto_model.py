@@ -37,13 +37,15 @@ logging.basicConfig(
         "./examples/fastspeech/conf/fastspeech.v3.yaml", 
         "./examples/fastspeech2/conf/fastspeech2.v1.yaml",
         "./examples/fastspeech2/conf/fastspeech2.v2.yaml",
+        "./examples/fastspeech2/conf/fastspeech2.kss.v1.yaml",
+        "./examples/fastspeech2/conf/fastspeech2.kss.v2.yaml",
         "./examples/melgan/conf/melgan.v1.yaml",
         "./examples/melgan.stft/conf/melgan.stft.v1.yaml",
         "./examples/multiband_melgan/conf/multiband_melgan.v1.yaml",
         "./examples/tacotron2/conf/tacotron2.v1.yaml",
+        "./examples/tacotron2/conf/tacotron2.kss.v1.yaml",
      ]
 )
 def test_auto_model(config_path):
     config = AutoConfig.from_pretrained(pretrained_path=config_path)
     model = TFAutoModel.from_pretrained(config=config, pretrained_path=None)
-    model.summary()
