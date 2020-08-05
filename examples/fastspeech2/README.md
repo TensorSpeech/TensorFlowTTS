@@ -52,7 +52,9 @@ CUDA_VISIBLE_DEVICES=0 python examples/fastspeech2/decode_fastspeech2.py \
 ## Pretrained Models and Audio samples
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
-| [fastspeech2.v1](https://drive.google.com/drive/folders/158vFyC2pxw9xKdxp-C5WPEtgtUiWZYE0?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech2/conf/fastspeech2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 150k    |
+| [fastspeech2.v1](https://drive.google.com/drive/folders/158vFyC2pxw9xKdxp-C5WPEtgtUiWZYE0?usp=sharing)             | [link](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/examples/fastspeech2/conf/fastspeech2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 150k    |
+| [fastspeech2.kss.v1](https://drive.google.com/drive/folders/1DU952--jVnJ5SZDSINRs7dVVSpdB7tC_?usp=sharing)             | [link](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/examples/fastspeech2/conf/fastspeech2.kss.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 200k    |
+| [fastspeech2.kss.v2](https://drive.google.com/drive/folders/1G3-AJnEsu2rYXYgo2iGIVJfCqqfbpwMu?usp=sharing)             | [link](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/examples/fastspeech2/conf/fastspeech2.kss.v2.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 200k    |
 
 ## Reference
 

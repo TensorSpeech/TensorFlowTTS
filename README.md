@@ -1,11 +1,11 @@
 <h2 align="center">
 <p> :yum: TensorflowTTS
 <p align="center">
-    <a href="https://github.com/dathudeptrai/TensorflowTTS/actions">
-        <img alt="Build" src="https://github.com/dathudeptrai/TensorflowTTS/workflows/CI/badge.svg?branch=master">
+    <a href="https://github.com/tensorspeech/TensorFlowTTS/actions">
+        <img alt="Build" src="https://github.com/tensorspeech/TensorFlowTTS/workflows/CI/badge.svg?branch=master">
     </a>
-    <a href="https://github.com/dathudeptrai/TensorflowTTS/blob/master/LICENSE">
-        <img alt="GitHub" src="https://img.shields.io/github/license/dathudeptrai/TensorflowTTS?color=red">
+    <a href="https://github.com/tensorspeech/TensorFlowTTS/blob/master/LICENSE">
+        <img alt="GitHub" src="https://img.shields.io/github/license/tensorspeech/TensorflowTTS?color=red">
     </a>
     <a href="https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing">
         <img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg">
@@ -19,8 +19,9 @@
 :zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems.
 
 ## What's new
-- 2020/07/17 **(NEW!)** Support MultiGPU for all Trainer.
-- 2020/07/05 **(New!)** Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from TFlite team for his support.
+- 2020/08/05 **(NEW!)** Support Korean TTS. Pls see the [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing). Thank [@crux153](https://github.com/crux153).
+- 2020/07/17 Support MultiGPU for all Trainer.
+- 2020/07/05 Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from TFlite team for his support.
 - 2020/06/20 [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
 - 2020/06/07 [Multi-band MelGAN (MB MelGAN)](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported.
 
@@ -41,7 +42,7 @@ This repository is tested on Ubuntu 18.04 with:
 - Python 3.6+
 - Cuda 10.1
 - CuDNN 7.6.5
-- Tensorflow 2.2
+- Tensorflow 2.2/2.3
 - [Tensorflow Addons](https://github.com/tensorflow/addons) 0.10.0
 
 Different Tensorflow version should be working but not tested yet. This repo will try to work with latest stable tensorflow version. **We recommend you install tensorflow 2.3.0 to training in case you want to use MultiGPU.**
@@ -54,8 +55,8 @@ $ pip install TensorflowTTS
 ### From source
 Examples are included in the repository but are not shipped with the framework. Therefore, in order to run the latest verion of examples, you need install from source following bellow.
 ```bash
-$ git clone https://github.com/TensorSpeech/TensorflowTTS.git
-$ cd TensorflowTTS
+$ git clone https://github.com/TensorSpeech/TensorFlowTTS.git
+$ cd TensorFlowTTS
 $ pip install .
 ```
 If you want upgrade the repository and its dependencies:
@@ -112,9 +113,11 @@ The preprocessing has two steps:
 
 To reproduce the steps above:
 ```
-tensorflow-tts-preprocess --rootdir ./datasets --outdir ./dump --config preprocess/ljspeech_preprocess.yaml
-tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config preprocess/ljspeech_preprocess.yaml
+tensorflow-tts-preprocess --rootdir ./datasets --outdir ./dump --config preprocess/ljspeech_preprocess.yaml --dataset ljspeech
+tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config preprocess/ljspeech_preprocess.yaml --dataset ljspeech
 ```
+
+Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/) and [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset) for dataset argument. In the future, we intend to support more datasets.
 
 After preprocessing, the structure of the project folder should be:
 ```
@@ -225,7 +228,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py), [train_multiband_melgan.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/multiband_melgan/train_multiband_melgan.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/dathudeptrai/TensorflowTTS/blob/master/examples/fastspeech/train_fastspeech.py)).
 
 # End-to-End Examples
-You can know how to inference each model at [notebooks](https://github.com/dathudeptrai/TensorflowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing). Here is an example code for end2end inference with fastspeech and melgan.
+You can know how to inference each model at [notebooks](https://github.com/dathudeptrai/TensorflowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing) (for English), [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing) (for Korean). Here is an example code for end2end inference with fastspeech and melgan.
 
 ```python
 import numpy as np
@@ -242,7 +245,7 @@ from tensorflow_tts.inference import TFAutoModel
 # initialize fastspeech model.
 fs_config = AutoConfig.from_pretrained('/examples/fastspeech/conf/fastspeech.v1.yaml')
 fastspeech = TFAutoModel.from_pretrained(
-    config=config,
+    config=fs_config,
     pretrained_path="./examples/fastspeech/pretrained/model-195000.h5"
 )
 
@@ -250,7 +253,7 @@ fastspeech = TFAutoModel.from_pretrained(
 # initialize melgan model
 melgan_config = AutoConfig.from_pretrained('./examples/melgan/conf/melgan.v1.yaml')
 melgan = TFAutoModel.from_pretrained(
-    config=config,
+    config=melgan_config,
     pretrained_path="./examples/melgan/checkpoint/generator-1500000.h5"
 )
 
