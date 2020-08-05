@@ -1,8 +1,9 @@
 import os
-import re
 import numpy as np
 import librosa
 import soundfile as sf
+from pypinyin.style._utils import get_finals, get_initials
+from g2pM import G2pM
 
 
 _pad = ['_']
@@ -60,6 +61,8 @@ class BakerProcessor(object):
                     items.append([' '.join(phonemes), wav_path, self.speaker_name, utt_id])
             self.items = items
 
+        self.g2pm = G2pM()
+
     @staticmethod
     def deal_r(phonemes):
         result = []
@@ -71,20 +74,26 @@ class BakerProcessor(object):
                 result.append(p)
         return result
 
-    # @staticmethod
-    # def get_initials_and_finals(text):
-    #     result = []
-    #     for x in text.split():
-    #         initials = get_initials(x.strip(), False)
-    #         finals = get_finals(x.strip(), False)
-    #         if initials != "":
-    #             result.append(initials)
-    #         if finals != "":
-    #             # we replace ar4 to a4 er5
-    #             if finals[-2] == 'r' and finals[:2] != 'er':
-    #                 finals = finals[:-2] + finals[-1] + ' er5'
-    #             result.append(finals)
-    #     return ' '.join(result)
+    @staticmethod
+    def get_initials_and_finals(text):
+        result = []
+        for x in text:
+            initials = get_initials(x.strip(), False)
+            finals = get_finals(x.strip(), False)
+            if initials != "":
+                # for y and w, we do not have initials
+                if initials == 'w' or initials == 'y':
+                    pass
+                else:
+                    result.append(initials)
+            if finals != "":
+                # we replace ar4 to a4 er5
+                if finals[-1].isdigit() and finals[-2] == 'r' and finals[:2] != 'er':
+                    result.append(finals[:-2] + finals[-1])
+                    result.append('er5')
+                else:
+                    result.append(finals)
+        return ' '.join(result)
 
     def get_one_sample(self, item):
         text, wav_file, speaker_name, utt_id = item
@@ -115,9 +124,13 @@ class BakerProcessor(object):
 
         return sample
 
-    @staticmethod
-    def text_to_sequence(text):
+    def text_to_sequence(self, text, inference=False):
         global _symbol_to_id
+
+        if inference:
+            text = self.g2pm(text)
+            text = self.get_initials_and_finals(text)
+            print(text)
 
         sequence = []
         for symbol in text.split():
