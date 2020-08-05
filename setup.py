@@ -38,6 +38,7 @@ requirements = {
         "numba<=0.48",# Fix No module named "numba.decorators"
         "textgrid",
         "g2p_en",
+        "jamo>=0.4.1",
     ],
     "setup": ["numpy", "pytest-runner",],
     "test": [
