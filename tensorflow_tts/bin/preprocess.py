@@ -31,6 +31,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import KSSProcessor
 from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -60,8 +61,8 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech"],
-        help="Dataset to preprocess. Currently only LJSpeech.",
+        choices=["ljspeech", "kss"],
+        help="Dataset to preprocess.",
     )
     parser.add_argument(
         "--config", type=str, required=True, help="YAML format configuration file."
@@ -254,11 +255,17 @@ def preprocess():
 
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
+        "kss": KSSProcessor
+    }
+
+    dataset_cleaner = {
+        "ljspeech": "english_cleaners",
+        "kss": "korean_cleaners"
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
     processor = dataset_processor[config["dataset"]](
-        config["rootdir"], cleaner_names="english_cleaners"
+        config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
     )
 
     # check output directories
