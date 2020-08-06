@@ -517,7 +517,8 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
                 padding="same",
                 name="conv_._{}".format(i),
             )
-            batch_norm = tf.keras.layers.experimental.SyncBatchNormalization(
+            batch_norm = tf.keras.layers.BatchNormalization(
+                axis=-1,
                 name="batch_norm_._{}".format(i)
             )
             self.conv_batch_norm.append((conv, batch_norm))
