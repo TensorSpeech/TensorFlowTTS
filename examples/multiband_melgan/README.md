@@ -74,7 +74,8 @@ Here is a learning curves of melgan based on this config [`multiband_melgan.v1.y
 ## Pretrained Models and Audio samples
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
-| [multiband_melgan.v1](https://drive.google.com/drive/folders/1Hg82YnPbX6dfF7DxVs4c96RBaiFbh-cT?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 940K    |
+| [multiband_melgan.v1](https://drive.google.com/drive/folders/1Hg82YnPbX6dfF7DxVs4c96RBaiFbh-cT?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 940K    |
+| [multiband_melgan.v1](https://drive.google.com/drive/folders/199XCXER51PWf_VzUpOwxfY_8XDfeXuZl?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 1000K    |
 
 ## Reference
 
