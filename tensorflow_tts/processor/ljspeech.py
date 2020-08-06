@@ -9,6 +9,7 @@ import numpy as np
 import soundfile as sf
 
 from tensorflow_tts.utils import cleaners
+from tensorflow_tts.processor import BaseProcessor
 
 valid_symbols = [
     "AA",
@@ -97,8 +98,6 @@ valid_symbols = [
     "ZH",
 ]
 
-_pad = "_"
-_eos = "~"
 _punctuation = "!'(),.:;? "
 _special = "-"
 _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -108,28 +107,31 @@ _arpabet = ["@" + s for s in valid_symbols]
 
 # Export all symbols:
 symbols = (
-    [_pad] + list(_special) + list(_punctuation) + list(_letters) + _arpabet + [_eos]
+    list(_special) + list(_punctuation) + list(_letters) + _arpabet
 )
-
-# Mappings from symbol to numeric ID and vice versa:
-_symbol_to_id = {s: i for i, s in enumerate(symbols)}
-_id_to_symbol = {i: s for i, s in enumerate(symbols)}
 
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 
 
-class LJSpeechProcessor(object):
+class LJSpeechProcessor(BaseProcessor):
     """LJSpeech processor."""
 
-    def __init__(self, data_dir, cleaner_names, metadata_filename="metadata.csv"):
+    def __init__(self, data_dir=None, cleaner_names=None, metadata_filename="metadata.csv"):
         self.data_dir = data_dir
         self.cleaner_names = cleaner_names
 
         self.speaker_name = "ljspeech"
+
+        items = None
         if data_dir:
             with open(os.path.join(data_dir, metadata_filename), encoding="utf-8") as f:
-                self.items = [self.split_line(data_dir, line, "|") for line in f]
+                items = [self.split_line(data_dir, line, "|") for line in f]
+
+        super().__init__(
+            items=items,
+            symbols=symbols,       
+        )
 
     def split_line(self, data_dir, line, split):
         wav_file, _, text_norm = line.strip().split(split)
@@ -158,41 +160,42 @@ class LJSpeechProcessor(object):
         return sample
 
     def text_to_sequence(self, text):
-        global _symbol_to_id
-
         sequence = []
         # Check for curly braces and treat their contents as ARPAbet:
         while len(text):
             m = _curly_re.match(text)
             if not m:
-                sequence += _symbols_to_sequence(
-                    _clean_text(text, [self.cleaner_names])
+                sequence += self._symbols_to_sequence(
+                    self._clean_text(text, [self.cleaner_names])
                 )
                 break
-            sequence += _symbols_to_sequence(
-                _clean_text(m.group(1), [self.cleaner_names])
+            sequence += self._symbols_to_sequence(
+                self._clean_text(m.group(1), [self.cleaner_names])
             )
-            sequence += _arpabet_to_sequence(m.group(2))
+            sequence += self._arpabet_to_sequence(m.group(2))
             text = m.group(3)
+
+        # add eos tokens
+        sequence += self.eos_id
         return sequence
 
 
-def _clean_text(text, cleaner_names):
-    for name in cleaner_names:
-        cleaner = getattr(cleaners, name)
-        if not cleaner:
-            raise Exception("Unknown cleaner: %s" % name)
-        text = cleaner(text)
-    return text
+    def _clean_text(self, text, cleaner_names):
+        for name in cleaner_names:
+            cleaner = getattr(cleaners, name)
+            if not cleaner:
+                raise Exception("Unknown cleaner: %s" % name)
+            text = cleaner(text)
+        return text
 
 
-def _symbols_to_sequence(symbols):
-    return [_symbol_to_id[s] for s in symbols if _should_keep_symbol(s)]
+    def _symbols_to_sequence(self, symbols):
+        return [self._symbol_to_id[s] for s in symbols if self._should_keep_symbol(s)]
 
 
-def _arpabet_to_sequence(text):
-    return _symbols_to_sequence(["@" + s for s in text.split()])
+    def _arpabet_to_sequence(self, text):
+        return self._symbols_to_sequence(["@" + s for s in text.split()])
 
 
-def _should_keep_symbol(s):
-    return s in _symbol_to_id and s != "_" and s != "~"
+    def _should_keep_symbol(self, s):
+        return s in self._symbol_to_id and s != "_" and s != "~"
