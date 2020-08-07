@@ -33,15 +33,15 @@ For Windows x64, precompiled libraries are included. For other platforms (such a
  1. [Phonetisaurus](https://github.com/AdolfVonKleist/Phonetisaurus)
  2. [OpenFST](http://www.openfst.org/twiki/bin/view/FST/WebHome) (preferably 1.6.2)
  
- For Tensorflow, you need the C API, which you can grab compiled binaries [from here](https://www.tensorflow.org/install/lang_c).
+ For Tensorflow, you need the C API, which you can grab compiled binaries (or view compile instructions) [from here](https://www.tensorflow.org/install/lang_c).
  
  The rest (such as CppFlow and AudioFile) are included in the source code.
 
 ### Notes when compiling
 
- 3. With MSVC compiler, you'll have to use `/FORCE` as linker command line option, because otherwise the linker throws `LNK2005` due to OpenFST linking; the included project is already set up for that. Not sure about GCC, but you'll probably have to do something similar.
- 4. Tensorflow library malfunctions in debug builds, so only build release.
- 5. Using MSVC 2017 (v141) compiler.
+ 1. With MSVC compiler, you'll have to use `/FORCE` as linker command line option, because otherwise the linker throws `LNK2005` due to OpenFST linking; the included project is already set up for that. Not sure about GCC, but you'll probably have to do something similar.
+ 2. Tensorflow library malfunctions in debug builds, so only build release.
+ 3. Using MSVC 2017 (v141) compiler.
 
 ## Externals (and thanks)
 
