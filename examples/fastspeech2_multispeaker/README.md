@@ -1,4 +1,4 @@
-# Fast speech 2 multi-speaker
+# Fast speech 2 multi-speaker english lang based
 
 ## Prepare
 Everything is done from main repo folder so TensorflowTTS/
