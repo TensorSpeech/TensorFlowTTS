@@ -79,7 +79,7 @@ class TxtGridParser:
 
 @click.command()
 @click.option(
-    "--yaml_path", default="examples/fastspeech2_multispeaker/conf/fastspeech2.v1.yaml"
+    "--yaml_path", default="examples/fastspeech2_multispeaker/conf/fastspeech2libritts.yaml"
 )
 @click.option("--dataset_path", default="libritts", type=str, help="Dataset directory")
 @click.option("--text_grid_path", default="mfa/parsed", type=str)
