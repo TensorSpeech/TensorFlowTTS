@@ -5,10 +5,11 @@ import click
 
 
 @click.command()
-@click.option("--base_path", default="dump_libri")
-@click.option("--trimmed_dur_path", default="libritts/trimmed-durations")
-@click.option("--dur_path", default="libritts/durations")
-def fix(base_path: str, dur_path: str, trimmed_dur_path: str):
+@click.option("--base_path", default="dump")
+@click.option("--trimmed_dur_path", default="dataset/trimmed-durations")
+@click.option("--dur_path", default="dataset/durations")
+@click.option("--use_norm", default="f")
+def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
     for t in ["train", "valid"]:
         mfa_longer = []
         mfa_shorter = []
@@ -19,7 +20,11 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str):
 
         print(f"FIXING {t}")
         for i in tqdm(os.listdir(f"{pre_path}/ids")):
-            mel = np.load(f"{pre_path}/norm-feats/{i.split('-')[0]}-norm-feats.npy")
+            if use_norm == "t":
+                mel = np.load(f"{pre_path}/norm-feats/{i.split('-')[0]}-norm-feats.npy")
+            else:
+                mel = np.load(f"{pre_path}/raw-feats/{i.split('-')[0]}-raw-feats.npy")
+
             try:
                 dur = np.load(f"{trimmed_dur_path}/{i.split('-')[0]}-durations.npy")
             except:
