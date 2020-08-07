@@ -2,6 +2,7 @@
 
 ## Prepare
 Everything is done from main repo folder so TensorflowTTS/
+
 0. Optional* Download and prepare libritts (helper to prepare libri in examples/fastspeech2_multispeaker/libri_experiment/prepare_libri.ipynb)
 1. Extract Duration (use examples/mfa_extraction or pretrained tacotron2) 
 2. Optional* build docker `bash examples/fastspeech2_multispeaker/scripts/build.sh`
