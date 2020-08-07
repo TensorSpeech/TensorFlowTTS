@@ -19,4 +19,4 @@ Everything is done from main repo folder so TensorflowTTS/
 ## Problems with MFA extraction
 Looks like MFA have problems with trimmed files it works better (in my experiments) with ~100ms of silence at start and end
 
-Short files can not get false positive only silence extraction (LibriTTS example) so i would get only samples >2s
+Short files can get a lot of false positive like only silence extraction (LibriTTS example) so i would get only samples >2s
