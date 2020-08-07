@@ -13,6 +13,7 @@ class BaseDataset(abc.ABC):
     positions = {"file": 0, "text": 1, "speaker_name": 2}  # positions of file,text,speaker_name after split line
     f_extension: str = ".wav"
     items = []
+    dataset_cleaner = None
 
     def __post_init__(self):
         self.create_items()

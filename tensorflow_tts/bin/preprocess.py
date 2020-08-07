@@ -304,17 +304,14 @@ def preprocess():
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
-        "kss": "korean_cleaners"
+        "kss": "korean_cleaners",
+        "multispeaker": None
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
-    if config["dataset"] == "multispeaker":
-        processor = dataset_processor[config["dataset"]](
-            config["rootdir"])
-    else:
-        processor = dataset_processor[config["dataset"]](
-            config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
-        )
+    processor = dataset_processor[config["dataset"]](
+        config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
+    )
 
     # check output directories
     build_dir = lambda x: [
