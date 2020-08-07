@@ -9,11 +9,11 @@
 hop_size: 256            # Hop size.
 format: "npy"
 
-
+model_type: fastspeech2
 ###########################################################
 #              NETWORK ARCHITECTURE SETTING               #
 ###########################################################
-fastspeech_params:
+fastspeech2_params:
     n_speakers: 20
     encoder_hidden_size: 384
     encoder_num_hidden_layers: 4
