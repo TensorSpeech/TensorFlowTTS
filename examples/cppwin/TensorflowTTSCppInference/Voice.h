@@ -11,8 +11,6 @@ private:
 	MultiBandMelGAN Vocoder;
 	EnglishPhoneticProcessor Processor;
 
-	unsigned SampleRate;
-
 
 	std::vector<int32_t> PhonemesToID(const std::string& InTxt);
 

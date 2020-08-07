@@ -171,7 +171,6 @@
     <ClInclude Include="ext\ZCharScanner.h" />
     <ClInclude Include="FastSpeech2.h" />
     <ClInclude Include="MultiBandMelGAN.h" />
-    <ClInclude Include="pch.h" />
     <ClInclude Include="TextTokenizer.h" />
     <ClInclude Include="Voice.h" />
     <ClInclude Include="VoxCommon.hpp" />
@@ -183,12 +182,6 @@
     <ClCompile Include="ext\ZCharScanner.cpp" />
     <ClCompile Include="FastSpeech2.cpp" />
     <ClCompile Include="MultiBandMelGAN.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="TensorflowTTSCppInference.cpp" />
     <ClCompile Include="TextTokenizer.cpp" />
     <ClCompile Include="Voice.cpp" />

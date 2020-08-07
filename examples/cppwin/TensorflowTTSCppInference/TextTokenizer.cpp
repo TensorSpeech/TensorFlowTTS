@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "TextTokenizer.h"
 #include "ext/ZCharScanner.h"
 #include <algorithm>
