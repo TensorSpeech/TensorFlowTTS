@@ -69,7 +69,13 @@ vector<string> TextTokenizer::ExpandNumbers(const std::vector<std::string>& Spac
 			ZStringDelimiter DelInt(IntStr);
 			DelInt.AddDelimiter(" ");
 
-			for (const auto& NumTok : DelInt.GetTokens())
+			std::vector<std::string> NumToks = DelInt.GetTokens();
+
+			// If a number results in one word the delimiter may not add it.
+			if (NumToks.empty())
+				NumToks.push_back(IntStr);
+
+			for (const auto& NumTok : NumToks)
 				RetVec.push_back(NumTok);
 			
 
