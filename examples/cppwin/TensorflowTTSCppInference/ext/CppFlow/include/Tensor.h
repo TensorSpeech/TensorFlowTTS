@@ -11,8 +11,13 @@
 #include <algorithm>
 #include <numeric>
 #include <cstring>
+
+// Prevent warnings from Tensorflow C API headers
+
+#pragma warning(push, 0)
 #include <tensorflow/c/c_api.h>
 #include "Model.h"
+#pragma warning(pop)
 
 class Model;
 
@@ -34,12 +39,9 @@ public:
     template<typename T>
     void set_data(std::vector<T> new_data);
 
-	template<typename T>
-	void set_data(std::vector<T> new_data, const std::vector<int64_t>& inshape, bool lay);
-
-
     template<typename T>
     void set_data(std::vector<T> new_data, const std::vector<int64_t>& new_shape);
+
 	void set_data(const std::string & new_data, Model & inmodel);
 	template<typename T>
     std::vector<T> get_data();

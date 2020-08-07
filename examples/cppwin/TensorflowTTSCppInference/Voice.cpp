@@ -69,21 +69,22 @@ std::vector<float> Voice::Vocalize(const std::string & Prompt, float Speed, int3
 	TFTensor<float> AuData = Vocoder.DoInference(Mel);
 
 
-	int Width = AuData.Shape[0];
-	int Height = AuData.Shape[1];
-	int Depth = AuData.Shape[2];
+	int64_t Width = AuData.Shape[0];
+	int64_t Height = AuData.Shape[1];
+	int64_t Depth = AuData.Shape[2];
 	//int z = 0;
 
 	std::vector<float> AudioData;
 	AudioData.resize(Height);
 
 	// Code to access 1D array as if it were 3D
-	for (int x = 0; x < Width;x++)
+	for (int64_t x = 0; x < Width;x++)
 	{
-		for (int z = 0;z < Depth;z++)
+		for (int64_t z = 0;z < Depth;z++)
 		{
-			for (int y = 0; y < Height;y++) {
-				AudioData[y] = AuData.Data[x * Height * Depth + y * Depth + z];
+			for (int64_t y = 0; y < Height;y++) {
+				int64_t Index = x * Height * Depth + y * Depth + z;
+				AudioData[(size_t)y] = AuData.Data[(size_t)Index];
 
 			}
 

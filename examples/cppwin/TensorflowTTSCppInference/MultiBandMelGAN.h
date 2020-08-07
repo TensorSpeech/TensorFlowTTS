@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ext/CppFlow/include/Model.h"
 #include "VoxCommon.hpp"
 class MultiBandMelGAN

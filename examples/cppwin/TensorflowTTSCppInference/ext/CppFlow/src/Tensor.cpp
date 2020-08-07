@@ -5,6 +5,9 @@
 #include "../include/Tensor.h"
 
 #include <utility>
+// Disable "loss of data" warnings
+#pragma warning( disable : 4267)
+
 
 Tensor::Tensor(const Model& model, const std::string& operation) {
 
@@ -170,45 +173,7 @@ void Tensor::set_data(const std::string& new_data,Model& inmodel) {
 	free(input_encoded);
 }
 
-template<typename T>
-void Tensor::set_data(std::vector<T> new_data,const std::vector<int64_t>& inshape,bool lay) {
 
-	//Non empty tensor
-	if (this->flag == 1) {
-		TF_DeleteTensor(this->val);
-		this->flag = 0;
-	}
-
-	// Check Tensor is valid
-	this->error_check(this->flag != -1, "Tensor is not valid");
-
-	// Check type
-	this->error_check(deduce_type<T>() == this->type, "Provided type is different from Tensor expected type");
-
-	
-	// Check number of elements
-	auto exp_size = std::abs(std::accumulate(inshape.begin(), inshape.end(), 1, std::multiplies<int64_t>()));
-
-	this->error_check(new_data.size() % exp_size == 0, "Expected and provided number of elements do not match");
-
-	// Deallocator
-	auto d = [](void* ddata, size_t, void*) {free(static_cast<T*>(ddata));};
-
-
-	// Calculate actual shape of unknown dimensions
-	this->actual_shape = std::make_unique<decltype(actual_shape)::element_type>(shape.begin(), shape.end());
-
-	// Saves data on class
-	this->data = malloc(sizeof(T) * new_data.size());
-	memcpy(this->data, new_data.data(), sizeof(T) * new_data.size());
-
-	this->val = TF_NewTensor(this->type, actual_shape->data(), actual_shape->size(), this->data, sizeof(T) * new_data.size(), d, nullptr);
-
-
-	this->error_check(this->val != nullptr, "An error occurred allocating the Tensor memory");
-
-	this->flag = 1;
-}
 
 template<typename T> void Tensor::set_data(std::vector<T> new_data, const std::vector<int64_t>& new_shape) {
 
