@@ -104,11 +104,25 @@ def parse_and_config():
     return config
 
 
-def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio: np.array, hop_size: int):
+def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio: np.array, hop_size: int) -> \
+        (bool, np.array, np.array):
+    """
+
+    Args:
+        config: Parsed yaml config
+        utt_id: file name
+        text_ids: array with text ids
+        raw_text: raw text of file
+        audio: parsed wav file
+        hop_size: Hop size
+
+    Returns: (bool, np.array, np.array) => if trimmed return True, new text_ids, new audio_array
+
+    """
 
     duration_path = config.get("duration_path", f"{config['rootdir']}/durations")
     duration_fixed_path = config.get("duration_fixed_path", f"{config['rootdir']}/trimmed-durations")
-    sil_ph = ["SIL", "END"] # TODO FIX hardcoded values
+    sil_ph = ["SIL", "END"]  # TODO FIX hardcoded values
     text = raw_text.split(" ")
 
     trim_start, trim_end = False, False
