@@ -259,15 +259,13 @@ def main():
     )
     parser.add_argument(
         "--dataset_config",
-        default="prepro/libri_prepro.yaml",
+        default="preprocess/preprocess_multispeaker.yaml",
         type=str,
-        help="using mixed precision for generator or not.",
     )
     parser.add_argument(
         "--dataset_stats",
-        default="dump_libri/stats.npy",
+        default="dump/stats.npy",
         type=str,
-        help="using mixed precision for generator or not.",
     )
     args = parser.parse_args()
 
@@ -384,7 +382,7 @@ def main():
     with STRATEGY.scope():
         # define model
         fastspeech = TFFastSpeech2(
-            config=FastSpeech2Config(**config["fastspeech_params"])
+            config=FastSpeech2Config(**config["fastspeech2_params"])
         )
         fastspeech._build()
         fastspeech.summary()
