@@ -4,15 +4,17 @@
 Everything is done from main repo folder so TensorflowTTS/
 
 * bash examples/mfa_extraction/scripts/prepare_mfa.sh
-* python examples/mfa_extraction/run_mfa.py --corpus_directory=<your dataset path>
+* python examples/mfa_extraction/run_mfa.py --corpus_directory=< your dataset path >
    
    (corpus_directory should be splited based on speakers example => dataset/speaker_1/001.wav dataset/speaker_1/001.txt)
    
+* python examples/mfa_extraction/txt_grid_parser.py 
+
 * Optional* add your own dataset parser based on tensorflow_tts/processor/experiment/example_dataset.py ( If base processor dataset didnt match yours )
 
 * Run preprocess and normalization using preprocess_multispeaker.yaml or preprocess_libritts.yaml based config
 
-* Run fix mismatch to fix few frames difference in audio and duration files examples/mfa_extraction/fix_mismatch.py --base_path=< your preprocess outdir location > 
+* Run fix mismatch to fix few frames difference in audio and duration files examples/mfa_extraction/fix_mismatch.py --base_path=< your preprocess outdir location on above step > 
 --trimmed_dur_path=< trimmed durations directory > --dur_path=< durations directory >
 
 
