@@ -12,7 +12,7 @@ Everything is done from main repo folder so TensorflowTTS/
 
 * Run preprocess and normalization using preprocess_multispeaker.yaml or preprocess_libritts.yaml based config
 
-* Run examples/mfa_extraction/fix_mismatch.py --base_path=< your preprocess outdir location > 
+* Run fix mismatch to fix few frames difference in audio and duration files examples/mfa_extraction/fix_mismatch.py --base_path=< your preprocess outdir location > 
 --trimmed_dur_path=< trimmed durations directory > --dur_path=< durations directory >
 
 
