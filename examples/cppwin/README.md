@@ -27,11 +27,21 @@ For compiling it yourself, see **Compiling** below
 # Compiling
 Due to being too heavy, some dependencies (include + libs) have been excluded from the repo. You can find them [here](https://drive.google.com/file/d/1ufLQvH-Me2NLmzNBkjcyD13WTyHb35aB/view?usp=sharing) for Windows 64-bit release. Simply put the `deps` folder into the same place as the solution (.sln) file.
 
+### For other platforms
+For Windows x64, precompiled libraries are included. For other platforms (such as Ubuntu), you'll have to download and compile from source the following dependencies:
+
+ 1. [Phonetisaurus](https://github.com/AdolfVonKleist/Phonetisaurus)
+ 2. [OpenFST](http://www.openfst.org/twiki/bin/view/FST/WebHome) (preferably 1.6.2)
+ 
+ For Tensorflow, you need the C API, which you can grab compiled binaries [from here](https://www.tensorflow.org/install/lang_c).
+ 
+ The rest (such as CppFlow and AudioFile) are included in the source code.
+
 ### Notes when compiling
 
- 1. With MSVC compiler, you'll have to use `/FORCE` as linker command line option, because otherwise the linker throws `LNK2005` due to OpenFST linking; the included project is already set up for that. Not sure about GCC, but you'll probably have to do something similar.
- 2. Tensorflow library malfunctions in debug builds, so only build release.
- 3. Using MSVC 2017 (v141) compiler.
+ 3. With MSVC compiler, you'll have to use `/FORCE` as linker command line option, because otherwise the linker throws `LNK2005` due to OpenFST linking; the included project is already set up for that. Not sure about GCC, but you'll probably have to do something similar.
+ 4. Tensorflow library malfunctions in debug builds, so only build release.
+ 5. Using MSVC 2017 (v141) compiler.
 
 ## Externals (and thanks)
 
