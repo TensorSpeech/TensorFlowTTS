@@ -3,7 +3,7 @@
 ## Prepare
 Everything is done from main repo folder so TensorflowTTS/
 
-0. Optional* Modify MFA scripts to work with your language
+0. Optional* Modify MFA scripts to work with your language (https://montreal-forced-aligner.readthedocs.io/en/latest/pretrained_models.html)
 
 1. bash examples/mfa_extraction/scripts/prepare_mfa.sh
  python examples/mfa_extraction/run_mfa.py --corpus_directory=< your dataset path >
