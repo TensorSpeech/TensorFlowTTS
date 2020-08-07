@@ -77,6 +77,7 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         self.use_griffin = config.get("use_griffin", False)
         self.griffin_lim_tf = None
         if self.use_griffin:
+            logging.info(f"Load griff stats from {stats_path} and config from {dataset_config}")
             self.griff_conf = yaml.load(open(dataset_config), Loader=yaml.Loader)
             self.prepare_grim(stats_path, self.griff_conf)
 
