@@ -32,6 +32,7 @@ from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
 from tensorflow_tts.processor import KSSProcessor
+from tensorflow_tts.processor.experiment.example_dataset import ExampleMultispeaker
 from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -61,7 +62,7 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "kss"],
+        choices=["ljspeech", "kss", "multispeaker"],
         help="Dataset to preprocess.",
     )
     parser.add_argument(
@@ -103,6 +104,39 @@ def parse_and_config():
     return config
 
 
+def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio: np.array, hop_size: int):
+
+    duration_path = config.get("duration_path", f"{config['rootdir']}/durations")
+    duration_fixed_path = config.get("duration_fixed_path", f"{config['rootdir']}/trimmed-durations")
+    sil_ph = ["SIL", "END"] # TODO FIX hardcoded values
+    text = raw_text.split(" ")
+
+    trim_start, trim_end = False, False
+
+    if text[0] in sil_ph:
+        trim_start = True
+
+    if text[-1] in sil_ph:
+        trim_end = True
+
+    if not trim_start and not trim_end:
+        return False, text_ids, audio
+
+    idx_start, idx_end = 0 if not trim_start else 1, text_ids.__len__() if not trim_end else -1
+    text_ids = text_ids[idx_start:idx_end]
+    durations = np.load(f"{duration_path}/{utt_id}-durations.npy")
+    if trim_start:
+        s_trim = int(durations[0] * hop_size)
+        audio = audio[s_trim:]
+    if trim_end:
+        e_trim = int(durations[-1] * hop_size)
+        audio = audio[:-e_trim]
+
+    durations = durations[idx_start:idx_end]
+    np.save(f"{duration_fixed_path}/{utt_id}-durations.npy", durations)
+    return True, text_ids, audio
+
+
 def gen_audio_features(item, config):
     """Generate audio features and transformations
     Args:
@@ -128,12 +162,20 @@ def gen_audio_features(item, config):
 
     # trim silence
     if config["trim_silence"]:
-        audio, _ = librosa.effects.trim(
-            audio,
-            top_db=config["trim_threshold_in_db"],
-            frame_length=config["trim_frame_size"],
-            hop_length=config["trim_hop_size"],
-        )
+        if config["trim_mfa"]:
+            _, item["text_ids"], audio = ph_based_trim(config, utt_id, item["text_ids"],
+                                                       item["raw_text"], audio, config["hop_size"])
+            if audio.__len__() < 1:  # very short files can get trimmed fully if mfa didnt extract any tokens LibriTTS maybe take only longer files?
+                logging.warning(f"File have only silence or MFA didnt extract any token {utt_id}")
+                return False, None, None, None, item
+
+        else:
+            audio, _ = librosa.effects.trim(
+                audio,
+                top_db=config["trim_threshold_in_db"],
+                frame_length=config["trim_frame_size"],
+                hop_length=config["trim_hop_size"],
+            )
 
     # resample audio if necessary
     if "sampling_rate_for_feats" in config:
@@ -203,7 +245,7 @@ def gen_audio_features(item, config):
     item["mel"] = mel
     item["f0"] = f0
     item["energy"] = energy
-    return mel, energy, f0, item
+    return True, mel, energy, f0, item
 
 
 def save_statistics_to_file(scaler_list, config):
@@ -256,7 +298,8 @@ def preprocess():
 
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
-        "kss": KSSProcessor
+        "kss": KSSProcessor,
+        "multispeaker": ExampleMultispeaker
     }
 
     dataset_cleaner = {
@@ -265,9 +308,13 @@ def preprocess():
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
-    processor = dataset_processor[config["dataset"]](
-        config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
-    )
+    if config["dataset"] == "multispeaker":
+        processor = dataset_processor[config["dataset"]](
+            config["rootdir"])
+    else:
+        processor = dataset_processor[config["dataset"]](
+            config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
+        )
 
     # check output directories
     build_dir = lambda x: [
@@ -278,9 +325,15 @@ def preprocess():
     build_dir("valid")
 
     # build train test split
-    train_split, valid_split = train_test_split(
-        processor.items, test_size=config["test_size"], random_state=42, shuffle=True,
-    )
+    if config["dataset"] == "multispeaker":
+        train_split, valid_split, _, _ = train_test_split(
+            processor.items, [i[-1] for i in processor.items], test_size=config["test_size"], random_state=42,
+            shuffle=True,
+        )
+    else:
+        train_split, valid_split = train_test_split(
+            processor.items, test_size=config["test_size"], random_state=42, shuffle=True,
+        )
     logging.info(f"Training items: {len(train_split)}")
     logging.info(f"Validation items: {len(valid_split)}")
 
@@ -314,14 +367,26 @@ def preprocess():
     scaler_energy = StandardScaler(copy=False)
     scaler_f0 = StandardScaler(copy=False)
 
-    for mel, energy, f0, features in train_map:
+    id_to_remove = []
+    for result, mel, energy, f0, features in train_map:
+        if not result:
+            id_to_remove.append(features["utt_id"])
+            continue
         save_features_to_file(features, "train", config)
         # remove outliers
-        energy = remove_outlier(energy)
+        energy = remove_outlier(energy, 15, 85)
+        f0 = remove_outlier(f0, 15, 85)
         # partial fitting of scalers
+        if len(energy[energy != 0]) == 0 or len(f0[f0 != 0]) == 0:
+            id_to_remove.append(features["utt_id"])
+            continue
         scaler_mel.partial_fit(mel)
         scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))
         scaler_f0.partial_fit(f0[f0 != 0].reshape(-1, 1))
+
+    if len(id_to_remove) > 0:
+        np.save(os.path.join(config["outdir"], "train_utt_ids.npy"), [i for i in train_utt_ids if i not in id_to_remove])
+        print(f"removed {len(id_to_remove)} cause of too many outliers or bad mfa extraction")
 
     # save statistics to file
     logging.info("Saving computed statistics.")
@@ -350,7 +415,8 @@ def gen_normal_mel(mel_path, scaler, config):
     mel_norm = scaler.transform(mel)
     path, file_name = os.path.split(mel_path)
     *_, subdir, suffix = path.split(os.sep)
-    utt_id = file_name.strip(f"-{suffix}.npy")
+
+    utt_id = file_name.split(f"-{suffix}.npy")[0]
     np.save(
         os.path.join(
             config["outdir"], subdir, "norm-feats", f"{utt_id}-norm-feats.npy"
