@@ -1,7 +1,32 @@
+# -*- coding: utf-8 -*-
+# Copyright 2020 TensorFlowTTS Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Fix mismatch between sum durations and mel lengths."""
+
 import numpy as np
 import os
 from tqdm import tqdm
 import click
+import logging
+import sys
+
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    stream=sys.stdout,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+)
 
 
 @click.command()
@@ -15,20 +40,20 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
         mfa_shorter = []
         big_diff = []
         not_fixed = []
-        pre_path = f"{base_path}/{t}"
-        os.makedirs(f"{pre_path}/fix_dur", exist_ok=True)
+        pre_path = os.path.join(base_path, t)
+        os.makedirs(os.path.join(pre_path, "fix_dur"), exist_ok=True)
 
-        print(f"FIXING {t}")
-        for i in tqdm(os.listdir(f"{pre_path}/ids")):
+        logging.info(f"FIXING {t} set ...\n")
+        for i in tqdm(os.listdir(os.path.join(pre_path, "ids")):
             if use_norm == "t":
-                mel = np.load(f"{pre_path}/norm-feats/{i.split('-')[0]}-norm-feats.npy")
+                mel = np.load(os.path.join(pre_path, "norm-feats", f"{i.split('-')[0]}-norm-feats.npy"))
             else:
-                mel = np.load(f"{pre_path}/raw-feats/{i.split('-')[0]}-raw-feats.npy")
+                mel = np.load(os.path.join(pre_path, "raw-feats", f"{i.split('-')[0]}-raw-feats.npy"))
 
             try:
-                dur = np.load(f"{trimmed_dur_path}/{i.split('-')[0]}-durations.npy")
+                dur = np.load(os.path.join(trimmed_dur_path, f"{i.split('-')[0]}-durations.npy"))
             except:
-                dur = np.load(f"{dur_path}/{i.split('-')[0]}-durations.npy")
+                dur = np.load(os.path.join(dur_path, f"{i.split('-')[0]}-durations.npy"))
 
             l_mel = len(mel)
             dur_s = np.sum(dur)
@@ -59,21 +84,21 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
             elif dur_s < l_mel:
                 cloned[-1] += diff
                 mfa_shorter.append(abs(l_mel - dur_s))
+            
+            np.save(os.path.join(pre_path, "fix_dur", f"{i.split('-')[0]}-durations.npy"), cloned)
 
-            np.save(f"{pre_path}/fix_dur/{i.split('-')[0]}-durations.npy", cloned)
-
-        print(
-            f"\n{t} stats: number of mfa with longer duration => {len(mfa_longer)} total diff => {sum(mfa_longer)}"
-            f" mean diff => {sum(mfa_longer)/len(mfa_longer)}"
+        logging.info(
+            f"{t} stats: number of mfa with longer duration: {len(mfa_longer)}, total diff: {sum(mfa_longer)}"
+            f", mean diff: {sum(mfa_longer)/len(mfa_longer)}"
         )
-        print(
-            f"{t} stats: number of mfa with shorter duration => {len(mfa_shorter)} total diff => {sum(mfa_shorter)}"
-            f" mean diff => {sum(mfa_shorter)/len(mfa_shorter) if len(mfa_shorter) > 0 else 0}"
+        logging.info(
+            f"{t} stats: number of mfa with shorter duration: {len(mfa_shorter)}, total diff: {sum(mfa_shorter)}"
+            f", mean diff: {sum(mfa_shorter)/len(mfa_shorter) if len(mfa_shorter) > 0 else 0}"
         )
-        print(
-            f"{t} stats: number of files with a ''big'' duration diff => {len(big_diff)} if number>1 you should check it"
+        logging.info(
+            f"{t} stats: number of files with a ''big'' duration diff: {len(big_diff)} if number>1 you should check it"
         )
-        print(f"{t} stats: not fixed len => {len(not_fixed)}")
+        logging.info(f"{t} stats: not fixed len: {len(not_fixed)}\n")
 
 
 if __name__ == "__main__":

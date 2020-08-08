@@ -88,7 +88,7 @@ class FastSpeechConfig(object):
         elif dataset == "kss":
             self.vocab_size = len(kss_symbols)
         else:
-            raise ValueError('No such dataset: {}'.format(dataset))
+            raise ValueError("No such dataset: {}".format(dataset))
         self.initializer_range = initializer_range
         self.max_position_embeddings = max_position_embeddings
         self.n_speakers = n_speakers
