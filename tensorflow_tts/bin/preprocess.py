@@ -176,12 +176,13 @@ def gen_audio_features(item, config):
     assert len(mel) * hop_size == len(audio)
 
     # extract raw pitch
-    f0, _ = pw.dio(
+    _f0, t = pw.dio(
         audio.astype(np.double),
         fs=sampling_rate,
         f0_ceil=fmax,
         frame_period=1000 * hop_size / sampling_rate,
     )
+    f0 = pw.stonemask(audio.astype(np.double), _f0, t, sampling_rate)
     if len(f0) >= len(mel):
         f0 = f0[: len(mel)]
     else:
@@ -317,7 +318,6 @@ def preprocess():
         save_features_to_file(features, "train", config)
         # remove outliers
         energy = remove_outlier(energy)
-        f0 = remove_outlier(f0)
         # partial fitting of scalers
         scaler_mel.partial_fit(mel)
         scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))
