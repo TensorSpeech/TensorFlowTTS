@@ -29,7 +29,9 @@ _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 class KSSProcessor(object):
     """KSS processor."""
 
-    def __init__(self, data_dir, cleaner_names, metadata_filename="transcript.v.1.2.txt"):
+    def __init__(
+        self, data_dir, cleaner_names, metadata_filename="transcript.v.1.2.txt"
+    ):
         self.data_dir = data_dir
         self.cleaner_names = cleaner_names
 
@@ -42,7 +44,7 @@ class KSSProcessor(object):
         wav_file, _, text_norm, _, _ = line.strip().split(split)
         wav_path = os.path.join(data_dir, wav_file)
         return text_norm, wav_path, self.speaker_name
-    
+
     def get_one_sample(self, item):
         text, wav_file, speaker_name = item
 

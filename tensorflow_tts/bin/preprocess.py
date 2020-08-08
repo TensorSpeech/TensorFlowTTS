@@ -32,7 +32,7 @@ from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
 from tensorflow_tts.processor import KSSProcessor
-from tensorflow_tts.processor.experiment.example_dataset import ExampleMultispeaker
+from tensorflow_tts.processor.experiment.example_processor import ExampleMultispeaker
 from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -104,8 +104,14 @@ def parse_and_config():
     return config
 
 
-def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio: np.array, hop_size: int) -> \
-        (bool, np.array, np.array):
+def ph_based_trim(
+    config,
+    utt_id: str,
+    text_ids: np.array,
+    raw_text: str,
+    audio: np.array,
+    hop_size: int,
+) -> (bool, np.array, np.array):
     """
 
     Args:
@@ -120,8 +126,13 @@ def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio:
 
     """
 
-    duration_path = config.get("duration_path", f"{config['rootdir']}/durations")
-    duration_fixed_path = config.get("duration_fixed_path", f"{config['rootdir']}/trimmed-durations")
+    os.makedirs(os.path.join(config["rootdir"], "trimmed-durations"), exist_ok=True)
+    duration_path = config.get(
+        "duration_path", os.path.join(config["rootdir"], "durations")
+    )
+    duration_fixed_path = config.get(
+        "duration_fixed_path", os.path.join(config["rootdir"], "trimmed-durations")
+    )
     sil_ph = ["SIL", "END"]  # TODO FIX hardcoded values
     text = raw_text.split(" ")
 
@@ -136,9 +147,12 @@ def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio:
     if not trim_start and not trim_end:
         return False, text_ids, audio
 
-    idx_start, idx_end = 0 if not trim_start else 1, text_ids.__len__() if not trim_end else -1
+    idx_start, idx_end = (
+        0 if not trim_start else 1,
+        text_ids.__len__() if not trim_end else -1,
+    )
     text_ids = text_ids[idx_start:idx_end]
-    durations = np.load(f"{duration_path}/{utt_id}-durations.npy")
+    durations = np.load(os.path.join(duration_path, f"{utt_id}-durations.npy"))
     if trim_start:
         s_trim = int(durations[0] * hop_size)
         audio = audio[s_trim:]
@@ -147,7 +161,7 @@ def ph_based_trim(config, utt_id: str, text_ids: np.array, raw_text: str, audio:
         audio = audio[:-e_trim]
 
     durations = durations[idx_start:idx_end]
-    np.save(f"{duration_fixed_path}/{utt_id}-durations.npy", durations)
+    np.save(os.path.join(duration_fixed_path, f"{utt_id}-durations.npy"), durations)
     return True, text_ids, audio
 
 
@@ -157,6 +171,7 @@ def gen_audio_features(item, config):
         item (Dict): dictionary containing the attributes to encode.
         config (Dict): configuration dictionary.
     Returns:
+        (bool): keep this sample or not.
         mel (ndarray): mel matrix in np.float32.
         energy (ndarray): energy audio profile.
         f0 (ndarray): fundamental frequency.
@@ -176,11 +191,21 @@ def gen_audio_features(item, config):
 
     # trim silence
     if config["trim_silence"]:
-        if config["trim_mfa"]:
-            _, item["text_ids"], audio = ph_based_trim(config, utt_id, item["text_ids"],
-                                                       item["raw_text"], audio, config["hop_size"])
-            if audio.__len__() < 1:  # very short files can get trimmed fully if mfa didnt extract any tokens LibriTTS maybe take only longer files?
-                logging.warning(f"File have only silence or MFA didnt extract any token {utt_id}")
+        if "trim_mfa" in config and config["trim_mfa"]:
+            _, item["text_ids"], audio = ph_based_trim(
+                config,
+                utt_id,
+                item["text_ids"],
+                item["raw_text"],
+                audio,
+                config["hop_size"],
+            )
+            if (
+                audio.__len__() < 1
+            ):  # very short files can get trimmed fully if mfa didnt extract any tokens LibriTTS maybe take only longer files?
+                logging.warning(
+                    f"File have only silence or MFA didnt extract any token {utt_id}"
+                )
                 return False, None, None, None, item
 
         else:
@@ -313,13 +338,13 @@ def preprocess():
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
         "kss": KSSProcessor,
-        "multispeaker": ExampleMultispeaker
+        "multispeaker": ExampleMultispeaker,
     }
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
         "kss": "korean_cleaners",
-        "multispeaker": None
+        "multispeaker": None,
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
@@ -338,12 +363,18 @@ def preprocess():
     # build train test split
     if config["dataset"] == "multispeaker":
         train_split, valid_split, _, _ = train_test_split(
-            processor.items, [i[-1] for i in processor.items], test_size=config["test_size"], random_state=42,
+            processor.items,
+            [i[-1] for i in processor.items],
+            test_size=config["test_size"],
+            random_state=42,
             shuffle=True,
         )
     else:
         train_split, valid_split = train_test_split(
-            processor.items, test_size=config["test_size"], random_state=42, shuffle=True,
+            processor.items,
+            test_size=config["test_size"],
+            random_state=42,
+            shuffle=True,
         )
     logging.info(f"Training items: {len(train_split)}")
     logging.info(f"Validation items: {len(valid_split)}")
@@ -385,8 +416,8 @@ def preprocess():
             continue
         save_features_to_file(features, "train", config)
         # remove outliers
-        energy = remove_outlier(energy, 15, 85)
-        f0 = remove_outlier(f0, 15, 85)
+        energy = remove_outlier(energy)
+        f0 = remove_outlier(f0)
         # partial fitting of scalers
         if len(energy[energy != 0]) == 0 or len(f0[f0 != 0]) == 0:
             id_to_remove.append(features["utt_id"])
@@ -396,8 +427,13 @@ def preprocess():
         scaler_f0.partial_fit(f0[f0 != 0].reshape(-1, 1))
 
     if len(id_to_remove) > 0:
-        np.save(os.path.join(config["outdir"], "train_utt_ids.npy"), [i for i in train_utt_ids if i not in id_to_remove])
-        print(f"removed {len(id_to_remove)} cause of too many outliers or bad mfa extraction")
+        np.save(
+            os.path.join(config["outdir"], "train_utt_ids.npy"),
+            [i for i in train_utt_ids if i not in id_to_remove],
+        )
+        logging.info(
+            f"removed {len(id_to_remove)} cause of too many outliers or bad mfa extraction"
+        )
 
     # save statistics to file
     logging.info("Saving computed statistics.")

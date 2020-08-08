@@ -124,9 +124,13 @@ class TFGriffinLim(tf.keras.layers.Layer):
         """
         # de-normalize mel spectogram
         if self.normalized:
-            mel_spec = tf.math.pow(10.0, mel_spec * self.scaler.scale_ + self.scaler.mean_)
+            mel_spec = tf.math.pow(
+                10.0, mel_spec * self.scaler.scale_ + self.scaler.mean_
+            )
         else:
-            mel_spec = tf.math.pow(10.0, mel_spec)  # TODO @dathudeptrai check if its ok without it wavs were too quiet
+            mel_spec = tf.math.pow(
+                10.0, mel_spec
+            )  # TODO @dathudeptrai check if its ok without it wavs were too quiet
         inverse_mel = tf.linalg.pinv(self.mel_basis)
 
         # [:, num_mels] @ [fft_size // 2 + 1, num_mels].T

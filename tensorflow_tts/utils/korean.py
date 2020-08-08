@@ -33,11 +33,9 @@ _jamo_leads = [chr(_) for _ in range(0x1100, 0x1113)]
 _jamo_vowels = [chr(_) for _ in range(0x1161, 0x1176)]
 _jamo_tails = [chr(_) for _ in range(0x11A8, 0x11C3)]
 
-_letters = _jamo_leads + _jamo_vowels + _jamo_tails;
+_letters = _jamo_leads + _jamo_vowels + _jamo_tails
 
-symbols = (
-    [_pad] + list(_special) + list(_punctuation) + _letters + [_eos]
-)
+symbols = [_pad] + list(_special) + list(_punctuation) + _letters + [_eos]
 
 _symbol_to_id = {c: i for i, c in enumerate(symbols)}
 _id_to_symbol = {i: c for i, c in enumerate(symbols)}
@@ -106,7 +104,18 @@ def jamo_to_korean(text):
     return new_text
 
 
-num_to_kor = {"0": "영", "1": "일", "2": "이", "3": "삼", "4": "사", "5": "오", "6": "육", "7": "칠", "8": "팔", "9": "구"}
+num_to_kor = {
+    "0": "영",
+    "1": "일",
+    "2": "이",
+    "3": "삼",
+    "4": "사",
+    "5": "오",
+    "6": "육",
+    "7": "칠",
+    "8": "팔",
+    "9": "구",
+}
 
 unit_to_kor1 = {"%": "퍼센트", "cm": "센치미터", "mm": "밀리미터", "km": "킬로미터", "kg": "킬로그람"}
 unit_to_kor2 = {"m": "미터"}
@@ -148,7 +157,9 @@ def compare_sentence_with_jamo(text1, text2):
 def tokenize(text, as_id=False):
     # jamo package에 있는 hangul_to_jamo를 이용하여 한글 string을 초성/중성/종성으로 나눈다.
     text = normalize(text)
-    tokens = list(hangul_to_jamo(text))  # '존경하는'  --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ', '~']
+    tokens = list(
+        hangul_to_jamo(text)
+    )  # '존경하는'  --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ', '~']
 
     if as_id:
         return [_symbol_to_id[token] for token in tokens]
@@ -225,7 +236,9 @@ count_checker = "(시|명|가지|살|마리|포기|송이|수|톨|통|점|개|�
 def normalize_number(text):
     text = normalize_with_dictionary(text, unit_to_kor1)
     text = normalize_with_dictionary(text, unit_to_kor2)
-    text = re.sub(number_checker + count_checker, lambda x: number_to_korean(x, True), text)
+    text = re.sub(
+        number_checker + count_checker, lambda x: number_to_korean(x, True), text
+    )
     text = re.sub(number_checker, lambda x: number_to_korean(x, False), text)
     return text
 
@@ -237,7 +250,17 @@ num_to_kor3 = [""] + list("십백천")
 # count_to_kor1 = [""] + ["하나","둘","셋","넷","다섯","여섯","일곱","여덟","아홉"]
 count_to_kor1 = [""] + ["한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"]
 
-count_tenth_dict = {"십": "열", "두십": "스물", "세십": "서른", "네십": "마흔", "다섯십": "쉰", "여섯십": "예순", "일곱십": "일흔", "여덟십": "여든", "아홉십": "아흔"}
+count_tenth_dict = {
+    "십": "열",
+    "두십": "스물",
+    "세십": "서른",
+    "네십": "마흔",
+    "다섯십": "쉰",
+    "여섯십": "예순",
+    "일곱십": "일흔",
+    "여덟십": "여든",
+    "아홉십": "아흔",
+}
 
 
 def number_to_korean(num_str, is_count=False):
@@ -293,7 +316,11 @@ def number_to_korean(num_str, is_count=False):
             kor = kor[1:]
 
         if any(word in kor for word in count_tenth_dict):
-            kor = re.sub("|".join(count_tenth_dict.keys()), lambda x: count_tenth_dict[x.group()], kor)
+            kor = re.sub(
+                "|".join(count_tenth_dict.keys()),
+                lambda x: count_tenth_dict[x.group()],
+                kor,
+            )
 
     if not is_count and kor.startswith("일") and len(kor) > 1:
         kor = kor[1:]
@@ -324,5 +351,10 @@ if __name__ == "__main__":
     test_normalize("비대위원장이 지난 1월 이런 말을 했습니다. “난 그냥 산돼지처럼 돌파하는 스타일이다”")
     test_normalize("지금은 -12.35%였고 종류는 5가지와 19가지, 그리고 55가지였다")
     test_normalize("JTBC는 TH와 K 양이 2017년 9월 12일 오후 12시에 24살이 된다")
-    print(list(hangul_to_jamo(list(hangul_to_jamo("비대위원장이 지난 1월 이런 말을 했습니다? “난 그냥 산돼지처럼 돌파하는 스타일이다”")))))
-
+    print(
+        list(
+            hangul_to_jamo(
+                list(hangul_to_jamo("비대위원장이 지난 1월 이런 말을 했습니다? “난 그냥 산돼지처럼 돌파하는 스타일이다”"))
+            )
+        )
+    )

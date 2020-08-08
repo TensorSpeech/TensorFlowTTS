@@ -32,3 +32,6 @@ ljspeech
 /datasets
 /examples/tacotron2/exp/
 /temp/
+LibriTTS/
+dataset/
+mfa/

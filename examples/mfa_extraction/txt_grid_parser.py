@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+# Copyright 2020 TensorFlowTTS Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Create training file and durations from textgrids."""
+
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,6 +24,15 @@ import textgrid
 import yaml
 from tqdm import tqdm
 
+import logging
+import sys
+
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    stream=sys.stdout,
+    format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
+)
 
 @dataclass
 class TxtGridParser:
@@ -15,7 +40,7 @@ class TxtGridParser:
     multi_speaker: bool
     txt_grid_path: str
     hop_size: int
-    durations_path: str
+    output_durations_path: str
     dataset_path: str
     training_file: str = "train.txt"
     phones_mapper = {"sil": "SIL", "sp": "SIL", "spn": "SIL", "": "END"}
@@ -27,7 +52,7 @@ class TxtGridParser:
     def parse(self):
         speakers = (
             [
-                i for i in os.listdir(self.txt_grid_path) if os.path.isdir(f"{self.txt_grid_path}/{i}")
+                i for i in os.listdir(self.txt_grid_path) if os.path.isdir(os.path.join(self.txt_grid_path, i))
             ]
             if self.multi_speaker
             else [])
@@ -35,20 +60,20 @@ class TxtGridParser:
 
         if speakers:
             for speaker in speakers:
-                file_list = os.listdir(f"{self.txt_grid_path}/{speaker}")
+                file_list = os.listdir(os.path.join(self.txt_grid_path, speaker))
                 self.parse_text_grid(file_list, data, speaker)
         else:
             file_list = os.listdir(self.txt_grid_path)
             self.parse_text_grid(file_list, data, "")
 
-        with open(f"{self.dataset_path}/{self.training_file}", "w") as f:
+        with open(os.path.join(self.dataset_path, self.training_file), "w") as f:
             f.writelines(data)
 
     def parse_text_grid(self, file_list: list, data: list, speaker_name: str):
-        print(f"\n parse: {len(file_list)} files, speaker name: {speaker_name} \n")
+        logging.info(f"\n Parse: {len(file_list)} files, speaker name: {speaker_name} \n")
         for f_name in tqdm(file_list):
             text_grid = textgrid.TextGrid.fromFile(
-                f"{self.txt_grid_path}/{speaker_name}/{f_name}"
+                os.path.join(self.txt_grid_path, speaker_name, f_name)
             )
             pha = text_grid[1]
             durations = []
@@ -72,7 +97,7 @@ class TxtGridParser:
 
             base_name = f_name.split(".TextGrid")[0]
             np.save(
-                f"{self.durations_path}/{base_name}-durations.npy", np.array(durations)
+                os.path.join(self.output_durations_path, f"{base_name}-durations.npy"), np.array(durations)
             )
             data.append(f"{speaker_name}/{base_name}|{full_ph}|{speaker_name}\n")
 
@@ -81,9 +106,9 @@ class TxtGridParser:
 @click.option(
     "--yaml_path", default="examples/fastspeech2_multispeaker/conf/fastspeech2libritts.yaml"
 )
-@click.option("--dataset_path", default="libritts", type=str, help="Dataset directory")
+@click.option("--dataset_path", default="dataset", type=str, help="Dataset directory")
 @click.option("--text_grid_path", default="mfa/parsed", type=str)
-@click.option("--durations_path", default="libritts/durations")
+@click.option("--output_durations_path", default="dataset/durations")
 @click.option("--sample_rate", default=24000, type=int)
 @click.option("--multi_speakers", default=1, type=int, help="Use multi-speaker version")
 @click.option("--train_file", default="train.txt")
@@ -91,7 +116,7 @@ def main(
     yaml_path: str,
     dataset_path: str,
     text_grid_path: str,
-    durations_path: str,
+    output_durations_path: str,
     sample_rate: int,
     multi_speakers: int,
     train_file: str,
@@ -101,14 +126,14 @@ def main(
         attrs = yaml.load(file)
         hop_size = attrs["hop_size"]
 
-    Path(durations_path).mkdir(parents=True, exist_ok=True)
+    Path(output_durations_path).mkdir(parents=True, exist_ok=True)
 
     txt_grid_parser = TxtGridParser(
         sample_rate=sample_rate,
         multi_speaker=bool(multi_speakers),
         txt_grid_path=text_grid_path,
         hop_size=hop_size,
-        durations_path=durations_path,
+        output_durations_path=output_durations_path,
         training_file=train_file,
         dataset_path=dataset_path,
     )

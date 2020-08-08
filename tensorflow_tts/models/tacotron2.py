@@ -19,6 +19,7 @@ import collections
 
 import numpy as np
 import tensorflow as tf
+
 # TODO: once https://github.com/tensorflow/addons/pull/1964 is fixed,
 #  uncomment this line.
 # from tensorflow_addons.seq2seq import dynamic_decode
@@ -831,7 +832,9 @@ class TFTacotron2(tf.keras.Model):
 
         if self.enable_tflite_convertible:
             mask = tf.math.not_equal(
-                tf.cast(tf.reduce_sum(tf.abs(decoder_outputs), axis=-1), dtype=tf.int32),
+                tf.cast(
+                    tf.reduce_sum(tf.abs(decoder_outputs), axis=-1), dtype=tf.int32
+                ),
                 0,
             )
             decoder_outputs = tf.expand_dims(
@@ -982,7 +985,9 @@ class TFTacotron2(tf.keras.Model):
 
         if self.enable_tflite_convertible:
             mask = tf.math.not_equal(
-                tf.cast(tf.reduce_sum(tf.abs(decoder_outputs), axis=-1), dtype=tf.int32),
+                tf.cast(
+                    tf.reduce_sum(tf.abs(decoder_outputs), axis=-1), dtype=tf.int32
+                ),
                 0,
             )
             decoder_outputs = tf.expand_dims(
