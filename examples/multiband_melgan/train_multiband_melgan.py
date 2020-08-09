@@ -363,7 +363,7 @@ def main():
     if config["remove_short_samples"]:
         mel_length_threshold = config["batch_max_steps"] // config[
             "hop_size"
-        ] + 2 * config["multiband_melgan_generator"].get("aux_context_window", 0)
+        ] + 2 * config["multiband_melgan_generator_params"].get("aux_context_window", 0)
     else:
         mel_length_threshold = None
 
@@ -427,7 +427,7 @@ def main():
     with STRATEGY.scope():
         # define generator and discriminator
         generator = TFMelGANGenerator(
-            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator"]),
+            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]),
             name="multi_band_melgan_generator",
         )
 
@@ -437,7 +437,7 @@ def main():
         )
 
         pqmf = TFPQMF(
-            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator"]), name="pqmf"
+            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]), name="pqmf"
         )
 
         # dummy input to build model.
