@@ -44,7 +44,7 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
         os.makedirs(os.path.join(pre_path, "fix_dur"), exist_ok=True)
 
         logging.info(f"FIXING {t} set ...\n")
-        for i in tqdm(os.listdir(os.path.join(pre_path, "ids")):
+        for i in tqdm(os.listdir(os.path.join(pre_path, "ids"))):
             if use_norm == "t":
                 mel = np.load(os.path.join(pre_path, "norm-feats", f"{i.split('-')[0]}-norm-feats.npy"))
             else:
