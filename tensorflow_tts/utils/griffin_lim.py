@@ -64,16 +64,18 @@ def griffin_lim_lb(
 class TFGriffinLim(tf.keras.layers.Layer):
     """Griffin-Lim algorithm for phase reconstruction from mel spectrogram magnitude."""
 
-    def __init__(self, stats_path, dataset_config):
+    def __init__(self, stats_path, dataset_config, normalized: bool = True):
         """Init GL params.
         Args:
             stats_path (str): path to the `stats.npy` file containing norm statistics.
             dataset_config (Dict): dataset configuration parameters.
         """
         super().__init__()
-        scaler = StandardScaler()
-        scaler.mean_, scaler.scale_ = np.load(stats_path)
-        self.scaler = scaler
+        self.normalized = normalized
+        if normalized:
+            scaler = StandardScaler()
+            scaler.mean_, scaler.scale_ = np.load(stats_path)
+            self.scaler = scaler
         self.ds_config = dataset_config
         self.mel_basis = librosa.filters.mel(
             self.ds_config["sampling_rate"],
@@ -121,7 +123,14 @@ class TFGriffinLim(tf.keras.layers.Layer):
             (tf.Tensor): reconstructed signal from GL algorithm.
         """
         # de-normalize mel spectogram
-        mel_spec = tf.math.pow(10.0, mel_spec * self.scaler.scale_ + self.scaler.mean_)
+        if self.normalized:
+            mel_spec = tf.math.pow(
+                10.0, mel_spec * self.scaler.scale_ + self.scaler.mean_
+            )
+        else:
+            mel_spec = tf.math.pow(
+                10.0, mel_spec
+            )  # TODO @dathudeptrai check if its ok without it wavs were too quiet
         inverse_mel = tf.linalg.pinv(self.mel_basis)
 
         # [:, num_mels] @ [fft_size // 2 + 1, num_mels].T

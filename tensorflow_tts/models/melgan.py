@@ -283,17 +283,20 @@ class TFMelGANGenerator(tf.keras.Model):
         return self.inference(mels)
 
     @tf.function(
-        input_signature=[tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")]
+        input_signature=[
+            tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")
+        ]
     )
     def inference(self, mels):
         return self.melgan(mels)
 
     @tf.function(
-        input_signature=[tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")]
+        input_signature=[
+            tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")
+        ]
     )
     def inference_tflite(self, mels):
         return self.melgan(mels)
-
 
     def _apply_weightnorm(self, list_layers):
         """Try apply weightnorm for all layer in list_layers."""

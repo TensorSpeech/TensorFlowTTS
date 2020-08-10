@@ -17,8 +17,11 @@ from typing import Any, Optional, Tuple, Union
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_util
 from tensorflow_addons.seq2seq import Decoder
-from tensorflow_addons.seq2seq.decoder import (BaseDecoder, _prepend_batch,
-                                               _transpose_batch_time)
+from tensorflow_addons.seq2seq.decoder import (
+    BaseDecoder,
+    _prepend_batch,
+    _transpose_batch_time,
+)
 from tensorflow_addons.utils.types import Number, TensorLike
 
 

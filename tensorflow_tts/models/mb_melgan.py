@@ -173,14 +173,18 @@ class TFMBMelGANGenerator(TFMelGANGenerator):
         return self.inference(mels)
 
     @tf.function(
-        input_signature=[tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")]
+        input_signature=[
+            tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")
+        ]
     )
     def inference(self, mels):
         mb_audios = self.melgan(mels)
         return self.pqmf.synthesis(mb_audios)
 
     @tf.function(
-        input_signature=[tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")]
+        input_signature=[
+            tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")
+        ]
     )
     def inference_tflite(self, mels):
         mb_audios = self.melgan(mels)
