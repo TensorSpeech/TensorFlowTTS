@@ -210,6 +210,19 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
             name="bilstm",
         )
 
+        if config.n_speakers > 1:
+            self.encoder_speaker_embeddings = tf.keras.layers.Embedding(
+                config.n_speakers,
+                config.embedding_hidden_size,
+                embeddings_initializer=get_initializer(config.initializer_range),
+                name="encoder_speaker_embeddings",
+            )
+            self.encoder_speaker_fc = tf.keras.layers.Dense(
+                units=config.encoder_lstm_units * 2, name="encoder_speaker_fc"
+            )
+
+        self.config = config
+
     def call(self, inputs, training=False):
         """Call logic."""
         input_ids, speaker_ids, input_mask = inputs
@@ -223,6 +236,18 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
 
         # bi-lstm.
         outputs = self.bilstm(conv_outputs, mask=input_mask)
+
+        if self.config.n_speakers > 1:
+            encoder_speaker_embeddings = self.encoder_speaker_embeddings(speaker_ids)
+            encoder_speaker_features = tf.math.softplus(
+                self.encoder_speaker_fc(encoder_speaker_embeddings)
+            )
+            # extended encoderspeaker embeddings
+            extended_encoder_speaker_features = encoder_speaker_features[
+                :, tf.newaxis, :
+            ]
+            # sum to encoder outputs
+            outputs += extended_encoder_speaker_features
 
         return outputs
 
