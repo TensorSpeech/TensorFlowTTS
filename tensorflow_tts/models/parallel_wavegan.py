@@ -549,19 +549,3 @@ class TFParallelWaveGANDiscriminator(tf.keras.Model):
         for f in self.conv_layers:
             x = f(x)
         return x
-
-
-if __name__ == "__main__":
-    config = SampleConfigDis()
-
-    # parallel_wavegan = TFParallelWaveGANGenerator(
-    #     config=config, name="parallel_wavegan"
-    # )
-    # parallel_wavegan._build()
-    # print(parallel_wavegan.summary())
-
-    parallel_wavegan_dis = TFParallelWaveGANDiscriminator(
-        config, name="parallel_wavegan_dis"
-    )
-    parallel_wavegan_dis._build()
-    parallel_wavegan_dis.summary()
