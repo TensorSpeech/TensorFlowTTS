@@ -518,7 +518,7 @@ class TFTacotronPostnet(tf.keras.layers.Layer):
                 name="conv_._{}".format(i),
             )
             batch_norm = tf.keras.layers.BatchNormalization(
-                name="batch_norm_._{}".format(i)
+                axis=-1, name="batch_norm_._{}".format(i)
             )
             self.conv_batch_norm.append((conv, batch_norm))
         self.dropout = tf.keras.layers.Dropout(

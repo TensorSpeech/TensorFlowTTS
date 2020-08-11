@@ -62,7 +62,7 @@ class Tacotron2Config(object):
         elif dataset == 'baker':
             self.vocab_size = len(bk_symbols)
         else:
-            raise ValueError('No such dataset: {}'.format(dataset))
+            raise ValueError("No such dataset: {}".format(dataset))
         self.embedding_hidden_size = embedding_hidden_size
         self.initializer_range = initializer_range
         self.layer_norm_eps = layer_norm_eps

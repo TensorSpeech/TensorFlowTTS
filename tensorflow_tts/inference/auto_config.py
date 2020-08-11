@@ -38,7 +38,6 @@ CONFIG_MAPPING = OrderedDict(
 
 
 class AutoConfig:
-
     def __init__(self):
         raise EnvironmentError(
             "AutoConfig is designed to be instantiated "
@@ -59,5 +58,7 @@ class AutoConfig:
             raise ValueError(
                 "Unrecognized model in {}. "
                 "Should have a `model_type` key in its config.json, or contain one of the following strings "
-                "in its name: {}".format(pretrained_path, ", ".join(CONFIG_MAPPING.keys()))
+                "in its name: {}".format(
+                    pretrained_path, ", ".join(CONFIG_MAPPING.keys())
+                )
             )
