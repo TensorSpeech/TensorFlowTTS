@@ -110,11 +110,13 @@ def main():
 
     # define data-loader
     dataset = CharactorMelDataset(
+        dataset=config["tacotron2_params"]["dataset"],
         root_dir=args.rootdir,
         charactor_query=char_query,
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
+        reduction_factor=config["tacotron2_params"]["reduction_factor"]
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 

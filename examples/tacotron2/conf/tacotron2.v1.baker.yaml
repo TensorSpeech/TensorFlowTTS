@@ -32,7 +32,7 @@ tacotron2_params:
     prenet_activation: 'relu'
     prenet_dropout_rate: 0.5
     n_lstm_decoder: 1
-    reduction_factor: 1
+    reduction_factor: 2
     decoder_lstm_units: 1024
     attention_dim: 128
     attention_filters: 32
