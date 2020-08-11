@@ -109,6 +109,7 @@ class TFResidualBlock(tf.keras.layers.Layer):
                 use_bias=False,
                 padding="same",
                 initializer_seed=initializer_seed,
+                name="conv1x1_aux",
             )
         else:
             self.conv1x1_aux = None
@@ -120,12 +121,14 @@ class TFResidualBlock(tf.keras.layers.Layer):
             use_bias=use_bias,
             padding="same",
             initializer_seed=initializer_seed,
+            name="conv1x1_out",
         )
         self.conv1x1_skip = TFConv1d1x1(
             skip_channels,
             use_bias=use_bias,
             padding="same",
             initializer_seed=initializer_seed,
+            name="conv1x1_skip",
         )
 
         self.dropout = tf.keras.layers.Dropout(rate=self.dropout_rate)
@@ -161,7 +164,8 @@ class TFResidualBlock(tf.keras.layers.Layer):
         s = self.conv1x1_skip(x)
 
         # for residual connection
-        x = (self.conv1x1_out(x) + residual) * tf.math.sqrt(0.5)
+        x = self.conv1x1_out(x)
+        x = (x + residual) * tf.math.sqrt(0.5)
 
         return x, s
 
@@ -187,16 +191,15 @@ class TFStretch1d(tf.keras.layers.Layer):
         """Calculate forward propagation.
 
         Args:
-            x (Tensor): Input tensor (B, T, C).
+            x (Tensor): Input tensor (B, T, C, 1).
         Returns:
-            Tensor: Interpolated tensor (B, F * y_scale, T * x_scale, C)
+            Tensor: Interpolated tensor (B, T * x_scale, C * y_scale, 1)
 
         """
-        x = tf.expand_dims(x, axis=1)  # [B, 1, T, C]
         x_shape = tf.shape(x)
-        new_size = (x_shape[1] * self.y_scale, x_shape[2] * self.x_scale)
+        new_size = (x_shape[1] * self.x_scale, x_shape[2] * self.y_scale)
         x = tf.image.resize(x, method=self.method, size=new_size)
-        return tf.squeeze(x, axis=1)
+        return x
 
 
 class TFUpsampleNetWork(tf.keras.layers.Layer):
@@ -232,7 +235,7 @@ class TFUpsampleNetWork(tf.keras.layers.Layer):
             # interpolation layer
             stretch = TFStretch1d(
                 scale, 1, interpolate_mode, name="stretch_._{}".format(scale)
-            )
+            )  # ->> outputs: [B, T * scale, C * 1, 1]
             self.up_layers += [stretch]
 
             # conv layer
@@ -240,12 +243,12 @@ class TFUpsampleNetWork(tf.keras.layers.Layer):
                 freq_axis_kernel_size - 1
             ) % 2 == 0, "Not support even number freq axis kernel size."
             kernel_size = scale * 2 + 1
-            conv = tf.keras.layers.Conv1D(
-                filters=output_channels,
-                kernel_size=kernel_size,
+            conv = tf.keras.layers.Conv2D(
+                filters=1,
+                kernel_size=(kernel_size, freq_axis_kernel_size),
                 padding="causal" if self.use_causal_conv is True else "same",
                 use_bias=False,
-            )
+            )  # ->> outputs: [B, T * scale, C * 1, 1]
             self.up_layers += [conv]
 
             # nonlinear
@@ -262,9 +265,10 @@ class TFUpsampleNetWork(tf.keras.layers.Layer):
         Returns:
             Tensor: Upsampled tensor (B, T', C), where T' = T * prod(upsample_scales).
         """
+        c = tf.expand_dims(c, -1)  # [B, T, C, 1]
         for f in self.up_layers:
             c = f(c)
-        return c
+        return tf.squeeze(c, -1)  # [B, T, C]
 
 
 class TFConvInUpsampleNetWork(tf.keras.layers.Layer):
@@ -418,25 +422,25 @@ class TFParallelWaveGANGenerator(tf.keras.Model):
         ]
 
     def _build(self):
-        noise = tf.random.uniform(shape=[2, 20 * 256, 1], dtype=tf.float32)
-        c = tf.random.uniform(shape=[2, 20, 80], dtype=tf.float32)
-        self(noise, c, training=tf.cast(True, tf.bool))
+        mels = tf.random.uniform(shape=[2, 20, 80], dtype=tf.float32)
+        self(mels, training=tf.cast(True, tf.bool))
 
-    def call(self, x, c, training=False, **kwargs):
+    def call(self, mels, training=False, **kwargs):
         """Calculate forward propagation.
 
         Args:
-            x (Tensor): Input noise signal (B, T, 1).
-            c (Tensor): Local conditioning auxiliary features (B, T', C).
+            mels (Tensor): Local conditioning auxiliary features (B, T', C).
         Returns:
 
             Tensor: Output tensor (B, T, 1)
         """
         # perform upsampling
-        if c is not None and self.upsample_net is not None:
-            c = self.upsample_net(c)
+        if mels is not None and self.upsample_net is not None:
+            c = self.upsample_net(mels)
 
+        # random noise x
         # enccode to hidden representation
+        x = tf.expand_dims(tf.random.normal(shape=tf.shape(c)[0:2]), axis=2)
         x = self.first_conv(x)
         skips = 0
         for f in self.conv_layers:
@@ -454,25 +458,24 @@ class TFParallelWaveGANGenerator(tf.keras.Model):
     @tf.function(
         experimental_relax_shapes=True,
         input_signature=[
-            tf.TensorSpec(shape=[None, None, 1], dtype=tf.float32, name="noise"),
             tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels"),
         ],
     )
-    def inference(self, x, c):
+    def inference(self, mels):
         """Calculate forward propagation.
 
         Args:
-            x (Tensor): Input noise signal (B, T, 1).
             c (Tensor): Local conditioning auxiliary features (B, T', C).
         Returns:
 
             Tensor: Output tensor (B, T, 1)
         """
         # perform upsampling
-        if c is not None and self.upsample_net is not None:
-            c = self.upsample_net(c)
+        if mels is not None and self.upsample_net is not None:
+            c = self.upsample_net(mels)
 
         # enccode to hidden representation
+        x = tf.expand_dims(tf.random.normal(shape=tf.shape(c)[0:2]), axis=2)
         x = self.first_conv(x)
         skips = 0
         for f in self.conv_layers:

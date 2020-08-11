@@ -88,7 +88,6 @@ def make_pwgan_discriminator_args(**kwargs):
 )
 def test_melgan_trainable(dict_g, dict_d):
     random_c = tf.random.uniform(shape=[4, 32, 80], dtype=tf.float32)
-    random_noise = tf.random.uniform(shape=[4, 32 * 256, 1], dtype=tf.float32)
 
     args_g = make_pwgan_generator_args(**dict_g)
     args_d = make_pwgan_discriminator_args(**dict_d)
@@ -101,5 +100,8 @@ def test_melgan_trainable(dict_g, dict_d):
     discriminator = TFParallelWaveGANDiscriminator(args_d)
     discriminator._build()
 
-    generated_audios = generator(random_noise, random_c, training=True)
+    generated_audios = generator(random_c, training=True)
     discriminator(generated_audios)
+
+    generator.summary()
+    discriminator.summary()
