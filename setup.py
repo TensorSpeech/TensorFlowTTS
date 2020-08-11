@@ -39,6 +39,9 @@ requirements = {
         "jamo>=0.4.1",
         "pypinyin",
         "g2pM",
+        "textgrid",
+        "click",
+        "g2p_en"
     ],
     "setup": ["numpy", "pytest-runner",],
     "test": [

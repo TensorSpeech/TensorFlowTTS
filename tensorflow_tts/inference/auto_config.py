@@ -32,13 +32,12 @@ CONFIG_MAPPING = OrderedDict(
         ("fastspeech2", FastSpeech2Config),
         ("melgan_generator", MelGANGeneratorConfig),
         ("multiband_melgan_generator", MultiBandMelGANGeneratorConfig),
-        ("tacotron2", Tacotron2Config)
+        ("tacotron2", Tacotron2Config),
     ]
 )
 
 
 class AutoConfig:
-
     def __init__(self):
         raise EnvironmentError(
             "AutoConfig is designed to be instantiated "
@@ -59,5 +58,7 @@ class AutoConfig:
             raise ValueError(
                 "Unrecognized model in {}. "
                 "Should have a `model_type` key in its config.json, or contain one of the following strings "
-                "in its name: {}".format(pretrained_path, ", ".join(CONFIG_MAPPING.keys()))
+                "in its name: {}".format(
+                    pretrained_path, ", ".join(CONFIG_MAPPING.keys())
+                )
             )

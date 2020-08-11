@@ -1,7 +1,7 @@
-###########################################################
+###########################################################base_preprocess
 #                FEATURE EXTRACTION SETTING               #
 ###########################################################
-sampling_rate: 22050     # Sampling rate.
+sampling_rate: 24000     # Sampling rate.
 fft_size: 1024           # FFT size.
 hop_size: 256            # Hop size. (fixed value, don't change)
 win_length: null         # Window length.
@@ -16,4 +16,5 @@ trim_threshold_in_db: 60 # Need to tune carefully if the recording is not good.
 trim_frame_size: 2048    # Frame size in trimming.
 trim_hop_size: 512       # Hop size in trimming.
 format: "npy"            # Feature file format. Only "npy" is supported.
+trim_mfa: true
 
