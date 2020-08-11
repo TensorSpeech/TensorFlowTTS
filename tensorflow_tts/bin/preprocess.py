@@ -63,7 +63,7 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "kss", "multispeaker", "baker],
+        choices=["ljspeech", "kss", "multispeaker", "baker"],
         help="Dataset to preprocess. Currently only (ljspeech, kss, multispeaker, baker)",
     )
     parser.add_argument(
@@ -339,14 +339,14 @@ def preprocess():
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
         "kss": KSSProcessor,
-        "baker": BakerProcessor
+        "baker": BakerProcessor,
         "multispeaker": ExampleMultispeaker,
     }
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
         "kss": "korean_cleaners",
-        "baker": None
+        "baker": None,
         "multispeaker": None,
     }
 
