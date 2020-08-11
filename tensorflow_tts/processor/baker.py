@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 import librosa
 import soundfile as sf
@@ -10,28 +11,29 @@ from pypinyin.core import Pinyin
 
 _pad = ['_']
 _eos = ['~']
-_pause = ['sil', 'sp1']
-_initials = ['b', 'c', 'ch', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 'sh', 't', 'x', 'z', 'zh']
-_tones = ['1', '2', '3', '4', '5']
-_finals = ['a', 'ai', 'an', 'ang', 'ao', 'e', 'ei', 'en', 'eng', 'er', 'i', 'ia', 'ian', 'iang', 'iao', 'ie',
-           'ii', 'iii', 'in', 'ing', 'iong', 'iou', 'o', 'ong', 'ou', 'u', 'ua', 'uai', 'uan', 'uang',
-           'uei', 'uen', 'ueng', 'uo', 'v', 'van', 've', 'vn']
-_special = ['io5']
+_pause = ['sil', '#0', '#1', '#2', '#3']
 
-symbols = _pad + _pause + _initials + [i + j for i in _finals for j in _tones] + _special + _eos
+_initials = ['^', 'b', 'c', 'ch', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 'sh', 't', 'x', 'z', 'zh']
+
+_tones = ['1', '2', '3', '4', '5']
+
+_finals = ['a', 'ai', 'an', 'ang', 'ao', 'e', 'ei', 'en', 'eng', 'er', 'i', 'ia', 'ian', 'iang', 'iao', 'ie', 'ii',
+           'iii', 'in', 'ing', 'iong', 'iou', 'o', 'ong', 'ou', 'u', 'ua', 'uai', 'uan', 'uang', 'uei', 'uen', 'ueng',
+           'uo', 'v', 'van', 've', 'vn']
+
+symbols = _pad + _pause + _initials + [i + j for i in _finals for j in _tones] + _eos
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 _id_to_symbol = {i: s for i, s in enumerate(symbols)}
 
 
-
 pinyin_dict = {
-    'a': ('', 'a'),
-    'ai': ('', 'ai'),
-    'an': ('', 'an'),
-    'ang': ('', 'ang'),
-    'ao': ('', 'ao'),
+    'a': ('^', 'a'),
+    'ai': ('^', 'ai'),
+    'an': ('^', 'an'),
+    'ang': ('^', 'ang'),
+    'ao': ('^', 'ao'),
     'ba': ('b', 'a'),
     'bai': ('b', 'ai'),
     'ban': ('b', 'an'),
@@ -107,12 +109,12 @@ pinyin_dict = {
     'dui': ('d', 'uei'),
     'dun': ('d', 'uen'),
     'duo': ('d', 'uo'),
-    'e': ('', 'e'),
-    'ei': ('', 'ei'),
-    'en': ('', 'en'),
-    'ng': ('', 'en'),
-    'eng': ('', 'eng'),
-    'er': ('', 'er'),
+    'e': ('^', 'e'),
+    'ei': ('^', 'ei'),
+    'en': ('^', 'en'),
+    'ng': ('^', 'en'),
+    'eng': ('^', 'eng'),
+    'er': ('^', 'er'),
     'fa': ('f', 'a'),
     'fan': ('f', 'an'),
     'fang': ('f', 'ang'),
@@ -265,8 +267,8 @@ pinyin_dict = {
     'nve': ('n', 've'),
     'nue': ('n', 've'),
     'nuo': ('n', 'uo'),
-    'o': ('', 'o'),
-    'ou': ('', 'ou'),
+    'o': ('^', 'o'),
+    'ou': ('^', 'ou'),
     'pa': ('p', 'a'),
     'pai': ('p', 'ai'),
     'pan': ('p', 'an'),
@@ -369,15 +371,15 @@ pinyin_dict = {
     'tui': ('t', 'uei'),
     'tun': ('t', 'uen'),
     'tuo': ('t', 'uo'),
-    'wa': ('', 'ua'),
-    'wai': ('', 'uai'),
-    'wan': ('', 'uan'),
-    'wang': ('', 'uang'),
-    'wei': ('', 'uei'),
-    'wen': ('', 'uen'),
-    'weng': ('', 'ueng'),
-    'wo': ('', 'uo'),
-    'wu': ('', 'u'),
+    'wa': ('^', 'ua'),
+    'wai': ('^', 'uai'),
+    'wan': ('^', 'uan'),
+    'wang': ('^', 'uang'),
+    'wei': ('^', 'uei'),
+    'wen': ('^', 'uen'),
+    'weng': ('^', 'ueng'),
+    'wo': ('^', 'uo'),
+    'wu': ('^', 'u'),
     'xi': ('x', 'i'),
     'xia': ('x', 'ia'),
     'xian': ('x', 'ian'),
@@ -392,21 +394,21 @@ pinyin_dict = {
     'xuan': ('x', 'van'),
     'xue': ('x', 've'),
     'xun': ('x', 'vn'),
-    'ya': ('', 'ia'),
-    'yan': ('', 'ian'),
-    'yang': ('', 'iang'),
-    'yao': ('', 'iao'),
-    'ye': ('', 'ie'),
-    'yi': ('', 'i'),
-    'yin': ('', 'in'),
-    'ying': ('', 'ing'),
-    'yo': ('', 'iou'),
-    'yong': ('', 'iong'),
-    'you': ('', 'iou'),
-    'yu': ('', 'v'),
-    'yuan': ('', 'van'),
-    'yue': ('', 've'),
-    'yun': ('', 'vn'),
+    'ya': ('^', 'ia'),
+    'yan': ('^', 'ian'),
+    'yang': ('^', 'iang'),
+    'yao': ('^', 'iao'),
+    'ye': ('^', 'ie'),
+    'yi': ('^', 'i'),
+    'yin': ('^', 'in'),
+    'ying': ('^', 'ing'),
+    'yo': ('^', 'iou'),
+    'yong': ('^', 'iong'),
+    'you': ('^', 'iou'),
+    'yu': ('^', 'v'),
+    'yuan': ('^', 'van'),
+    'yue': ('^', 've'),
+    'yun': ('^', 'vn'),
     'za': ('z', 'a'),
     'zai': ('z', 'ai'),
     'zan': ('z', 'an'),
@@ -447,20 +449,11 @@ pinyin_dict = {
 }
 
 
-def process_phonelabel(label_file):
-    with open(label_file, 'r', encoding='utf-8') as f:
-        lines = f.readlines()[12:]
-    assert len(lines) % 3 == 0
-
-    text = []
-    for i in range(0, len(lines), 3):
-        begin = float(lines[i].strip())
-        if i == 0:
-            assert begin == 0.
-        phone = lines[i + 2].strip()
-        text.append(phone.replace('"', ''))
-
-    return text
+zh_pattern = re.compile(u'[\u4e00-\u9fa5]')
+def is_zh(word):
+    global zh_pattern
+    match = zh_pattern.search(word)
+    return match is not None
 
 
 class MyConverter(NeutralToneWith5Mixin, DefaultConverter):
@@ -479,41 +472,61 @@ class BakerProcessor(object):
             with open(os.path.join(data_dir, 'ProsodyLabeling/000001-010000.txt'), encoding='utf-8') as ttf:
                 lines = ttf.readlines()
                 for idx in range(0, len(lines), 2):
-                    utt_id, _ = lines[idx].strip().split()
-                    phonemes = process_phonelabel(os.path.join(data_dir, f'PhoneLabeling/{utt_id}.interval'))
-                    phonemes = self.deal_r(phonemes)
-                    if 'pl' in phonemes or 'ng1' in phonemes:
-                        print(f'Skip this: {utt_id} {phonemes}')
+                    utt_id, chn_char = lines[idx].strip().split()
+                    pinyin = lines[idx+1].strip().split()
+                    if 'IY1' in pinyin or 'Ｂ' in chn_char:
+                        print(f'Skip this: {utt_id} {chn_char} {pinyin}')
                         continue
+                    phonemes = self.get_phoneme_from_char_and_pinyin(chn_char, pinyin)
                     wav_path = os.path.join(data_dir, 'Wave', '%s.wav' % utt_id)
                     items.append([' '.join(phonemes), wav_path, self.speaker_name, utt_id])
             self.items = items
-
-        self.pinyin = self.get_pinyin()
+        self.pinyin_parser = self.get_pinyin_parser()
 
     @staticmethod
-    def deal_r(phonemes):
-        result = []
-        for p in phonemes:
-            if p[-1].isdigit() and p[-2] == 'r' and p[:2] != 'er':
-                result.append(p[:-2] + p[-1])
-                result.append('er5')
+    def get_phoneme_from_char_and_pinyin(chn_char, pinyin):
+        # we do not need #4, use sil to replace it
+        chn_char = chn_char.replace('#4', '')
+        char_len = len(chn_char)
+        i, j = 0, 0
+        result = ['sil']
+        while i < char_len:
+            cur_char = chn_char[i]
+            if is_zh(cur_char):
+                if pinyin[j][:-1] not in pinyin_dict:
+                    assert chn_char[i+1] == '儿'
+                    assert pinyin[j][-2] == 'r'
+                    tone = pinyin[j][-1]
+                    a = pinyin[j][:-2]
+                    a1, a2 = pinyin_dict[a]
+                    result += [a1, a2 + tone, 'er5']
+                    if i+2 < char_len and chn_char[i+2] != '#':
+                        result.append('#0')
+
+                    i += 2
+                    j += 1
+                else:
+                    tone = pinyin[j][-1]
+                    a = pinyin[j][:-1]
+                    a1, a2 = pinyin_dict[a]
+                    result += [a1, a2 + tone]
+
+                    if i + 1 < char_len and chn_char[i + 1] != '#':
+                        result.append('#0')
+
+                    i += 1
+                    j += 1
+            elif cur_char == '#':
+                result.append(chn_char[i:i+2])
+                i += 2
             else:
-                result.append(p)
-        return result
-
-    @staticmethod
-    def get_initials_and_finals(text):
-        result = []
-        for x in text.split():
-            assert x[-1].isdigit()
-            tone = x[-1]
-            initial, final = pinyin_dict[x[:-1]]
-            if initial != '':
-                result.append(initial)
-            assert final is not ''
-            result.append(final + tone)
-        result = ' '.join(result)
+                # ignore the unknown char and punctuation
+                # result.append(chn_char[i])
+                i += 1
+        if result[-1] == '#0':
+            result = result[:-1]
+        result.append('sil')
+        assert j == len(pinyin)
         return result
 
     def get_one_sample(self, item):
@@ -545,7 +558,7 @@ class BakerProcessor(object):
 
         return sample
 
-    def get_pinyin(self):
+    def get_pinyin_parser(self):
         my_pinyin = Pinyin(MyConverter())
         pinyin = my_pinyin.pinyin
         return pinyin
@@ -554,12 +567,15 @@ class BakerProcessor(object):
         global _symbol_to_id
 
         if inference:
-            text = self.pinyin(text, style=Style.TONE3)
-            new_text = []
-            for x in text:
-                new_text.append(''.join(x))
-            text = self.get_initials_and_finals(' '.join(new_text))
-            print(text)
+            pinyin = self.pinyin_parser(text, style=Style.TONE3)
+            new_pinyin = []
+            for x in pinyin:
+                x = ''.join(x)
+                if '#' not in x:
+                    new_pinyin.append(x)
+            phonemes = self.get_phoneme_from_char_and_pinyin(text, new_pinyin)
+            text = ' '.join(phonemes)
+            print(f'phoneme seq: {text}')
 
         sequence = []
         for symbol in text.split():
