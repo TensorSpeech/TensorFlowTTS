@@ -37,6 +37,9 @@ requirements = {
         "pyworld>=0.2.10",
         "numba<=0.48",  # Fix No module named "numba.decorators"
         "jamo>=0.4.1",
+        "textgrid",
+        "click",
+        "g2p_en"
     ],
     "setup": ["numpy", "pytest-runner",],
     "test": [

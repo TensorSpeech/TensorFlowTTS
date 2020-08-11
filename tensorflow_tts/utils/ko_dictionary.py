@@ -11,7 +11,6 @@ etc_dictionary = {
 english_dictionary = {
     "Devsisters": "데브시스터즈",
     "track": "트랙",
-
     # krbook
     "LA": "엘에이",
     "LG": "엘지",
@@ -33,7 +32,6 @@ english_dictionary = {
     "C": "씨",
     "BIFF": "비아이에프에프",
     "GV": "지비",
-
     # JTBC
     "IT": "아이티",
     "IQ": "아이큐",
@@ -57,17 +55,17 @@ english_dictionary = {
     "JTBC": "제이티비씨",
     "PC": "피씨",
     "bill": "빌",
-    "Halmuny": "하모니", #####
+    "Halmuny": "하모니",  #####
     "X": "엑스",
     "SNS": "에스엔에스",
     "ability": "어빌리티",
     "shy": "",
     "CCTV": "씨씨티비",
     "IT": "아이티",
-    "the tenth man": "더 텐쓰 맨", ####
+    "the tenth man": "더 텐쓰 맨",  ####
     "L": "엘",
     "PC": "피씨",
-    "YSDJJPMB": "", ########
+    "YSDJJPMB": "",  ########
     "Content Attitude Timing": "컨텐트 애티튜드 타이밍",
     "CAT": "캣",
     "IS": "아이에스",
@@ -78,20 +76,19 @@ english_dictionary = {
     "CIA": "씨아이에이",
     "PBS": "피비에스",
     "D": "디",
-    "PPropertyPositionPowerPrisonP"
-    "S": "에스",
+    "PPropertyPositionPowerPrisonP" "S": "에스",
     "francisco": "프란시스코",
     "I": "아이",
-    "III": "아이아이", ######
+    "III": "아이아이",  ######
     "No joke": "노 조크",
     "BBK": "비비케이",
     "LA": "엘에이",
     "Don": "",
     "t worry be happy": " 워리 비 해피",
-    "NO": "엔오", #####
+    "NO": "엔오",  #####
     "it was our sky": "잇 워즈 아워 스카이",
-    "it is our sky": "잇 이즈 아워 스카이", ####
-    "NEIS": "엔이아이에스", #####
+    "it is our sky": "잇 이즈 아워 스카이",  ####
+    "NEIS": "엔이아이에스",  #####
     "IMF": "아이엠에프",
     "apology": "어폴로지",
     "humble": "험블",
@@ -105,8 +102,8 @@ english_dictionary = {
     "Pick me up": "픽 미 업",
     "DNA": "디엔에이",
     "UN": "유엔",
-    "STOP": "스탑", #####
-    "PRESS": "프레스", #####
+    "STOP": "스탑",  #####
+    "PRESS": "프레스",  #####
     "not to be": "낫 투비",
     "Denial": "디나이얼",
     "G": "지",
@@ -170,7 +167,6 @@ english_dictionary = {
     "AIB": "에이아이비",
     "K": "케이",
     "PBS": "피비에스",
-
     # IU
     "ASMR": "에이에스엠알",
     "V": "브이",

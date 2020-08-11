@@ -59,7 +59,7 @@ class Tacotron2Config(object):
         elif dataset == "kss":
             self.vocab_size = len(kss_symbols)
         else:
-            raise ValueError('No such dataset: {}'.format(dataset))
+            raise ValueError("No such dataset: {}".format(dataset))
         self.embedding_hidden_size = embedding_hidden_size
         self.initializer_range = initializer_range
         self.layer_norm_eps = layer_norm_eps
