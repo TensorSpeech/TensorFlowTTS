@@ -1,5 +1,5 @@
 import pytest
-from tensorflow_tts.processor.base_processorv2 import ExamplePrepro
+from tensorflow_tts.processor.base_processorv2 import ExamplePrepro, DataProcessorError
 import string
 from dataclasses import dataclass
 from shutil import copyfile
@@ -7,7 +7,6 @@ from shutil import copyfile
 
 @dataclass
 class LJ(ExamplePrepro):
-
     def get_one_sample(self, item):
         sample = {
             "raw_text": None,
@@ -27,6 +26,14 @@ class LJ(ExamplePrepro):
 def processor(tmpdir):
     copyfile("test/files/train.txt", f"{tmpdir}/train.txt")
     processor = LJ(root_dir=tmpdir, symbols=list(string.ascii_lowercase))
+    return processor
+
+
+@pytest.fixture
+def mapper_processor(tmpdir):
+    copyfile("test/files/train.txt", f"{tmpdir}/train.txt")
+    copyfile("test/files/mapper.json", f"{tmpdir}/mapper.json")
+    processor = LJ(root_dir=tmpdir, load_mapper=True)
     return processor
 
 
@@ -75,9 +82,26 @@ def test_adding_symbols(processor):
     processor.add_symbol("O_O")
 
     assert processor.symbol_to_id["a"] == 0
-    assert processor.symbol_to_id["O_O"] == len(processor.symbols) - 1  # new symbol should have last id
+    assert (
+        processor.symbol_to_id["O_O"] == len(processor.symbols) - 1
+    )  # new symbol should have last id
 
     assert processor.id_to_symbol[0] == "a"
     assert processor.id_to_symbol[len(processor.symbols) - 1] == "O_O"
 
-    assert old_processor_len == len(processor.symbols) -1
+    assert old_processor_len == len(processor.symbols) - 1
+
+
+def test_loading_mapper(mapper_processor):
+    assert mapper_processor.symbol_to_id["a"] == 0
+    assert mapper_processor.symbol_to_id["@ph"] == 2
+
+    assert mapper_processor.speakers_map["test_one"] == 0
+    assert mapper_processor.speakers_map["test_two"] == 1
+
+    assert mapper_processor.id_to_symbol[0] == "a"
+    assert mapper_processor.id_to_symbol[2] == "@ph"
+
+    # Test failed creation
+    with pytest.raises(DataProcessorError):
+        failed = LJ(root_dir="test/files")
