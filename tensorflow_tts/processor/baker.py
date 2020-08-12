@@ -567,7 +567,7 @@ class BakerProcessor(object):
         global _symbol_to_id
 
         if inference:
-            pinyin = self.pinyin_parser(text, style=Style.TONE3)
+            pinyin = self.pinyin_parser(text, style=Style.TONE3, errors='ignore')
             new_pinyin = []
             for x in pinyin:
                 x = ''.join(x)
