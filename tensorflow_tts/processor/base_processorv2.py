@@ -1,29 +1,44 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import abc
 import os
 import json
+from typing import Union, List, Dict
 
-from typing import Union
+
+class DataProcessorError(Exception):
+    pass
 
 
 @dataclass
 class ExamplePrepro(abc.ABC):
     root_dir: str
-    symbols: list
-    speakers_map = {}
+    symbols: List[str] = field(default_factory=list)
+    speakers_map: Dict[str, int] = field(default_factory=dict)
     train_f_name: str = "train.txt"
     delimiter: str = "|"
-    positions = {"file": 0, "text": 1, "speaker_name": 2}  # positions of file,text,speaker_name after split line
+    positions = {
+        "file": 0,
+        "text": 1,
+        "speaker_name": 2,
+    }  # positions of file,text,speaker_name after split line
     f_extension: str = ".wav"
     extra_tokens = {"unk": "[UNK]", "pad": "[PAD]", "eos": "[EOS]", "bos": "[BOS]"}
     save_mapper: bool = False
-
+    load_mapper: bool = False
     # extras
-    items = []
-    symbol_to_id = {}
-    id_to_symbol = {}
+    items: List[List[str]] = field(default_factory=list)  # text, wav_path, speaker_name
+    symbol_to_id: Dict[str, int] = field(default_factory=dict)
+    id_to_symbol: Dict[int, str] = field(default_factory=dict)
 
     def __post_init__(self):
+
+        if self.load_mapper:
+            self.__load_mapper()
+            return
+
+        if self.symbols.__len__() < 1:
+            raise DataProcessorError("Symbols list is empty but mapper isn't loaded")
+
         self.create_items()
         self.create_speaker_map()
         self.reverse_speaker = {v: k for k, v in self.speakers_map.items()}
@@ -31,7 +46,7 @@ class ExamplePrepro(abc.ABC):
         if self.save_mapper:
             self.__save_mapper()
 
-    def __getattr__(self, name: str) -> str:
+    def __getattr__(self, name: str) -> Union[str, int]:
         if "_id" in name:  # map extra token to id
             return self.symbol_to_id[self.extra_tokens[name.split("_id")[0]]]
         return self.extra_tokens[name]  # map extra token to value
@@ -63,11 +78,17 @@ class ExamplePrepro(abc.ABC):
         Method used to create items from training file
         items struct => text, wav_file_path, speaker_name
         """
-        with open(os.path.join(self.root_dir, self.train_f_name), mode="r", encoding="utf-8") as f:
+        with open(
+            os.path.join(self.root_dir, self.train_f_name), mode="r", encoding="utf-8"
+        ) as f:
             for line in f:
                 parts = line.strip().split(self.delimiter)
                 wav_path = os.path.join(self.root_dir, parts[self.positions["file"]])
-                wav_path = wav_path + self.f_extension if wav_path[-len(self.f_extension):] != self.f_extension else wav_path
+                wav_path = (
+                    wav_path + self.f_extension
+                    if wav_path[-len(self.f_extension) :] != self.f_extension
+                    else wav_path
+                )
                 text = parts[self.positions["text"]]
                 speaker_name = parts[self.positions["speaker_name"]]
                 self.items.append([text, wav_path, speaker_name])
@@ -127,6 +148,17 @@ class ExamplePrepro(abc.ABC):
 
         return sequence
 
+    def __load_mapper(self):
+        """
+        Save all needed mappers to file
+        """
+        path = os.path.join(self.root_dir, "mapper.json")
+        with open(path, "r") as f:
+            data = json.load(f)
+        self.speakers_map = data["speakers_map"]
+        self.symbol_to_id = data["symbol_to_id"]
+        self.id_to_symbol = {int(k): v for k, v in data["id_to_symbol"].items()}
+
     def __save_mapper(self):
         """
         Save all needed mappers to file
@@ -135,6 +167,6 @@ class ExamplePrepro(abc.ABC):
             full_mapper = {
                 "symbol_to_id": self.symbol_to_id,
                 "id_to_symbol": self.id_to_symbol,
-                "speakers_map": self.speakers_map
+                "speakers_map": self.speakers_map,
             }
             json.dump(full_mapper, f)
