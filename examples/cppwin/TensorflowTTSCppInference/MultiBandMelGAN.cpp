@@ -1,5 +1,4 @@
 #include "MultiBandMelGAN.h"
-#define IF_EXCEPT(cond,ex) if (cond){throw std::exception(ex);}
 
 
 
@@ -19,7 +18,7 @@ bool MultiBandMelGAN::Initialize(const std::string & VocoderPath)
 
 TFTensor<float> MultiBandMelGAN::DoInference(const TFTensor<float>& InMel)
 {
-	IF_EXCEPT(!MelGAN, "Tried to infer MB-MelGAN on uninitialized model!!!!");
+    VX_IF_EXCEPT(!MelGAN, "Tried to infer MB-MelGAN on uninitialized model!!!!");
 
 	// Convenience reference so that we don't have to constantly derefer pointers.
 	Model& Mdl = *MelGAN;

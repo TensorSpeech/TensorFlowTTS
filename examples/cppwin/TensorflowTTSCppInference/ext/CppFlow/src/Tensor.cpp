@@ -7,7 +7,7 @@
 #include <utility>
 // Disable "loss of data" warnings
 #pragma warning( disable : 4267)
-
+#include <memory>
 
 Tensor::Tensor(const Model& model, const std::string& operation) {
 

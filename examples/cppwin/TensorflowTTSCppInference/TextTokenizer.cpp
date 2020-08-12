@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
+#include <stdexcept>
 const std::vector<std::string> first14 = { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen" };
 const std::vector<std::string> prefixes = { "twen", "thir", "for", "fif", "six", "seven", "eigh", "nine" };
 

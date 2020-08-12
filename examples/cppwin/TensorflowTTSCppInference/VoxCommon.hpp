@@ -6,8 +6,10 @@
 #include <vector>
 #include "ext/AudioFile.hpp"
 #include "ext/CppFlow/include/Tensor.h"
+#include <stdexcept>
 
 #define IF_RETURN(cond,ret) if (cond){return ret;}
+#define VX_IF_EXCEPT(cond,ex) if (cond){throw std::invalid_argument(ex);}
 
 
 template<typename T>

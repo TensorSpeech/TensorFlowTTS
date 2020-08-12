@@ -1,4 +1,5 @@
 #include "ZCharScanner.h"
+#include <stdexcept>
 using namespace std;
 
 int ZStringDelimiter::key_search(const GString& s, const GString& key)

@@ -3,8 +3,6 @@
 #include "Voice.h"
 #define LOGF(txt) std::cout << txt <<  "\n"
 
-
-
 int main()
 {
 	bool Running = true;

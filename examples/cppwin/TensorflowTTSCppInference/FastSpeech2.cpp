@@ -28,8 +28,8 @@ bool FastSpeech2::Initialize(const std::string & SavedModelFolder)
 
 TFTensor<float> FastSpeech2::DoInference(const std::vector<int32_t>& InputIDs, int32_t SpeakerID, float Speed, float Energy, float F0)
 {
-	if (!FastSpeech)
-		throw std::exception("Tried to do inference on unloaded or invalid model!");
+    VX_IF_EXCEPT(!FastSpeech,"Tried to do inference on unloaded or invalid model!")
+
 
 	// Convenience reference so that we don't have to constantly derefer pointers.
 	Model& Mdl = *FastSpeech;
