@@ -28,6 +28,7 @@ from tensorflow_tts.processor import BaseProcessor
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 
+
 @dataclass
 class KSSProcessor(BaseProcessor):
     """KSS processor."""
@@ -41,7 +42,9 @@ class KSSProcessor(BaseProcessor):
 
     def create_items(self):
         if self.data_dir:
-            with open(os.path.join(self.data_dir, self.train_f_name), encoding="utf-8") as f:
+            with open(
+                os.path.join(self.data_dir, self.train_f_name), encoding="utf-8"
+            ) as f:
                 self.items = [self.split_line(self.data_dir, line, "|") for line in f]
 
     def split_line(self, data_dir, line, split):
@@ -51,7 +54,7 @@ class KSSProcessor(BaseProcessor):
         wav_path = os.path.join(data_dir, "kss", wave_file)
         speaker_name = "kss"
         return text_norm, wav_path, speaker_name
-    
+
     def get_one_sample(self, item):
         text, wav_path, speaker_name = item
 
@@ -94,7 +97,6 @@ class KSSProcessor(BaseProcessor):
         sequence += [self.eos_id]
         return sequence
 
-
     def _clean_text(self, text, cleaner_names):
         for name in cleaner_names:
             cleaner = getattr(cleaners, name)
@@ -103,14 +105,11 @@ class KSSProcessor(BaseProcessor):
             text = cleaner(text)
         return text
 
-
     def _symbols_to_sequence(self, symbols):
         return [self.symbol_to_id[s] for s in symbols if self._should_keep_symbol(s)]
 
-
     def _arpabet_to_sequence(self, text):
         return self._symbols_to_sequence(["@" + s for s in text.split()])
-
 
     def _should_keep_symbol(self, s):
         return s in self.symbol_to_id and s != "_" and s != "~"

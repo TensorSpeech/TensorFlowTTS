@@ -22,7 +22,7 @@ class BaseProcessor(abc.ABC):
         "speaker_name": 2,
     }  # positions of file,text,speaker_name after split line
     f_extension: str = ".wav"
-    #extra_tokens = {"unk": "[UNK]", "pad": "[PAD]", "eos": "[EOS]", "bos": "[BOS]"}
+    # extra_tokens = {"unk": "[UNK]", "pad": "[PAD]", "eos": "[EOS]", "bos": "[BOS]"}
     save_mapper: bool = False
     load_mapper: bool = False
     # extras
@@ -151,7 +151,11 @@ class BaseProcessor(abc.ABC):
         """
         Save all needed mappers to file
         """
-        loaded_path = os.path.join(self.data_dir, "mapper.json") if loaded_path is None else loaded_path
+        loaded_path = (
+            os.path.join(self.data_dir, "mapper.json")
+            if loaded_path is None
+            else loaded_path
+        )
         with open(loaded_path, "r") as f:
             data = json.load(f)
         self.speakers_map = data["speakers_map"]
@@ -162,7 +166,11 @@ class BaseProcessor(abc.ABC):
         """
         Save all needed mappers to file
         """
-        saved_path = os.path.join(self.data_dir, "mapper.json") if saved_path is None else saved_path
+        saved_path = (
+            os.path.join(self.data_dir, "mapper.json")
+            if saved_path is None
+            else saved_path
+        )
         with open(saved_path, "w") as f:
             full_mapper = {
                 "symbol_to_id": self.symbol_to_id,
@@ -170,4 +178,3 @@ class BaseProcessor(abc.ABC):
                 "speakers_map": self.speakers_map,
             }
             json.dump(full_mapper, f)
-                

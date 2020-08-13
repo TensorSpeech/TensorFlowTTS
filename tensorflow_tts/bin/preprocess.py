@@ -126,9 +126,9 @@ def gen_audio_features(item, config):
     # check audio properties
     assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
     assert np.abs(audio).max() <= 1.0, f"{utt_id} is different from 16 bit PCM."
-    # assert (
-    #     rate == config["sampling_rate"]
-    # ), f"{utt_id} sampling rate is not {config['sampling_rate']}."
+    assert (
+        rate == config["sampling_rate"]
+    ), f"{utt_id} sampling rate is not {config['sampling_rate']}."
 
     # trim silence
     if config["trim_silence"]:
@@ -268,14 +268,13 @@ def preprocess():
         "kss": KSS_SYMBOLS,
     }
 
-    dataset_cleaner = {
-        "ljspeech": "english_cleaners",
-        "kss": "korean_cleaners"
-    }
+    dataset_cleaner = {"ljspeech": "english_cleaners", "kss": "korean_cleaners"}
 
     logging.info(f"Selected '{config['dataset']}' processor.")
     processor = dataset_processor[config["dataset"]](
-        config["rootdir"], symbols=dataset_symbol[config["dataset"]], cleaner_names=dataset_cleaner[config["dataset"]]
+        config["rootdir"],
+        symbols=dataset_symbol[config["dataset"]],
+        cleaner_names=dataset_cleaner[config["dataset"]],
     )
 
     # check output directories
@@ -287,7 +286,9 @@ def preprocess():
     build_dir("valid")
 
     # save pretrained-processor to feature dir
-    processor._save_mapper(os.path.join(config["outdir"], f"{config['dataset']}_mapper.json"))
+    processor._save_mapper(
+        os.path.join(config["outdir"], f"{config['dataset']}_mapper.json")
+    )
 
     # build train test split
     train_split, valid_split = train_test_split(
