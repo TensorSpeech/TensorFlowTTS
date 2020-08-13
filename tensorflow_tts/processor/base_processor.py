@@ -23,8 +23,8 @@ class BaseProcessor(abc.ABC):
     }  # positions of file,text,speaker_name after split line
     f_extension: str = ".wav"
     # extra_tokens = {"unk": "[UNK]", "pad": "[PAD]", "eos": "[EOS]", "bos": "[BOS]"}
-    save_mapper: bool = False
-    load_mapper: bool = False
+    saved_mapper_path: str = None
+    loaded_mapper_path: str = None
     # extras
     items: List[List[str]] = field(default_factory=list)  # text, wav_path, speaker_name
     symbol_to_id: Dict[str, int] = field(default_factory=dict)
@@ -32,8 +32,8 @@ class BaseProcessor(abc.ABC):
 
     def __post_init__(self):
 
-        if self.load_mapper:
-            self._load_mapper()
+        if self.loaded_mapper_path is not None:
+            self._load_mapper(loaded_path=self.loaded_mapper_path)
             return
 
         if self.symbols.__len__() < 1:
@@ -43,8 +43,8 @@ class BaseProcessor(abc.ABC):
         self.create_speaker_map()
         self.reverse_speaker = {v: k for k, v in self.speakers_map.items()}
         self.create_symbols()
-        if self.save_mapper:
-            self._save_mapper()
+        if self.saved_mapper_path is not None:
+            self._save_mapper(saved_path=self.saved_mapper_path)
 
     def __getattr__(self, name: str) -> Union[str, int]:
         if "_id" in name:  # map symbol to id
