@@ -11,6 +11,8 @@ import soundfile as sf
 from tensorflow_tts.utils import cleaners
 from tensorflow_tts.processor import BaseProcessor
 
+from dataclasses import dataclass
+
 valid_symbols = [
     "AA",
     "AA0",
@@ -98,6 +100,8 @@ valid_symbols = [
     "ZH",
 ]
 
+_pad = "pad"
+_eos = "eos"
 _punctuation = "!'(),.:;? "
 _special = "-"
 _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -106,43 +110,45 @@ _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 _arpabet = ["@" + s for s in valid_symbols]
 
 # Export all symbols:
-symbols = (
-    list(_special) + list(_punctuation) + list(_letters) + _arpabet
+LJSPEECH_SYMBOLS = (
+    [_pad] + list(_special) + list(_punctuation) + list(_letters) + _arpabet + [_eos]
 )
 
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 
 
+@dataclass
 class LJSpeechProcessor(BaseProcessor):
     """LJSpeech processor."""
+    
+    cleaner_names: str = "english_cleaners"
+    positions = {
+        "wave_file": 0,
+        "text": 1,
+        "text_norm": 2,
+    }
+    train_f_name: str = "metadata.csv"
 
-    def __init__(self, data_dir=None, cleaner_names=None, metadata_filename="metadata.csv"):
-        self.data_dir = data_dir
-        self.cleaner_names = cleaner_names
+    def create_items(self):
+        if self.data_dir:
+            with open(os.path.join(self.data_dir, self.train_f_name), encoding="utf-8") as f:
+                self.items = [self.split_line(self.data_dir, line, "|") for line in f]
 
-        self.speaker_name = "ljspeech"
-
-        items = None
-        if data_dir:
-            with open(os.path.join(data_dir, metadata_filename), encoding="utf-8") as f:
-                items = [self.split_line(data_dir, line, "|") for line in f]
-
-        super().__init__(
-            items=items,
-            symbols=symbols,       
-        )
 
     def split_line(self, data_dir, line, split):
-        wav_file, _, text_norm = line.strip().split(split)
-        wav_path = os.path.join(data_dir, "wavs", f"{wav_file}.wav")
-        return text_norm, wav_path, self.speaker_name
+        parts = line.strip().split(split)
+        wave_file = parts[self.positions["wave_file"]]
+        text_norm = parts[self.positions["text_norm"]]
+        wav_path = os.path.join(data_dir, "wavs", f"{wave_file}.wav")
+        speaker_name = "ljspeech"
+        return text_norm, wav_path, speaker_name
 
     def get_one_sample(self, item):
-        text, wav_file, speaker_name = item
+        text, wav_path, speaker_name = item
 
         # normalize audio signal to be [-1, 1], soundfile already norm.
-        audio, rate = sf.read(wav_file)
+        audio, rate = sf.read(wav_path)
         audio = audio.astype(np.float32)
 
         # convert text to ids
@@ -152,7 +158,7 @@ class LJSpeechProcessor(BaseProcessor):
             "raw_text": text,
             "text_ids": text_ids,
             "audio": audio,
-            "utt_id": os.path.split(wav_file)[-1].split(".")[0],
+            "utt_id": os.path.split(wav_path)[-1].split(".")[0],
             "speaker_name": speaker_name,
             "rate": rate,
         }
@@ -176,7 +182,7 @@ class LJSpeechProcessor(BaseProcessor):
             text = m.group(3)
 
         # add eos tokens
-        sequence += self.eos_id
+        sequence += [self.eos_id]
         return sequence
 
 
@@ -190,7 +196,7 @@ class LJSpeechProcessor(BaseProcessor):
 
 
     def _symbols_to_sequence(self, symbols):
-        return [self._symbol_to_id[s] for s in symbols if self._should_keep_symbol(s)]
+        return [self.symbol_to_id[s] for s in symbols if self._should_keep_symbol(s)]
 
 
     def _arpabet_to_sequence(self, text):
@@ -198,4 +204,4 @@ class LJSpeechProcessor(BaseProcessor):
 
 
     def _should_keep_symbol(self, s):
-        return s in self._symbol_to_id and s != "_" and s != "~"
+        return s in self.symbol_to_id and s != "_" and s != "~"

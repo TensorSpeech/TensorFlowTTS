@@ -24,8 +24,8 @@ from .ko_dictionary import english_dictionary, etc_dictionary
 'ᆺ': 71, 'ᆻ': 72, 'ᆼ': 73, 'ᆽ': 74, 'ᆾ': 75, 'ᆿ': 76, 'ᇀ': 77, 'ᇁ': 78, 'ᇂ': 79, '~': 80
 """
 
-_pad = "_"
-_eos = "~"
+_pad = "pad"
+_eos = "eos"
 _punctuation = "!'(),-.:;? "
 _special = "-"
 

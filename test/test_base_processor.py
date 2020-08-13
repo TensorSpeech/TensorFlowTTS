@@ -1,12 +1,12 @@
 import pytest
-from tensorflow_tts.processor.base_processorv2 import ExamplePrepro, DataProcessorError
+from tensorflow_tts.processor.base_processor import BaseProcessor, DataProcessorError
 import string
 from dataclasses import dataclass
 from shutil import copyfile
 
 
 @dataclass
-class LJ(ExamplePrepro):
+class LJ(BaseProcessor):
     def get_one_sample(self, item):
         sample = {
             "raw_text": None,
@@ -25,7 +25,7 @@ class LJ(ExamplePrepro):
 @pytest.fixture
 def processor(tmpdir):
     copyfile("test/files/train.txt", f"{tmpdir}/train.txt")
-    processor = LJ(root_dir=tmpdir, symbols=list(string.ascii_lowercase))
+    processor = LJ(data_dir=tmpdir, symbols=list(string.ascii_lowercase))
     return processor
 
 
@@ -33,7 +33,7 @@ def processor(tmpdir):
 def mapper_processor(tmpdir):
     copyfile("test/files/train.txt", f"{tmpdir}/train.txt")
     copyfile("test/files/mapper.json", f"{tmpdir}/mapper.json")
-    processor = LJ(root_dir=tmpdir, load_mapper=True)
+    processor = LJ(data_dir=tmpdir, load_mapper=True)
     return processor
 
 
@@ -54,27 +54,21 @@ def test_items_creation(processor):
 def test_mapper(processor):
     # check symbol to id mapper
     assert processor.symbol_to_id["a"] == 0
-    assert processor.symbol_to_id[processor.bos] == len(processor.symbols) - 1
 
     # check id to symbol mapper
     assert processor.id_to_symbol[0] == "a"
-    assert processor.id_to_symbol[len(processor.symbols) - 1] == processor.bos
 
     # check speaker mapper
     assert processor.speakers_map["One"] == 0
     assert processor.speakers_map["Two"] == 1
 
-    assert len(processor.extra_tokens) == 4
-
 
 def test_adding_symbols(processor):
     # check symbol to id mapper
     assert processor.symbol_to_id["a"] == 0
-    assert processor.symbol_to_id[processor.bos] == len(processor.symbols) - 1
 
     # check id to symbol mapper
     assert processor.id_to_symbol[0] == "a"
-    assert processor.id_to_symbol[len(processor.symbols) - 1] == processor.bos
 
     old_processor_len = len(processor.symbols)
 
@@ -104,4 +98,4 @@ def test_loading_mapper(mapper_processor):
 
     # Test failed creation
     with pytest.raises(DataProcessorError):
-        failed = LJ(root_dir="test/files")
+        failed = LJ(data_dir="test/files")
