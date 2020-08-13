@@ -50,6 +50,8 @@ from tensorflow_tts.trainers import GanBasedTrainer
 from tensorflow_tts.losses import TFMultiResolutionSTFT
 from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
 
+from tensorflow_addons.optimizers import RectifiedAdam
+
 
 class ParallelWaveganTrainer(GanBasedTrainer):
     """ParallelWaveGAN Trainer class based on GanBasedTrainer."""
@@ -439,10 +441,10 @@ def main():
             config["discriminator_optimizer_params"]["lr_fn"],
         )(**config["discriminator_optimizer_params"]["lr_params"])
 
-        gen_optimizer = tf.keras.optimizers.Adam(
+        gen_optimizer = RectifiedAdam(
             learning_rate=generator_lr_fn, amsgrad=False
         )
-        dis_optimizer = tf.keras.optimizers.Adam(
+        dis_optimizer = RectifiedAdam(
             learning_rate=discriminator_lr_fn, amsgrad=False
         )
 
