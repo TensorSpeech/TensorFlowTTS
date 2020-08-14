@@ -19,6 +19,7 @@
 :zany_face: TensorflowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems.
 
 ## What's new
+- 2020/08/14 **(NEW!)** Support Chinese TTS. Pls see the [colab](https://colab.research.google.com/drive/1YpSHRBRPBI7cnTkQn1UcVTWEQVbsUm1S?usp=sharing). Thank [@azraelkuan](https://github.com/azraelkuan).
 - 2020/08/05 **(NEW!)** Support Korean TTS. Pls see the [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing). Thank [@crux153](https://github.com/crux153).
 - 2020/07/17 Support MultiGPU for all Trainer.
 - 2020/07/05 Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from TFlite team for his support.
@@ -35,15 +36,17 @@
 - Mixed precision to speed-up training if posible.
 - Support both Single/Multi GPU in base trainer class.
 - TFlite conversion for all supported model.
+- Android example.
+- Support many languages (currently, we support Chinese, Korean, English.)
 
 ## Requirements
 This repository is tested on Ubuntu 18.04 with:
 
-- Python 3.6+
+- Python 3.7+
 - Cuda 10.1
 - CuDNN 7.6.5
 - Tensorflow 2.2/2.3
-- [Tensorflow Addons](https://github.com/tensorflow/addons) 0.10.0
+- [Tensorflow Addons](https://github.com/tensorflow/addons) >= 0.10.0
 
 Different Tensorflow version should be working but not tested yet. This repo will try to work with latest stable tensorflow version. **We recommend you install tensorflow 2.3.0 to training in case you want to use MultiGPU.**
 
@@ -113,11 +116,11 @@ The preprocessing has two steps:
 
 To reproduce the steps above:
 ```
-tensorflow-tts-preprocess --rootdir ./datasets --outdir ./dump --config preprocess/ljspeech_preprocess.yaml --dataset ljspeech
-tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config preprocess/ljspeech_preprocess.yaml --dataset ljspeech
+tensorflow-tts-preprocess --rootdir ./datasets --outdir ./dump --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker]
+tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker]
 ```
 
-Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/) and [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset) for dataset argument. In the future, we intend to support more datasets.
+Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar) for dataset argument. In the future, we intend to support more datasets.
 
 After preprocessing, the structure of the project folder should be:
 ```
@@ -183,28 +186,6 @@ After preprocessing, the structure of the project folder should be:
 - `train_utt_ids.npy` / `valid_utt_ids.npy` contains training and validation utterances IDs respectively
 
 We use suffix (`ids`, `raw-feats`, `raw-energy`, `raw-f0`, `norm-feats` and `wave`) for each type of input.
-
-### Preprocessing Chinese Dataset
-please download the open dataset from [Data-Baker](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), and extract data like this:
-```
-.
-├── PhoneLabeling
-│   ├── 000001.interval
-│   ├── ...
-│   └── 010000.interval
-├── ProsodyLabeling
-│   └── 000001-010000.txt
-└── Wave
-    ├── 000001.wav
-    ├── ...
-    └── 010000.wav
-```
-
-after install tensorflowtts, you can process data like this:
-```shell
-tensorflow-tts-preprocess --dataset baker --rootdir ./baker --outdir ./dump --config ./preprocess/baker_preprocess.yaml
-tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config  ./preprocess/baker_preprocess.yaml --dataset baker
-```
 
 
 **IMPORTANT NOTES**:
