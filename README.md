@@ -184,6 +184,29 @@ After preprocessing, the structure of the project folder should be:
 
 We use suffix (`ids`, `raw-feats`, `raw-energy`, `raw-f0`, `norm-feats` and `wave`) for each type of input.
 
+### Preprocessing Chinese Dataset
+please download the open dataset from [Data-Baker](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), and extract data like this:
+```
+.
+├── PhoneLabeling
+│   ├── 000001.interval
+│   ├── ...
+│   └── 010000.interval
+├── ProsodyLabeling
+│   └── 000001-010000.txt
+└── Wave
+    ├── 000001.wav
+    ├── ...
+    └── 010000.wav
+```
+
+after install tensorflowtts, you can process data like this:
+```shell
+tensorflow-tts-preprocess --dataset baker --rootdir ./baker --outdir ./dump --config ./preprocess/baker_preprocess.yaml
+tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config  ./preprocess/baker_preprocess.yaml --dataset baker
+```
+
+
 **IMPORTANT NOTES**:
 - This preprocessing step is based on [ESPnet](https://github.com/espnet/espnet) so you can combine all models here with other models from ESPnet repository.
 

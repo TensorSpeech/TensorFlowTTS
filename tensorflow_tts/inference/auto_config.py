@@ -30,9 +30,9 @@ CONFIG_MAPPING = OrderedDict(
     [
         ("fastspeech", FastSpeechConfig),
         ("fastspeech2", FastSpeech2Config),
-        ("melgan_generator", MelGANGeneratorConfig),
         ("multiband_melgan_generator", MultiBandMelGANGeneratorConfig),
-        ("tacotron2", Tacotron2Config),
+        ("melgan_generator", MelGANGeneratorConfig),
+        ("tacotron2", Tacotron2Config)
     ]
 )
 

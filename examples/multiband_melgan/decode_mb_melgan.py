@@ -110,14 +110,14 @@ def main():
 
     # define model and load checkpoint
     mb_melgan = TFMelGANGenerator(
-        config=MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator"]),
+        config=MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]),
         name="multiband_melgan_generator",
     )
     mb_melgan._build()
     mb_melgan.load_weights(args.checkpoint)
 
     pqmf = TFPQMF(
-        config=MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator"]), name="pqmf"
+        config=MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]), name="pqmf"
     )
 
     for data in tqdm(dataset, desc="[Decoding]"):

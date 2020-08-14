@@ -1,5 +1,5 @@
 # This is the hyperparameter configuration file for Tacotron2 v1.
-# Please make sure this is adjusted for the LJSpeech dataset. If you want to
+# Please make sure this is adjusted for the Baker dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 200k iters but 65k iters is enough to get a good models.
 
@@ -16,9 +16,9 @@ format: "npy"
 model_type: "tacotron2"
 
 tacotron2_params:
-    dataset: ljspeech
+    dataset: baker
     embedding_hidden_size: 512
-    initializer_range: 0.02
+    initializer_range: 0.5
     embedding_dropout_prob: 0.1
     n_speakers: 1
     n_conv_encoder: 5
@@ -32,7 +32,7 @@ tacotron2_params:
     prenet_activation: 'relu'
     prenet_dropout_rate: 0.5
     n_lstm_decoder: 1
-    reduction_factor: 1
+    reduction_factor: 2
     decoder_lstm_units: 1024
     attention_dim: 128
     attention_filters: 32
@@ -52,7 +52,7 @@ remove_short_samples: true # Whether to remove samples the length of which are l
 allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
 mel_length_threshold: 32   # remove all targets has mel_length <= 32 
 is_shuffle: true           # shuffle dataset after each epoch.
-use_fixed_shapes: false    # use_fixed_shapes for training (2x speed-up)
+use_fixed_shapes: true     # use_fixed_shapes for training (2x speed-up)
                            # refer (https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118)
 
 ###########################################################
@@ -70,9 +70,9 @@ optimizer_params:
 #                    INTERVAL SETTING                     #
 ###########################################################
 train_max_steps: 200000                 # Number of training steps.
-save_interval_steps: 2000               # Interval steps to save checkpoint.
+save_interval_steps: 5000               # Interval steps to save checkpoint.
 eval_interval_steps: 500                # Interval steps to evaluate the network.
-log_interval_steps: 200                 # Interval steps to record the training log.
+log_interval_steps: 100                 # Interval steps to record the training log.
 start_schedule_teacher_forcing: 200001  # don't need to apply schedule teacher forcing.
 start_ratio_value: 0.5                  # start ratio of scheduled teacher forcing.
 schedule_decay_steps: 50000             # decay step scheduled teacher forcing.

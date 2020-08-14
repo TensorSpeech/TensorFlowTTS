@@ -31,6 +31,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import BakerProcessor
 from tensorflow_tts.processor import KSSProcessor
 from tensorflow_tts.processor.experiment.example_processor import ExampleMultispeaker
 from tensorflow_tts.utils import remove_outlier
@@ -62,8 +63,8 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "kss", "multispeaker"],
-        help="Dataset to preprocess.",
+        choices=["ljspeech", "kss", "multispeaker", "baker"],
+        help="Dataset to preprocess. Currently only (ljspeech, kss, multispeaker, baker)",
     )
     parser.add_argument(
         "--config", type=str, required=True, help="YAML format configuration file."
@@ -338,12 +339,14 @@ def preprocess():
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
         "kss": KSSProcessor,
+        "baker": BakerProcessor,
         "multispeaker": ExampleMultispeaker,
     }
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
         "kss": "korean_cleaners",
+        "baker": None,
         "multispeaker": None,
     }
 
@@ -534,3 +537,4 @@ def compute_statistics():
     logging.info("Saving computed statistics.")
     scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
     save_statistics_to_file(scaler_list, config)
+
