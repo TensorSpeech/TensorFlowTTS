@@ -1,8 +1,25 @@
-from dataclasses import dataclass, field
+# -*- coding: utf-8 -*-
+# Copyright 2020 TensorFlowTTS Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Base Processor for all processor."""
+
 import abc
-import os
 import json
-from typing import Union, List, Dict
+import os
+from typing import Dict, List, Union
+
+from dataclasses import dataclass, field
 
 
 class DataProcessorError(Exception):
@@ -22,7 +39,6 @@ class BaseProcessor(abc.ABC):
         "speaker_name": 2,
     }  # positions of file,text,speaker_name after split line
     f_extension: str = ".wav"
-    # extra_tokens = {"unk": "[UNK]", "pad": "[PAD]", "eos": "[EOS]", "bos": "[BOS]"}
     saved_mapper_path: str = None
     loaded_mapper_path: str = None
     # extras

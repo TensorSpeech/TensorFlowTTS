@@ -1,29 +1,28 @@
 # -*- coding: utf-8 -*-
-# This code is copy and modify from https://github.com/keithito/tacotron.
-"""Perform preprocessing and raw feature extraction."""
+# Copyright 2020 TensorFlowTTS Team.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Perform preprocessing and raw feature extraction for KSS dataset."""
 
-import re
 import os
+import re
 
 import numpy as np
 import soundfile as sf
-
-from tensorflow_tts.utils import cleaners
-
-"""
-Defines the set of symbols used in text input to the model.
-
-The default is a set of ASCII characters that works well for English or text that has been run
-through Unidecode. For other data, you can modify _characters. See TRAINING_DATA.md for details.
-"""
-
-from jamo import h2j, j2h
-from jamo.jamo import _jamo_char_to_hcj
-
-from tensorflow_tts.utils.korean import symbols as KSS_SYMBOLS
-
 from dataclasses import dataclass
 from tensorflow_tts.processor import BaseProcessor
+from tensorflow_tts.utils import cleaners
+from tensorflow_tts.utils.korean import symbols as KSS_SYMBOLS
 
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
