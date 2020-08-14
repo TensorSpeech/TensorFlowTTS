@@ -2,6 +2,8 @@
 
 This contains code (and libs, if using Windows) necessary to make portable programs for inference with FastSpeech2 (MFA-aligned phonetic) and MB-MelGAN on desktop, along with a simple example. The aforementioned models have to be exported in Tensorflow SavedModel format to be used.
 
+If you want to convert your model to the format that this program expects, you can check out the notebook: [<img src="https://colab.research.google.com/assets/colab-badge.svg">](https://colab.research.google.com/drive/1qRzNLZaZu_TtUYv-OH7N7xXD3vXtxD_z?usp=sharing)
+
 It includes a set of easily understandable and modular classes including a simple English text preprocessor, so you can easily copy and integrate them into your program.
 
 Inference is even easier than in Python.
@@ -73,9 +75,4 @@ For Windows x64 and Ubuntu 18.04 x64 (gcc version 7.5.0), precompiled libraries 
  - **Tensorflow C API**: [https://www.tensorflow.org/install/lang_c](https://www.tensorflow.org/install/lang_c)
  - **CppFlow** (TF C API -> C++ wrapper): [https://github.com/serizba/cppflow](https://github.com/serizba/cppflow) 
  - **AudioFile** (for WAV export): [https://github.com/adamstark/AudioFile](https://github.com/adamstark/AudioFile)
-
-
-
-
-
 
