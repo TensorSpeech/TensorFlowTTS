@@ -1,6 +1,6 @@
 # This is the hyperparameter configuration file for FastSpeech2 v2.
 # the different of v2 and v1 is that v2 apply linformer technique.
-# Please make sure this is adjusted for the LJSpeech dataset. If you want to
+# Please make sure this is adjusted for the Baker dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 200k iters but a best checkpoint is around 150k iters.
 

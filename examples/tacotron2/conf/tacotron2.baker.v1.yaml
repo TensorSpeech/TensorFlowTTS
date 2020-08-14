@@ -1,5 +1,5 @@
 # This is the hyperparameter configuration file for Tacotron2 v1.
-# Please make sure this is adjusted for the LJSpeech dataset. If you want to
+# Please make sure this is adjusted for the Baker dataset. If you want to
 # apply to the other dataset, you might need to carefully change some parameters.
 # This configuration performs 200k iters but 65k iters is enough to get a good models.
 
