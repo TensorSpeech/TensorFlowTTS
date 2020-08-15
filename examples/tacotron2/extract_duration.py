@@ -124,11 +124,13 @@ def main():
 
     # define data-loader
     dataset = CharactorMelDataset(
+        dataset=config["tacotron2_params"]["dataset"],
         root_dir=args.rootdir,
         charactor_query=char_query,
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
+        reduction_factor=config["tacotron2_params"]["reduction_factor"]
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
@@ -146,6 +148,8 @@ def main():
         input_lengths = data["input_lengths"]
         mel_lengths = data["mel_lengths"]
         utt_ids = utt_ids.numpy()
+        real_mel_lengths = data["real_mel_lengths"]
+        del data["real_mel_lengths"]
 
         # tacotron2 inference.
         mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2(
@@ -163,9 +167,25 @@ def main():
             real_char_length = (
                 input_lengths[i].numpy() - 1
             )  # minus 1 because char have eos tokens.
-            real_mel_length = mel_lengths[i].numpy()
-            alignment = alignment[:real_char_length, :real_mel_length]
+            real_mel_length = real_mel_lengths[i].numpy()
+            alignment_mel_length = int(np.ceil(real_mel_length / config["tacotron2_params"]["reduction_factor"]))
+            alignment = alignment[:real_char_length, :alignment_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
+
+            d = d * config["tacotron2_params"]["reduction_factor"]
+            assert np.sum(d) >= real_mel_length, f"{d}, {np.sum(d)}, {alignment_mel_length}, {real_mel_length}"
+            if np.sum(d) > real_mel_length:
+                rest = np.sum(d) - real_mel_length
+                # print(d, np.sum(d), real_mel_length)
+                if d[-1] > rest:
+                    d[-1] -= rest
+                elif d[0] > rest:
+                    d[0] -= rest
+                else:
+                    d[-1] -= rest // 2
+                    d[0] -= (rest - rest // 2)
+
+                assert d[-1] > 0 and d[0] > 0, f'{d}, {np.sum(d)}, {real_mel_length}'
 
             saved_name = utt_ids[i].decode("utf-8")
 
