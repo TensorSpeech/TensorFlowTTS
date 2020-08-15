@@ -31,6 +31,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import BakerProcessor
 from tensorflow_tts.processor import KSSProcessor
 from tensorflow_tts.processor import LibriTTSProcessor
 
@@ -173,6 +174,7 @@ def gen_audio_features(item, config):
         item (Dict): dictionary containing the attributes to encode.
         config (Dict): configuration dictionary.
     Returns:
+        (bool): keep this sample or not.
         mel (ndarray): mel matrix in np.float32.
         energy (ndarray): energy audio profile.
         f0 (ndarray): fundamental frequency.
@@ -436,6 +438,9 @@ def preprocess():
             id_to_remove.append(features["utt_id"])
             continue
         # partial fitting of scalers
+        if len(energy[energy != 0]) == 0 or len(f0[f0 != 0]) == 0:
+            id_to_remove.append(features["utt_id"])
+            continue
         scaler_mel.partial_fit(mel)
         scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))
         scaler_f0.partial_fit(f0[f0 != 0].reshape(-1, 1))
@@ -476,7 +481,8 @@ def gen_normal_mel(mel_path, scaler, config):
     mel_norm = scaler.transform(mel)
     path, file_name = os.path.split(mel_path)
     *_, subdir, suffix = path.split(os.sep)
-    utt_id = file_name.strip(f"-{suffix}.npy")
+
+    utt_id = file_name.split(f"-{suffix}.npy")[0]
     np.save(
         os.path.join(
             config["outdir"], subdir, "norm-feats", f"{utt_id}-norm-feats.npy"
@@ -547,3 +553,4 @@ def compute_statistics():
     logging.info("Saving computed statistics.")
     scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
     save_statistics_to_file(scaler_list, config)
+

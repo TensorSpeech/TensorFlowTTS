@@ -70,12 +70,8 @@ class AudioDataset(AbstractDataset):
             audio_file = self.audio_files[i]
             audio = self.audio_load_fn(audio_file)
             audio_length = self.audio_lengths[i]
-            
-            items = {
-                "utt_ids": utt_id,
-                "audios": audio,
-                "audio_lengths": audio_length
-            }
+
+            items = {"utt_ids": utt_id, "audios": audio, "audio_lengths": audio_length}
 
             yield items
 
@@ -83,7 +79,7 @@ class AudioDataset(AbstractDataset):
         output_types = {
             "utt_ids": tf.string,
             "audios": tf.float32,
-            "audio_lengths": tf.float32   
+            "audio_lengths": tf.float32,
         }
         return output_types
 

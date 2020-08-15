@@ -128,11 +128,11 @@ class TFFastSpeech2(TFFastSpeech):
             [[10, 10, 10, 10, 10, 10, 10, 10, 10, 10]], tf.float32
         )
         self(
-            input_ids=input_ids, 
-            speaker_ids=speaker_ids, 
-            duration_gts=duration_gts, 
-            f0_gts=f0_gts, 
-            energy_gts=energy_gts
+            input_ids=input_ids,
+            speaker_ids=speaker_ids,
+            duration_gts=duration_gts,
+            f0_gts=f0_gts,
+            energy_gts=energy_gts,
         )
 
     def call(
@@ -212,13 +212,7 @@ class TFFastSpeech2(TFFastSpeech):
         return outputs
 
     def _inference(
-        self,
-        input_ids,
-        speaker_ids,
-        speed_ratios,
-        f0_ratios,
-        energy_ratios,
-        **kwargs,
+        self, input_ids, speaker_ids, speed_ratios, f0_ratios, energy_ratios, **kwargs,
     ):
         """Call logic."""
         attention_mask = tf.math.not_equal(input_ids, 0)
