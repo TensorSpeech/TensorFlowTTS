@@ -178,7 +178,13 @@ class BaseProcessor(abc.ABC):
         self.symbol_to_id = data["symbol_to_id"]
         self.id_to_symbol = {int(k): v for k, v in data["id_to_symbol"].items()}
 
-    def _save_mapper(self, saved_path: str = None):
+        # other keys
+        all_data_keys = data.keys()
+        for key in all_data_keys:
+            if key not in ["speakers_map", "symbol_to_id", "id_to_symbol"]:
+                setattr(self, key, data[key])
+
+    def _save_mapper(self, saved_path: str = None, extra_attrs_to_save: dict = None):
         """
         Save all needed mappers to file
         """
@@ -193,4 +199,6 @@ class BaseProcessor(abc.ABC):
                 "id_to_symbol": self.id_to_symbol,
                 "speakers_map": self.speakers_map,
             }
+            if extra_attrs_to_save:
+                full_mapper = {**full_mapper, **extra_attrs_to_save}
             json.dump(full_mapper, f)
