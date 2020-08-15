@@ -33,7 +33,7 @@ def processor(tmpdir):
 def mapper_processor(tmpdir):
     copyfile("test/files/train.txt", f"{tmpdir}/train.txt")
     copyfile("test/files/mapper.json", f"{tmpdir}/mapper.json")
-    processor = LJ(data_dir=tmpdir, load_mapper=True)
+    processor = LJ(data_dir=tmpdir, loaded_mapper_path=f"{tmpdir}/mapper.json")
     return processor
 
 
