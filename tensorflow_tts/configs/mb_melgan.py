@@ -24,7 +24,7 @@ class MultiBandMelGANGeneratorConfig(MelGANGeneratorConfig):
         super().__init__(**kwargs)
         self.subbands = kwargs.pop("subbands", 4)
         self.taps = kwargs.pop("taps", 62)
-        self.cutoff_ratio = kwargs.pop("cutoff_ratio", 0.15)
+        self.cutoff_ratio = kwargs.pop("cutoff_ratio", 0.142)
         self.beta = kwargs.pop("beta", 9.0)
 
 
