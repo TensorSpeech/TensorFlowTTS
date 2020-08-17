@@ -82,7 +82,7 @@ class TFPQMF(tf.keras.layers.Layer):
                 * np.cos(
                     (2 * k + 1)
                     * (np.pi / (2 * subbands))
-                    * (np.arange(taps + 1) - (tap / 2))
+                    * (np.arange(taps + 1) - (taps / 2))
                     + (-1) ** k * np.pi / 4
                 )
             )
