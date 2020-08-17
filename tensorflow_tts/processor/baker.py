@@ -16,11 +16,12 @@
 
 import os
 import re
+from typing import Dict, List, Union, Tuple, Any
 
 import librosa
 import numpy as np
 import soundfile as sf
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pypinyin import Style
 from pypinyin.contrib.neutral_tone import NeutralToneWith5Mixin
 from pypinyin.converter import DefaultConverter
@@ -102,7 +103,7 @@ _finals = [
 BAKER_SYMBOLS = _pad + _pause + _initials + [i + j for i in _finals for j in _tones] + _eos
 
 
-pinyin_dict = {
+PINYIN_DICT = {
     "a": ("^", "a"),
     "ai": ("^", "ai"),
     "an": ("^", "an"),
@@ -539,10 +540,10 @@ class MyConverter(NeutralToneWith5Mixin, DefaultConverter):
 @dataclass
 class BakerProcessor(BaseProcessor):
 
+    pinyin_dict: Dict[str, Tuple[str, str]] = field(default_factory=lambda: PINYIN_DICT)
     cleaner_names: str = None
     target_rate: int = 24000
     speaker_name: str = "baker"
-    pinyin_dict: dict = pinyin_dict
 
     def create_items(self):
         if self.data_dir:

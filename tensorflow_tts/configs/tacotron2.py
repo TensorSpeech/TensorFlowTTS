@@ -16,7 +16,7 @@
 
 from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS as lj_symbols
 from tensorflow_tts.processor.kss import KSS_SYMBOLS as kss_symbols
-from tensorflow_tts.processor.baker import symbols as bk_symbols
+from tensorflow_tts.processor.baker import BAKER_SYMBOLS as bk_symbols
 
 
 class Tacotron2Config(object):
