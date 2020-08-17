@@ -36,6 +36,7 @@ from tensorflow_tts.processor import KSSProcessor
 from tensorflow_tts.processor import LibriTTSProcessor
 
 from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS
+from tensorflow_tts.processor.baker import BAKER_SYMBOLS
 from tensorflow_tts.processor.kss import KSS_SYMBOLS
 from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS
 
@@ -68,7 +69,7 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "kss", "libritts"],
+        choices=["ljspeech", "kss", "libritts", "baker"],
         help="Dataset to preprocess.",
     )
     parser.add_argument(
@@ -341,18 +342,21 @@ def preprocess():
         "ljspeech": LJSpeechProcessor,
         "kss": KSSProcessor,
         "libritts": LibriTTSProcessor,
+        "baker": BakerProcessor,
     }
 
     dataset_symbol = {
         "ljspeech": LJSPEECH_SYMBOLS,
         "kss": KSS_SYMBOLS,
         "libritts": LIBRITTS_SYMBOLS,
+        "baker": BAKER_SYMBOLS,
     }
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
         "kss": "korean_cleaners",
         "libritts": None,
+        "baker": None,
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
@@ -372,7 +376,10 @@ def preprocess():
 
     # save pretrained-processor to feature dir
     processor._save_mapper(
-        os.path.join(config["outdir"], f"{config['dataset']}_mapper.json")
+        os.path.join(config["outdir"], f"{config['dataset']}_mapper.json"),
+        extra_attrs_to_save={"pinyin_dict": processor.pinyin_dict}
+        if config["dataset"] is "baker"
+        else {},
     )
 
     # build train test split
@@ -553,4 +560,3 @@ def compute_statistics():
     logging.info("Saving computed statistics.")
     scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
     save_statistics_to_file(scaler_list, config)
-
