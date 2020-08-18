@@ -20,6 +20,7 @@ import pytest
 import tensorflow as tf
 
 from tensorflow_tts.inference import AutoConfig
+from tensorflow_tts.inference import AutoProcessor
 from tensorflow_tts.inference import TFAutoModel
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -49,3 +50,9 @@ logging.basicConfig(
 def test_auto_model(config_path):
     config = AutoConfig.from_pretrained(pretrained_path=config_path)
     model = TFAutoModel.from_pretrained(config=config, pretrained_path=None)
+
+
+@pytest.fixture
+def test_auto_processor():
+    processor = AutoProcessor(data_dir=None, loaded_mapper_path="./files/mapper.json")
+    return processor

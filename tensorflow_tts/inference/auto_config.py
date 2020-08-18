@@ -56,8 +56,8 @@ class AutoConfig:
             return config_class
         except Exception:
             raise ValueError(
-                "Unrecognized model in {}. "
-                "Should have a `model_type` key in its config.json, or contain one of the following strings "
+                "Unrecognized config in {}. "
+                "Should have a `model_type` key in its config.yaml, or contain one of the following strings "
                 "in its name: {}".format(
                     pretrained_path, ", ".join(CONFIG_MAPPING.keys())
                 )
