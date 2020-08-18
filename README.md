@@ -93,7 +93,7 @@ Here in an audio samples on valid set. [tacotron-2](https://drive.google.com/ope
 
 Prepare a dataset in the following format:
 ```
-|- datasets/
+|- [NAME_DATASET]/
 |   |- metadata.csv
 |   |- wav/
 |       |- file1.wav
@@ -101,6 +101,8 @@ Prepare a dataset in the following format:
 ```
 
 where `metadata.csv` has the following format: `id|transcription`. This is a ljspeech-like format, you can ignore preprocessing steps if you have other format dataset.
+
+Note that `NAME_DATASET` should be `[ljspeech/kss/baker/libritts]` for example.
 
 ## Preprocessing
 
@@ -116,20 +118,22 @@ The preprocessing has two steps:
 
 To reproduce the steps above:
 ```
-tensorflow-tts-preprocess --rootdir ./datasets --outdir ./dump --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker]
-tensorflow-tts-normalize --rootdir ./dump --outdir ./dump --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker]
+tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
+tensorflow-tts-normalize --rootdir ./[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker/libritts]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
 ```
 
-Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar) for dataset argument. In the future, we intend to support more datasets.
+Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar) and [`libritts`](http://www.openslr.org/60/) for dataset argument. In the future, we intend to support more datasets.
+
+**Note**: To runing `libritts` preprocessing, please first read the instruction in [examples/fastspeech2_libritts](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/fastspeech2_libritts). We need reformat it first before run preprocessing.
 
 After preprocessing, the structure of the project folder should be:
 ```
-|- datasets/
+|- [NAME_DATASET]/
 |   |- metadata.csv
 |   |- wav/
 |       |- file1.wav
 |       |- ...
-|- dump/
+|- dump_[ljspeech/kss/baker/libritts]/
 |   |- train/
 |       |- ids/
 |           |- LJ001-0001-ids.npy
@@ -190,6 +194,7 @@ We use suffix (`ids`, `raw-feats`, `raw-energy`, `raw-f0`, `norm-feats` and `wav
 
 **IMPORTANT NOTES**:
 - This preprocessing step is based on [ESPnet](https://github.com/espnet/espnet) so you can combine all models here with other models from ESPnet repository.
+- Regardless how your dataset is formatted, the final structure of `dump` folder **SHOULD** follow above structure to be able use the training script or you can modify by yourself 😄.
 
 ## Training models
 
@@ -198,6 +203,7 @@ To know how to training model from scratch or fine-tune with other datasets/lang
 - For Tacotron-2 tutorial, pls see [example/tacotron2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron2)
 - For FastSpeech tutorial, pls see [example/fastspeech](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech)
 - For FastSpeech2 tutorial, pls see [example/fastspeech2](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech2)
+- For FastSpeech2 + MFA tutorial, pls see [example/fastspeech2_libritts](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech2_libritts)
 - For MelGAN tutorial, pls see [example/melgan](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan)
 - For MelGAN + STFT Loss tutorial, pls see [example/melgan.stft](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan.stft)
 - For Multiband-MelGAN tutorial, pls see [example/multiband_melgan](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan)
@@ -285,7 +291,7 @@ sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
 ```
 
 # Contact
-[Minh Nguyen Quan Anh](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com, [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com, [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com, [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com
+[Minh Nguyen Quan Anh](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com, [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com, [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com, [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com, [Yunchao He](https://github.com/candlewill): yunchaohe@gmail.com, [Alejandro Miguel Velasquez](https://github.com/ZDisket): xml506ok@gmail.com
 
 # License
 Overrall, Almost models here are licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) for all countries in the world, except in **Viet Nam** this framework cannot be used for production in any way without permission from TensorflowTTS's Authors. There is an exception, Tacotron-2 can be used with any perpose. So, if you are VietNamese and want to use this framework for production, you **Must** contact our in andvance.

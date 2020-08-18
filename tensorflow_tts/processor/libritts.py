@@ -14,10 +14,13 @@
 # limitations under the License.
 """Perform preprocessing and raw feature extraction for LibriTTS dataset."""
 
-from dataclasses import dataclass
+import os
+import re
 
 import numpy as np
 import soundfile as sf
+from dataclasses import dataclass
+
 from g2p_en import g2p as grapheme_to_phonem
 
 from tensorflow_tts.processor.base_processor import BaseProcessor
@@ -73,7 +76,7 @@ class LibriTTSProcessor(BaseProcessor):
             "raw_text": text,
             "text_ids": text_ids,
             "audio": audio,
-            "utt_id": wav_file.split("/")[-1].split(".")[0],
+            "utt_id": wav_path.split("/")[-1].split(".")[0],
             "speaker_name": speaker_name,
             "rate": rate,
         }
@@ -84,7 +87,7 @@ class LibriTTSProcessor(BaseProcessor):
         if (
             self.mode == "train"
         ):  # in train mode text should be already transformed to phonemes
-            return self.symbols_to_ids(clean_g2p(text.split(" ")))
+            return self.symbols_to_ids(self.clean_g2p(text.split(" ")))
         else:
             return self.inference_text_to_seq(text)
 
