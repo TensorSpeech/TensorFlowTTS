@@ -32,6 +32,19 @@ logging.basicConfig(
 
 
 @pytest.mark.parametrize(
+    "mapper_path", 
+    [
+        "./test/files/baker_mapper.json",
+        "./test/files/kss_mapper.json",
+        "./test/files/libritts_mapper.json",
+        "./test/files/ljspeech_mapper.json",
+     ]
+)
+def test_auto_processor(mapper_path):
+    processor = AutoProcessor.from_pretrained(pretrained_path=mapper_path)
+
+
+@pytest.mark.parametrize(
     "config_path", 
     [
         "./examples/fastspeech/conf/fastspeech.v1.yaml", 
@@ -50,9 +63,3 @@ logging.basicConfig(
 def test_auto_model(config_path):
     config = AutoConfig.from_pretrained(pretrained_path=config_path)
     model = TFAutoModel.from_pretrained(config=config, pretrained_path=None)
-
-
-@pytest.fixture
-def test_auto_processor():
-    processor = AutoProcessor(data_dir=None, loaded_mapper_path="./files/mapper.json")
-    return processor

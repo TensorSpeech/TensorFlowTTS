@@ -189,9 +189,11 @@ def gen_audio_features(item, config):
     # check audio properties
     assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
     assert np.abs(audio).max() <= 1.0, f"{utt_id} is different from 16 bit PCM."
-    assert (
-        rate == config["sampling_rate"]
-    ), f"{utt_id} sampling rate is not {config['sampling_rate']}."
+    
+    # check sample rate
+    if rate != config["sampling_rate"]:
+        audio = librosa.resample(audio, rate, config["sampling_rate"])
+        logging.info(f"{utt_id} sampling rate is {rate}, not {config['sampling_rate']}, we resample it.")
 
     # trim silence
     if config["trim_silence"]:
@@ -378,7 +380,7 @@ def preprocess():
     processor._save_mapper(
         os.path.join(config["outdir"], f"{config['dataset']}_mapper.json"),
         extra_attrs_to_save={"pinyin_dict": processor.pinyin_dict}
-        if config["dataset"] is "baker"
+        if config["dataset"] == "baker"
         else {},
     )
 
