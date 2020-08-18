@@ -23,9 +23,6 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
-from tensorflow_tts.processor.ljspeech import symbols as ljspeech_symbols
-from tensorflow_tts.utils.korean import symbols as kss_symbols
-from tensorflow_tts.processor.baker import symbols as baker_symbols
 from tensorflow_tts.utils import find_files
 
 
@@ -103,13 +100,6 @@ class CharactorMelDataset(AbstractDataset):
             suffix = charactor_query[1:]
             utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
 
-        eos_token_dict = {
-            "ljspeech": len(ljspeech_symbols) - 1,
-            "kss": len(kss_symbols) - 1,
-            "baker": len(baker_symbols) - 1
-        }
-        self.eos_token_id = eos_token_dict[dataset]
-
         # set global params
         self.utt_ids = utt_ids
         self.mel_files = mel_files
@@ -125,7 +115,7 @@ class CharactorMelDataset(AbstractDataset):
         self.ga_pad_value = ga_pad_value
         self.g = g
         self.use_fixed_shapes = use_fixed_shapes
-        self.max_char_length = np.max(char_lengths) + 1  # +1 for eos
+        self.max_char_length = np.max(char_lengths)
 
         if np.max(mel_lengths) % self.reduction_factor == 0:
             self.max_mel_length = np.max(mel_lengths)
@@ -147,10 +137,6 @@ class CharactorMelDataset(AbstractDataset):
             charactor = self.charactor_load_fn(charactor_file)
             mel_length = self.mel_lengths[i]
             char_length = self.char_lengths[i]
-
-            # add eos token for charactor since charactor is original token.
-            charactor = np.concatenate([charactor, [self.eos_token_id]], -1)
-            char_length += 1
 
             # padding mel to make its length is multiple of reduction factor.
             real_mel_length = mel_length

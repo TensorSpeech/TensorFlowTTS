@@ -12,5 +12,6 @@
     "0": "a",
     "1": "b",
     "2": "@ph"
-  }
+  },
+  "processor_name": "TestProcessor"
 }

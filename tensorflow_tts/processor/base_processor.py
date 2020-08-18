@@ -72,7 +72,7 @@ class BaseProcessor(abc.ABC):
 
     def create_speaker_map(self):
         """
-        Create speaker map for dataset
+        Create speaker map for dataset.
         """
         sp_id = 0
         for i in self.items:
@@ -94,7 +94,8 @@ class BaseProcessor(abc.ABC):
     def create_items(self):
         """
         Method used to create items from training file
-        items struct => text, wav_file_path, speaker_name
+        items struct example => text, wav_file_path, speaker_name.
+        Note that the speaker_name should be a last.
         """
         with open(
             os.path.join(self.data_dir, self.train_f_name), mode="r", encoding="utf-8"

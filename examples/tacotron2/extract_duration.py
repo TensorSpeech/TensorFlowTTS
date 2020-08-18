@@ -165,8 +165,8 @@ def main():
 
         for i, alignment in enumerate(alignment_historys):
             real_char_length = (
-                input_lengths[i].numpy() - 1
-            )  # minus 1 because char have eos tokens.
+                input_lengths[i].numpy()
+            )
             real_mel_length = real_mel_lengths[i].numpy()
             alignment_mel_length = int(np.ceil(real_mel_length / config["tacotron2_params"]["reduction_factor"]))
             alignment = alignment[:real_char_length, :alignment_mel_length]
