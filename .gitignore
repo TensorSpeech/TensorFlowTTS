@@ -35,4 +35,5 @@ ljspeech
 LibriTTS/
 dataset/
 mfa/
-kss
+kss/
+baker/

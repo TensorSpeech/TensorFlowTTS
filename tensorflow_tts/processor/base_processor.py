@@ -61,6 +61,9 @@ class BaseProcessor(abc.ABC):
         self.create_symbols()
         if self.saved_mapper_path is not None:
             self._save_mapper(saved_path=self.saved_mapper_path)
+        
+        # processor name. usefull to use it for AutoProcessor
+        self._processor_name = type(self).__name__
 
     def __getattr__(self, name: str) -> Union[str, int]:
         if "_id" in name:  # map symbol to id
@@ -177,6 +180,7 @@ class BaseProcessor(abc.ABC):
         self.speakers_map = data["speakers_map"]
         self.symbol_to_id = data["symbol_to_id"]
         self.id_to_symbol = {int(k): v for k, v in data["id_to_symbol"].items()}
+        self._processor_name = data["processor_name"]
 
         # other keys
         all_data_keys = data.keys()
@@ -198,6 +202,7 @@ class BaseProcessor(abc.ABC):
                 "symbol_to_id": self.symbol_to_id,
                 "id_to_symbol": self.id_to_symbol,
                 "speakers_map": self.speakers_map,
+                "processor_name": self._processor_name,
             }
             if extra_attrs_to_save:
                 full_mapper = {**full_mapper, **extra_attrs_to_save}

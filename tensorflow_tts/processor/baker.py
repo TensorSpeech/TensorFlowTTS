@@ -28,8 +28,8 @@ from pypinyin.converter import DefaultConverter
 from pypinyin.core import Pinyin
 from tensorflow_tts.processor import BaseProcessor
 
-_pad = ["_"]
-_eos = ["~"]
+_pad = ["pad"]
+_eos = ["eos"]
 _pause = ["sil", "#0", "#1", "#2", "#3"]
 
 _initials = [
@@ -546,6 +546,7 @@ class BakerProcessor(BaseProcessor):
     speaker_name: str = "baker"
 
     def create_items(self):
+        items = []
         if self.data_dir:
             with open(
                 os.path.join(self.data_dir, "ProsodyLabeling/000001-010000.txt"),
@@ -561,13 +562,12 @@ class BakerProcessor(BaseProcessor):
                     phonemes = self.get_phoneme_from_char_and_pinyin(chn_char, pinyin)
                     wav_path = os.path.join(self.data_dir, "Wave", "%s.wav" % utt_id)
                     items.append(
-                        [" ".join(phonemes), wav_path, self.speaker_name, utt_id]
+                        [" ".join(phonemes), wav_path, utt_id, self.speaker_name]
                     )
             self.items = items
         self.pinyin_parser = self.get_pinyin_parser()
 
-    @staticmethod
-    def get_phoneme_from_char_and_pinyin(chn_char, pinyin):
+    def get_phoneme_from_char_and_pinyin(self, chn_char, pinyin):
         # we do not need #4, use sil to replace it
         chn_char = chn_char.replace("#4", "")
         char_len = len(chn_char)
@@ -613,7 +613,7 @@ class BakerProcessor(BaseProcessor):
         return result
 
     def get_one_sample(self, item):
-        text, wav_file, speaker_name, utt_id = item
+        text, wav_file, utt_id, speaker_name = item
 
         # normalize audio signal to be [-1, 1], soundfile already norm.
         audio, rate = sf.read(wav_file)
