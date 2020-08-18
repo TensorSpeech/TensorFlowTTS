@@ -247,10 +247,9 @@ import yaml
 
 import tensorflow as tf
 
-from tensorflow_tts.processor import LJSpeechProcessor
-
 from tensorflow_tts.inference import AutoConfig
 from tensorflow_tts.inference import TFAutoModel
+from tensorflow_tts.inference import AutoProcessor
 
 # initialize fastspeech model.
 fs_config = AutoConfig.from_pretrained('/examples/fastspeech/conf/fastspeech.v1.yaml')
@@ -269,7 +268,7 @@ melgan = TFAutoModel.from_pretrained(
 
 
 # inference
-processor = LJSpeechProcessor(None, cleaner_names="english_cleaners")
+processor = AutoProcessor.from_pretrained(pretrained_path="./test/files/ljspeech_mapper.json")
 
 ids = processor.text_to_sequence("Recent research at Harvard has shown meditating for as little as 8 weeks, can actually increase the grey matter in the parts of the brain responsible for emotional regulation, and learning.")
 ids = tf.expand_dims(ids, 0)
@@ -291,7 +290,7 @@ sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
 ```
 
 # Contact
-[Minh Nguyen Quan Anh](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com, [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com, [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com, [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com, [Yunchao He](https://github.com/candlewill): yunchaohe@gmail.com, [Alejandro Miguel Velasquez](https://github.com/ZDisket): xml506ok@gmail.com
+[Minh Nguyen Quan Anh](https://github.com/dathudeptrai): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com, [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com, [Dawid Kobus](https://github.com/machineko): machineko@protonmail.com, [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com, [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com, [Yunchao He](https://github.com/candlewill): yunchaohe@gmail.com, [Alejandro Miguel Velasquez](https://github.com/ZDisket): xml506ok@gmail.com
 
 # License
 Overrall, Almost models here are licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) for all countries in the world, except in **Viet Nam** this framework cannot be used for production in any way without permission from TensorflowTTS's Authors. There is an exception, Tacotron-2 can be used with any perpose. So, if you are VietNamese and want to use this framework for production, you **Must** contact our in andvance.
