@@ -545,6 +545,10 @@ class BakerProcessor(BaseProcessor):
     target_rate: int = 24000
     speaker_name: str = "baker"
 
+    def __post_init__(self):
+        super().__post_init__()
+        self.pinyin_parser = self.get_pinyin_parser()
+
     def create_items(self):
         items = []
         if self.data_dir:
@@ -565,7 +569,6 @@ class BakerProcessor(BaseProcessor):
                         [" ".join(phonemes), wav_path, utt_id, self.speaker_name]
                     )
             self.items = items
-        self.pinyin_parser = self.get_pinyin_parser()
 
     def get_phoneme_from_char_and_pinyin(self, chn_char, pinyin):
         # we do not need #4, use sil to replace it
