@@ -61,11 +61,21 @@ CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/decode_mb_melgan.py \
   --use-norm 1
 ```
 
-## Finetune MelGAN STFT with ljspeech pretrained on other languages
-Just load pretrained model and training from scratch with other languages. **DO NOT FORGET** re-preprocessing on your dataset if needed. A hop_size should be 256 if you want to use our pretrained.
+## Finetune Multi-Band MelGAN + PWGAN Disc with ljspeech pretrained on other languages
+Download generator weights
 
+```bash
+CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/train_multiband_pwgan.py \
+  --train-dir ./dump/train/ \
+  --dev-dir ./dump/valid/ \
+  --outdir ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/ \
+  --config ./examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml \
+  --use-norm 1 \
+  --generator_mixed_precision 1 \
+  --pretrained "ptgen.h5"
+```
 ## Learning Curves
-Here is a learning curves of melgan based on this config [`multiband_pwgan.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)
+Here is a learning curves of melgan based on this config [`multiband_melgan.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)
 
 <img src="fig/eval.png" height="300" width="850">
 
@@ -76,6 +86,9 @@ Here is a learning curves of melgan based on this config [`multiband_pwgan.v1.ya
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
 | [multiband_melgan.v1](https://drive.google.com/drive/folders/1Hg82YnPbX6dfF7DxVs4c96RBaiFbh-cT?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 940K    |
 | [multiband_melgan.v1](https://drive.google.com/drive/folders/199XCXER51PWf_VzUpOwxfY_8XDfeXuZl?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 1000K    |
+
+## Notes
+1. Using RAdam for discriminator
 
 ## Reference
 

@@ -79,11 +79,12 @@ generator_optimizer_params:
     amsgrad: false
 
 discriminator_optimizer_params:
-    lr_fn: "PiecewiseConstantDecay"
+    lr_fn: "ExponentialDecay"
     lr_params: 
-        boundaries: [100000, 200000, 300000, 400000, 500000]
-        values: [0.00025, 0.000125, 0.0000625, 0.00003125, 0.000015625, 0.000001]
-    amsgrad: false
+        initial_learning_rate: 0.0005
+        decay_steps: 200000
+        decay_rate: 0.5
+
 
 ###########################################################
 #                    INTERVAL SETTING                     #
