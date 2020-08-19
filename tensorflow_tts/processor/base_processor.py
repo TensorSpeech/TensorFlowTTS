@@ -64,7 +64,9 @@ class BaseProcessor(abc.ABC):
         
         # processor name. usefull to use it for AutoProcessor
         self._processor_name = type(self).__name__
-        self.eos_id = self.symbol_to_id[self.setup_eos_token()]
+
+        if self.setup_eos_token():
+            self.eos_id = self.symbol_to_id[self.setup_eos_token()]
 
     def __getattr__(self, name: str) -> Union[str, int]:
         if "_id" in name:  # map symbol to id
