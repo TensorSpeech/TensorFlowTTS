@@ -41,6 +41,8 @@ Compiling the demo depends on what platform. Currently two have been tested:
 1. Windows 10 x64; MSVC 2017 (v141)
 2. Linux(Ubuntu) x64: GCC 7.5.0
 
+Note that to test out your shiny new build afterwards you'll have to download the LJSpeech model (or make one yourself), it's bundled in any of the above precompiled demo download links.
+
 ## Windows
 Due to being too heavy, some dependencies (include + libs) have been excluded from the repo. You can find them [here](https://drive.google.com/file/d/1ufLQvH-Me2NLmzNBkjcyD13WTyHb35aB/view?usp=sharing) for Windows 64-bit release. Simply put the `deps` folder into the same place as the solution (.sln) file.
 
