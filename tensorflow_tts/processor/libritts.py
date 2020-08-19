@@ -83,6 +83,9 @@ class LibriTTSProcessor(BaseProcessor):
 
         return sample
 
+    def setup_eos_token(self):
+        return None
+
     def text_to_sequence(self, text):
         if (
             self.mode == "train"

@@ -64,6 +64,7 @@ class BaseProcessor(abc.ABC):
         
         # processor name. usefull to use it for AutoProcessor
         self._processor_name = type(self).__name__
+        self.eos_id = self.symbol_to_id[self.setup_eos_token()]
 
     def __getattr__(self, name: str) -> Union[str, int]:
         if "_id" in name:  # map symbol to id
@@ -150,6 +151,12 @@ class BaseProcessor(abc.ABC):
     @abc.abstractmethod
     def text_to_sequence(self, text: str):
         return []
+
+    @abc.abstractmethod
+    def setup_eos_token(self):
+        """Return eos symbol of type string."""
+        return "eos"
+
 
     def convert_symbols_to_ids(self, symbols: Union[str, list]):
         sequence = []
