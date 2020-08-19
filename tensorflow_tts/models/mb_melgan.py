@@ -82,7 +82,7 @@ class TFPQMF(tf.keras.layers.Layer):
                 * np.cos(
                     (2 * k + 1)
                     * (np.pi / (2 * subbands))
-                    * (np.arange(taps + 1) - ((taps - 1) / 2))
+                    * (np.arange(taps + 1) - (taps / 2))
                     + (-1) ** k * np.pi / 4
                 )
             )
@@ -92,7 +92,7 @@ class TFPQMF(tf.keras.layers.Layer):
                 * np.cos(
                     (2 * k + 1)
                     * (np.pi / (2 * subbands))
-                    * (np.arange(taps + 1) - ((taps - 1) / 2))
+                    * (np.arange(taps + 1) - (taps / 2))
                     - (-1) ** k * np.pi / 4
                 )
             )
@@ -101,7 +101,7 @@ class TFPQMF(tf.keras.layers.Layer):
         analysis_filter = np.expand_dims(h_analysis, 1)
         analysis_filter = np.transpose(analysis_filter, (2, 1, 0))
 
-        synthesis_filter = np.expand_dims(h_analysis, 0)
+        synthesis_filter = np.expand_dims(h_synthesis, 0)
         synthesis_filter = np.transpose(synthesis_filter, (2, 1, 0))
 
         # filter for downsampling & upsampling
@@ -173,14 +173,18 @@ class TFMBMelGANGenerator(TFMelGANGenerator):
         return self.inference(mels)
 
     @tf.function(
-        input_signature=[tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")]
+        input_signature=[
+            tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")
+        ]
     )
     def inference(self, mels):
         mb_audios = self.melgan(mels)
         return self.pqmf.synthesis(mb_audios)
 
     @tf.function(
-        input_signature=[tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")]
+        input_signature=[
+            tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")
+        ]
     )
     def inference_tflite(self, mels):
         mb_audios = self.melgan(mels)

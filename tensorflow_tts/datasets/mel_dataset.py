@@ -70,11 +70,7 @@ class MelDataset(AbstractDataset):
             mel = self.mel_load_fn(mel_file)
             mel_length = self.mel_lengths[i]
 
-            items = {
-                "utt_ids": utt_id,
-                "mels": mel,
-                "mel_lengths": mel_length
-            }
+            items = {"utt_ids": utt_id, "mels": mel, "mel_lengths": mel_length}
 
             yield items
 
@@ -82,7 +78,7 @@ class MelDataset(AbstractDataset):
         output_types = {
             "utt_ids": tf.string,
             "mels": tf.float32,
-            "mel_lengths": tf.int32   
+            "mel_lengths": tf.int32,
         }
         return output_types
 

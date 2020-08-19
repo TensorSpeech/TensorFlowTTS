@@ -23,7 +23,6 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
-from tensorflow_tts.processor.ljspeech import symbols
 from tensorflow_tts.utils import find_files
 
 
@@ -51,6 +50,7 @@ class CharactorMelDataset(AbstractDataset):
 
     def __init__(
         self,
+        dataset,
         root_dir,
         charactor_query="*-ids.npy",
         mel_query="*-norm-feats.npy",
@@ -115,7 +115,7 @@ class CharactorMelDataset(AbstractDataset):
         self.ga_pad_value = ga_pad_value
         self.g = g
         self.use_fixed_shapes = use_fixed_shapes
-        self.max_char_length = np.max(char_lengths) + 1  # +1 for eos
+        self.max_char_length = np.max(char_lengths)
 
         if np.max(mel_lengths) % self.reduction_factor == 0:
             self.max_mel_length = np.max(mel_lengths)
@@ -138,11 +138,8 @@ class CharactorMelDataset(AbstractDataset):
             mel_length = self.mel_lengths[i]
             char_length = self.char_lengths[i]
 
-            # add eos token for charactor since charactor is original token.
-            charactor = np.concatenate([charactor, [len(symbols) - 1]], -1)
-            char_length += 1
-
             # padding mel to make its length is multiple of reduction factor.
+            real_mel_length = mel_length
             remainder = mel_length % self.reduction_factor
             if remainder != 0:
                 new_mel_length = mel_length + self.reduction_factor - remainder
@@ -169,6 +166,7 @@ class CharactorMelDataset(AbstractDataset):
                 "speaker_ids": 0,
                 "mel_gts": mel,
                 "mel_lengths": mel_length,
+                "real_mel_lengths": real_mel_length,
                 "g_attentions": g_attention,
             }
 
@@ -209,6 +207,7 @@ class CharactorMelDataset(AbstractDataset):
             "speaker_ids": 0,
             "mel_gts": self.mel_pad_value,
             "mel_lengths": 0,
+            "real_mel_lengths": 0,
             "g_attentions": self.ga_pad_value,
         }
 
@@ -224,6 +223,7 @@ class CharactorMelDataset(AbstractDataset):
             if self.use_fixed_shapes is False
             else [self.max_mel_length, 80],
             "mel_lengths": [],
+            "real_mel_lengths": [],
             "g_attentions": [None, None]
             if self.use_fixed_shapes is False
             else [self.max_char_length, self.max_mel_length // self.reduction_factor],
@@ -243,6 +243,7 @@ class CharactorMelDataset(AbstractDataset):
             "speaker_ids": tf.int32,
             "mel_gts": tf.float32,
             "mel_lengths": tf.int32,
+            "real_mel_lengths": tf.int32,
             "g_attentions": tf.float32,
         }
         return output_types

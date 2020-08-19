@@ -21,10 +21,9 @@
 
 import re
 
-from unidecode import unidecode
-
-from .korean import tokenize as ko_tokenize
+from tensorflow_tts.utils.korean import tokenize as ko_tokenize
 from tensorflow_tts.utils.number_norm import normalize_numbers
+from unidecode import unidecode
 
 # Regular expression matching whitespace:
 _whitespace_re = re.compile(r"\s+")
@@ -101,7 +100,10 @@ def english_cleaners(text):
     text = collapse_whitespace(text)
     return text
 
+
 def korean_cleaners(text):
     """Pipeline for Korean text, including number and abbreviation expansion."""
-    text = ko_tokenize(text)  # '존경하는' --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ']
+    text = ko_tokenize(
+        text
+    )  # '존경하는' --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ']
     return text
