@@ -44,6 +44,10 @@ from tensorflow_tts.models import (TFPQMF, TFMelGANGenerator,
 from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
                                   return_strategy)
 
+from tensorflow_tts.configs import ParallelWaveGANDiscriminatorConfig
+
+from tensorflow_tts.models import TFParallelWaveGANDiscriminator
+
 
 class MultiBandMelganTrainer(MelganTrainer):
     """Multi-Band MelGAN Trainer class based on MelganTrainer."""
@@ -158,14 +162,13 @@ class MultiBandMelganTrainer(MelganTrainer):
             p_hat = self._discriminator(y_hat)
             p = self._discriminator(tf.expand_dims(audios, 2))
             adv_loss = 0.0
-            for i in range(len(p_hat)):
-                adv_loss += calculate_3d_loss(
-                    tf.ones_like(p_hat[i][-1]), p_hat[i][-1], loss_fn=self.mse_loss
-                )
-            adv_loss /= i + 1
+            adv_loss += calculate_3d_loss(
+                tf.ones_like(p_hat), p_hat, loss_fn=self.mse_loss
+            )
             gen_loss += self.config["lambda_adv"] * adv_loss
 
-            dict_metrics_losses.update({"adversarial_loss": adv_loss},)
+            # update dict_metrics_losses
+            dict_metrics_losses.update({"adversarial_loss": adv_loss})
 
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"subband_spectral_convergence_loss": sub_sc_loss})
@@ -178,7 +181,9 @@ class MultiBandMelganTrainer(MelganTrainer):
 
     def compute_per_example_discriminator_losses(self, batch, gen_outputs):
         audios = batch["audios"]
-        y_hat = gen_outputs
+        y_mb_hat = gen_outputs
+
+        y_hat = self.pqmf.synthesis(y_mb_hat)
 
         y = tf.expand_dims(audios, 2)
         p = self._discriminator(y)
