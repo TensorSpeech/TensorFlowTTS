@@ -120,7 +120,7 @@ The preprocessing has two steps:
 To reproduce the steps above:
 ```
 tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
-tensorflow-tts-normalize --rootdir ./[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker/libritts]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
+tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker/libritts]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
 ```
 
 Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar) and [`libritts`](http://www.openslr.org/60/) for dataset argument. In the future, we intend to support more datasets.
