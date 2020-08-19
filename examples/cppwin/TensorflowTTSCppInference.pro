@@ -29,10 +29,9 @@ SOURCES += \
     TensorflowTTSCppInference/ext/ZCharScanner.cpp
 
 INCLUDEPATH += $$PWD/deps/include
-LIBS += -L$$PWD/deps/lib -lfst -lfstfar -lfstngram -ltensorflow -lphonetisaurus
+LIBS += -L$$PWD/deps/lib -lfst -ltensorflow -lphonetisaurus
 
 # GCC shits itself on memcp in AudioFile.hpp (l-1186) unless we add this
 QMAKE_CXXFLAGS += -fpermissive
 
-# Stop ld from whining about LoadClusters
-QMAKE_CXXFLAGS += -Wl,-b,svr4,-z,multidefs
+
