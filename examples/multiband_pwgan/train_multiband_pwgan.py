@@ -47,6 +47,7 @@ from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
 from tensorflow_tts.configs import ParallelWaveGANDiscriminatorConfig
 
 from tensorflow_tts.models import TFParallelWaveGANDiscriminator
+from tensorflow_addons.optimizers import RectifiedAdam
 
 
 class MultiBandMelganTrainer(MelganTrainer):
@@ -488,10 +489,10 @@ def main():
             learning_rate=generator_lr_fn,
             amsgrad=config["generator_optimizer_params"]["amsgrad"],
         )
-        dis_optimizer = tf.keras.optimizers.Adam(
-            learning_rate=discriminator_lr_fn,
-            amsgrad=config["discriminator_optimizer_params"]["amsgrad"],
+        dis_optimizer = RectifiedAdam(
+            learning_rate=discriminator_lr_fn, amsgrad=False
         )
+
 
     trainer.compile(
         gen_model=generator,
