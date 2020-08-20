@@ -1,14 +1,14 @@
 # Multi-band MelGAN: Faster Waveform Generation for High-Quality Text-to-Speech (With ParallelWaveGAN discriminator)
-Based on the script [`train_multiband_pwgan.py`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/train_multiband_pwgan.py).
+Based on the script [`train_multiband_pwgan.py`](https://github.com/tensorspeech/TensorflowTTS/tree/master/examples/multiband_pwgan/train_multiband_pwgan.py).
 
-## Training Multi-band MelGAN from scratch with LJSpeech dataset.
+## Training Multi-band MelGAN with PWGAN generator from scratch with LJSpeech dataset.
 This example code show you how to train MelGAN from scratch with Tensorflow 2 based on custom training loop and tf.function. The data used for this example is LJSpeech, you can download the dataset at  [link](https://keithito.com/LJ-Speech-Dataset/).
 
 ### Step 1: Create Tensorflow based Dataloader (tf.dataset)
-Please see detail at [examples/melgan/](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/melgan#step-1-create-tensorflow-based-dataloader-tfdataset)
+Please see detail at [examples/melgan/](https://github.com/tensorspeech/TensorflowTTS/tree/master/examples/melgan#step-1-create-tensorflow-based-dataloader-tfdataset)
 
 ### Step 2: Training from scratch
-After you re-define your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_multiband_pwgan.py`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/train_multiband_pwgan.py). Here is an example command line to training melgan-stft from scratch:
+After you re-define your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_multiband_pwgan.py`](https://github.com/tensorspeech/TensorflowTTS/tree/master/examples/multiband_pwgan/train_multiband_pwgan.py). Here is an example command line to training melgan-stft from scratch:
 
 First, you need training generator with only stft loss: 
 
@@ -16,7 +16,7 @@ First, you need training generator with only stft loss:
 CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/train_multiband_pwgan.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
-  --outdir ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/ \
+  --outdir ./examples/multiband_pwgan/exp/train.multiband_pwgan.v1/ \
   --config ./examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml \
   --use-norm 1 \
   --generator_mixed_precision 1 \
@@ -29,10 +29,10 @@ Then resume and start training generator + discriminator:
 CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/train_multiband_pwgan.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
-  --outdir ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/ \
+  --outdir ./examples/multiband_pwgan/exp/train.multiband_pwgan.v1/ \
   --config ./examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml \
   --use-norm 1 \
-  --resume ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/checkpoints/ckpt-200000
+  --resume ./examples/multiband_pwgan/exp/train.multiband_pwgan.v1/checkpoints/ckpt-200000
 ```
 
 IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode. 
@@ -40,7 +40,7 @@ IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0`
 In case you want to resume the training progress, please following below example command line:
 
 ```bash
---resume ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/checkpoints/ckpt-100000
+--resume ./examples/multiband_pwgan/exp/train.multiband_pwgan.v1/checkpoints/ckpt-100000
 ```
 
 **IMPORTANT NOTES**:
@@ -55,37 +55,26 @@ To running inference on folder mel-spectrogram (eg valid folder), run below comm
 CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/decode_mb_melgan.py \
   --rootdir ./dump/valid/ \
   --outdir ./prediction/multiband_melgan.v1/ \
-  --checkpoint ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/checkpoints/generator-940000.h5 \
+  --checkpoint ./examples/multiband_pwgan/exp/train.multiband_pwgan.v1/checkpoints/generator-940000.h5 \
   --config ./examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml \
   --batch-size 32 \
   --use-norm 1
 ```
 
 ## Finetune Multi-Band MelGAN + PWGAN Disc with ljspeech pretrained on other languages
-Download generator weights of Multi-Band MelGAN model, pass to `--pretrained` argument
+Download generator weights of (any) Multi-Band MelGAN model, pass to `--pretrained` argument.
+It's recommended to use (and tune if necessary), the dedicated finetuning config `train.multiband_pwgan.v1ft.yaml`
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/train_multiband_pwgan.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
-  --outdir ./examples/multiband_pwgan/exp/train.multiband_melgan.v1ft/ \
-  --config ./examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml \
+  --outdir ./examples/multiband_pwgan/exp/train.multiband_pwgan.v1/ \
+  --config ./examples/multiband_pwgan/conf/train.multiband_pwgan.v1ft.yaml \
   --use-norm 1 \
   --generator_mixed_precision 1 \
   --pretrained "ptgen.h5"
 ```
-## Learning Curves
-Here is a learning curves of melgan based on this config [`multiband_melgan.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)
-
-<img src="fig/eval.png" height="300" width="850">
-
-<img src="fig/train.png" height="300" width="850">
-
-## Pretrained Models and Audio samples
-| Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
-| :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
-| [multiband_melgan.v1](https://drive.google.com/drive/folders/1Hg82YnPbX6dfF7DxVs4c96RBaiFbh-cT?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 940K    |
-| [multiband_melgan.v1](https://drive.google.com/drive/folders/199XCXER51PWf_VzUpOwxfY_8XDfeXuZl?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 1000K    |
 
 ## Notes
 1. Using RAdam for discriminator
