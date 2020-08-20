@@ -3,8 +3,7 @@
 """Group Convolution Modules."""
 
 from tensorflow.python.framework import tensor_shape
-from tensorflow.python.keras import (activations, constraints, initializers,
-                                     regularizers)
+from tensorflow.python.keras import activations, constraints, initializers, regularizers
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.engine.input_spec import InputSpec
 from tensorflow.python.keras.layers import Conv1D, SeparableConv1D

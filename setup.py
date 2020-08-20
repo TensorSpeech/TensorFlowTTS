@@ -37,6 +37,11 @@ requirements = {
         "pyworld>=0.2.10",
         "numba<=0.48",  # Fix No module named "numba.decorators"
         "jamo>=0.4.1",
+        "pypinyin",
+        "g2pM",
+        "textgrid",
+        "click",
+        "g2p_en"
     ],
     "setup": ["numpy", "pytest-runner",],
     "test": [
@@ -66,8 +71,8 @@ setup(
     name="TensorflowTTS",
     version="0.0",
     url="https://github.com/dathudeptrai/TensorflowTTS",
-    author="Minh Nguyen Quan Anh, Eren Gölge, Kuan Chen, Takuya Ebata, Trinh Le Quang",
-    author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com, azraelkuan@gmail.com, meguru.mokke@gmail.com, trinhle.cse@gmail.com",
+    author="Minh Nguyen Quan Anh, Eren Gölge, Kuan Chen, Dawid Kobus, Takuya Ebata, Trinh Le Quang, Yunchao He, Alejandro Miguel Velasquez",
+    author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com, azraelkuan@gmail.com, machineko@protonmail.com, meguru.mokke@gmail.com, trinhle.cse@gmail.com, yunchaohe@gmail, xml506ok@gmail.com",
     description="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
     long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",

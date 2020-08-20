@@ -31,7 +31,7 @@ from tensorflow_tts.models import (
     TFFastSpeech2,
     TFMelGANGenerator,
     TFMBMelGANGenerator,
-    TFTacotron2
+    TFTacotron2,
 )
 
 
@@ -41,7 +41,7 @@ TF_MODEL_MAPPING = OrderedDict(
         (FastSpeech2Config, TFFastSpeech2),
         (MultiBandMelGANGeneratorConfig, TFMBMelGANGenerator),
         (MelGANGeneratorConfig, TFMelGANGenerator),
-        (Tacotron2Config, TFTacotron2)
+        (Tacotron2Config, TFTacotron2),
     ]
 )
 
@@ -50,15 +50,15 @@ class TFAutoModel(object):
     """General model class for inferencing."""
 
     def __init__(self):
-        raise EnvironmentError(
-            "Cannot be instantiated using `__init__()`"
-        )
+        raise EnvironmentError("Cannot be instantiated using `__init__()`")
 
     @classmethod
     def from_pretrained(cls, config, pretrained_path=None, **kwargs):
         is_build = kwargs.pop("is_build", True)
         for config_class, model_class in TF_MODEL_MAPPING.items():
-            if isinstance(config, config_class) and str(config_class.__name__) in str(config):
+            if isinstance(config, config_class) and str(config_class.__name__) in str(
+                config
+            ):
                 model = model_class(config=config, **kwargs)
                 if is_build:
                     model._build()
@@ -68,7 +68,8 @@ class TFAutoModel(object):
         raise ValueError(
             "Unrecognized configuration class {} for this kind of TFAutoModel: {}.\n"
             "Model type should be one of {}.".format(
-                config.__class__, cls.__name__, ", ".join(c.__name__ for c in TF_MODEL_MAPPING.keys())
+                config.__class__,
+                cls.__name__,
+                ", ".join(c.__name__ for c in TF_MODEL_MAPPING.keys()),
             )
         )
-

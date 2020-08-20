@@ -1,0 +1,17 @@
+{
+    "speakers_map": {
+      "test_one": 0,
+      "test_two": 1
+    },
+    "symbol_to_id": {
+      "a": 0,
+      "b": 1,
+      "@ph": 2
+    },
+    "id_to_symbol": {
+      "0": "a",
+      "1": "b",
+      "2": "@ph"
+    },
+    "processor_name": "KSSProcessor"
+  }
