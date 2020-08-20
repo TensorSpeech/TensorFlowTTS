@@ -68,7 +68,7 @@ Download generator weights
 CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/train_multiband_pwgan.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
-  --outdir ./examples/multiband_pwgan/exp/train.multiband_melgan.v1/ \
+  --outdir ./examples/multiband_pwgan/exp/train.multiband_melgan.v1ft/ \
   --config ./examples/multiband_pwgan/conf/multiband_pwgan.v1.yaml \
   --use-norm 1 \
   --generator_mixed_precision 1 \
