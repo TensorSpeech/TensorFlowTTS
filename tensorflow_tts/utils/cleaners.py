@@ -21,10 +21,9 @@
 
 import re
 
-from unidecode import unidecode
-
-from .korean import tokenize as ko_tokenize
+from tensorflow_tts.utils.korean import tokenize as ko_tokenize
 from tensorflow_tts.utils.number_norm import normalize_numbers
+from unidecode import unidecode
 
 # Regular expression matching whitespace:
 _whitespace_re = re.compile(r"\s+")

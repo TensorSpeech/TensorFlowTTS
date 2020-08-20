@@ -33,7 +33,13 @@ from tqdm import tqdm
 from tensorflow_tts.processor import LJSpeechProcessor
 from tensorflow_tts.processor import BakerProcessor
 from tensorflow_tts.processor import KSSProcessor
-from tensorflow_tts.processor.experiment.example_processor import ExampleMultispeaker
+from tensorflow_tts.processor import LibriTTSProcessor
+
+from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS
+from tensorflow_tts.processor.baker import BAKER_SYMBOLS
+from tensorflow_tts.processor.kss import KSS_SYMBOLS
+from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS
+
 from tensorflow_tts.utils import remove_outlier
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -63,8 +69,8 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "kss", "multispeaker", "baker"],
-        help="Dataset to preprocess. Currently only (ljspeech, kss, multispeaker, baker)",
+        choices=["ljspeech", "kss", "libritts", "baker"],
+        help="Dataset to preprocess.",
     )
     parser.add_argument(
         "--config", type=str, required=True, help="YAML format configuration file."
@@ -114,7 +120,6 @@ def ph_based_trim(
     hop_size: int,
 ) -> (bool, np.array, np.array):
     """
-
     Args:
         config: Parsed yaml config
         utt_id: file name
@@ -122,9 +127,7 @@ def ph_based_trim(
         raw_text: raw text of file
         audio: parsed wav file
         hop_size: Hop size
-
     Returns: (bool, np.array, np.array) => if trimmed return True, new text_ids, new audio_array
-
     """
 
     os.makedirs(os.path.join(config["rootdir"], "trimmed-durations"), exist_ok=True)
@@ -186,9 +189,11 @@ def gen_audio_features(item, config):
     # check audio properties
     assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
     assert np.abs(audio).max() <= 1.0, f"{utt_id} is different from 16 bit PCM."
-    assert (
-        rate == config["sampling_rate"]
-    ), f"{utt_id} sampling rate is not {config['sampling_rate']}."
+    
+    # check sample rate
+    if rate != config["sampling_rate"]:
+        audio = librosa.resample(audio, rate, config["sampling_rate"])
+        logging.info(f"{utt_id} sampling rate is {rate}, not {config['sampling_rate']}, we resample it.")
 
     # trim silence
     if config["trim_silence"]:
@@ -208,7 +213,6 @@ def gen_audio_features(item, config):
                     f"File have only silence or MFA didnt extract any token {utt_id}"
                 )
                 return False, None, None, None, item
-
         else:
             audio, _ = librosa.effects.trim(
                 audio,
@@ -339,20 +343,29 @@ def preprocess():
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
         "kss": KSSProcessor,
+        "libritts": LibriTTSProcessor,
         "baker": BakerProcessor,
-        "multispeaker": ExampleMultispeaker,
+    }
+
+    dataset_symbol = {
+        "ljspeech": LJSPEECH_SYMBOLS,
+        "kss": KSS_SYMBOLS,
+        "libritts": LIBRITTS_SYMBOLS,
+        "baker": BAKER_SYMBOLS,
     }
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
         "kss": "korean_cleaners",
+        "libritts": None,
         "baker": None,
-        "multispeaker": None,
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
     processor = dataset_processor[config["dataset"]](
-        config["rootdir"], cleaner_names=dataset_cleaner[config["dataset"]]
+        config["rootdir"],
+        symbols=dataset_symbol[config["dataset"]],
+        cleaner_names=dataset_cleaner[config["dataset"]],
     )
 
     # check output directories
@@ -363,8 +376,16 @@ def preprocess():
     build_dir("train")
     build_dir("valid")
 
+    # save pretrained-processor to feature dir
+    processor._save_mapper(
+        os.path.join(config["outdir"], f"{config['dataset']}_mapper.json"),
+        extra_attrs_to_save={"pinyin_dict": processor.pinyin_dict}
+        if config["dataset"] == "baker"
+        else {},
+    )
+
     # build train test split
-    if config["dataset"] == "multispeaker":
+    if config["dataset"] == "libritts":
         train_split, valid_split, _, _ = train_test_split(
             processor.items,
             [i[-1] for i in processor.items],
@@ -421,6 +442,10 @@ def preprocess():
         # remove outliers
         energy = remove_outlier(energy)
         f0 = remove_outlier(f0)
+        # partial fitting of scalers
+        if len(energy[energy != 0]) == 0 or len(f0[f0 != 0]) == 0:
+            id_to_remove.append(features["utt_id"])
+            continue
         # partial fitting of scalers
         if len(energy[energy != 0]) == 0 or len(f0[f0 != 0]) == 0:
             id_to_remove.append(features["utt_id"])
@@ -537,4 +562,3 @@ def compute_statistics():
     logging.info("Saving computed statistics.")
     scaler_list = [(scaler_mel, ""), (scaler_energy, "_energy"), (scaler_f0, "_f0")]
     save_statistics_to_file(scaler_list, config)
-

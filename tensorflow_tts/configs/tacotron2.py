@@ -14,9 +14,10 @@
 # limitations under the License.
 """Tacotron-2 Config object."""
 
-from tensorflow_tts.processor.ljspeech import symbols as lj_symbols
-from tensorflow_tts.processor.kss import symbols as kss_symbols
-from tensorflow_tts.processor.baker import symbols as bk_symbols
+from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS as lj_symbols
+from tensorflow_tts.processor.kss import KSS_SYMBOLS as kss_symbols
+from tensorflow_tts.processor.baker import BAKER_SYMBOLS as bk_symbols
+from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS as lbri_symbols
 
 
 class Tacotron2Config(object):
@@ -61,6 +62,8 @@ class Tacotron2Config(object):
             self.vocab_size = len(kss_symbols)
         elif dataset == 'baker':
             self.vocab_size = len(bk_symbols)
+        elif dataset == "libritts":
+            self.vocab_size = len(lbri_symbols)
         else:
             raise ValueError("No such dataset: {}".format(dataset))
         self.embedding_hidden_size = embedding_hidden_size

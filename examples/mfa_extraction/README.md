@@ -13,18 +13,20 @@ Everything is done from main repo folder so TensorflowTTS/
 
 - ```
   python examples/mfa_extraction/run_mfa.py \
-    --corpus_directory ./dataset \
+    --corpus_directory ./libritts \
     --output_directory ./mfa/parsed \
     --jobs 8
   ```
 
+  After this step, the TextGrids is allocated at `./mfa/parsed`.
+
 2. Extract duration from textgrid files:
 - ```
   python examples/mfa_extraction/txt_grid_parser.py \
-    --yaml_path examples/fastspeech2_multispeaker/conf/fastspeech2libritts.yaml \
-    --dataset_path ./dataset \
+    --yaml_path examples/fastspeech2_libritts/conf/fastspeech2libritts.yaml \
+    --dataset_path ./libritts \
     --text_grid_path ./mfa/parsed \
-    --output_durations_path ./dataset/durations \
+    --output_durations_path ./libritts/durations \
     --sample_rate 24000 
   ```
 
@@ -50,7 +52,7 @@ Everything is done from main repo folder so TensorflowTTS/
     ``` 
 3. Optional* add your own dataset parser based on tensorflow_tts/processor/experiment/example_dataset.py ( If base processor dataset didnt match yours )
 
-4. Run preprocess and normalization (Step 4,5 in `examples/fastspeech2_multispeaker/README.MD`)
+4. Run preprocess and normalization (Step 4,5 in `examples/fastspeech2_libritts/README.MD`)
 
 5. Run fix mismatch to fix few frames difference in audio and duration files:
 
