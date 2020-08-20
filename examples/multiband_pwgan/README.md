@@ -62,7 +62,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/decode_mb_melgan.py \
 ```
 
 ## Finetune Multi-Band MelGAN + PWGAN Disc with ljspeech pretrained on other languages
-Download generator weights
+Download generator weights of Multi-Band MelGAN model, pass to `--pretrained` argument
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/multiband_pwgan/train_multiband_pwgan.py \
