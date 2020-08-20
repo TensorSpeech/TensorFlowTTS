@@ -1,6 +1,12 @@
 
 # This is the hyperparameter configuration file for Multi-Band MelGAN with PWGAN discriminator.
-# This one is adjusted for finetuning, used to finetune the LJSpeech pretrained on 
+# This one is adjusted for finetuning, used to finetune the LJSpeech pretrained Multi-Band MelGAN generator on a 50-minute male speaker dataset
+# You may have to tune this for your own
+
+# Main differences from regular training config are: 
+# 1. We start training the discriminator from the start
+# 2. The learning rate is very low
+# 3. Max iterations, save intervals, and associates are lowered because this gets done very quickly
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
