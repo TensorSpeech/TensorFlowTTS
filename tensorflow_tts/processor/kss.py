@@ -54,6 +54,9 @@ class KSSProcessor(BaseProcessor):
         speaker_name = "kss"
         return text_norm, wav_path, speaker_name
 
+    def setup_eos_token(self):
+        return "eos"
+
     def get_one_sample(self, item):
         text, wav_path, speaker_name = item
 

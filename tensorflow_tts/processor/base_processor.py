@@ -61,9 +61,15 @@ class BaseProcessor(abc.ABC):
         self.create_symbols()
         if self.saved_mapper_path is not None:
             self._save_mapper(saved_path=self.saved_mapper_path)
-        
+
         # processor name. usefull to use it for AutoProcessor
         self._processor_name = type(self).__name__
+
+        if self.setup_eos_token():
+            self.add_symbol(
+                self.setup_eos_token()
+            )  # if this eos token not yet present in symbols list.
+            self.eos_id = self.symbol_to_id[self.setup_eos_token()]
 
     def __getattr__(self, name: str) -> Union[str, int]:
         if "_id" in name:  # map symbol to id
@@ -150,6 +156,11 @@ class BaseProcessor(abc.ABC):
     @abc.abstractmethod
     def text_to_sequence(self, text: str):
         return []
+
+    @abc.abstractmethod
+    def setup_eos_token(self):
+        """Return eos symbol of type string."""
+        return "eos"
 
     def convert_symbols_to_ids(self, symbols: Union[str, list]):
         sequence = []
