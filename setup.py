@@ -68,12 +68,12 @@ extras_require = {
 
 dirname = os.path.dirname(__file__)
 setup(
-    name="TensorflowTTS",
+    name="TensorFlowTTS",
     version="0.0",
-    url="https://github.com/dathudeptrai/TensorflowTTS",
+    url="https://github.com/tensorspeech/TensorFlowTTS",
     author="Minh Nguyen Quan Anh, Eren Gölge, Kuan Chen, Dawid Kobus, Takuya Ebata, Trinh Le Quang, Yunchao He, Alejandro Miguel Velasquez",
-    author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com, azraelkuan@gmail.com, machineko@protonmail.com, meguru.mokke@gmail.com, trinhle.cse@gmail.com, yunchaohe@gmail, xml506ok@gmail.com",
-    description="TensorflowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
+    author_email="nguyenquananhminh@gmail.com",
+    description="TensorFlowTTS: Real-Time State-of-the-art Speech Synthesis for Tensorflow 2",
     long_description=open(os.path.join(dirname, "README.md"), encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     license="Apache-2.0",
@@ -88,7 +88,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Intended Audience :: Science/Research",
         "Operating System :: POSIX :: Linux",
-        "License :: OSI Approved :: Apache-2.0 License",
+        "License :: OSI Approved :: Apache Software License",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
 )
