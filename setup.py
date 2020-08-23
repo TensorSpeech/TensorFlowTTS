@@ -1,4 +1,4 @@
-"""Setup Tensorflow TTS libarary."""
+"""Setup TensorFlow TTS libarary."""
 
 import os
 import sys
@@ -9,7 +9,7 @@ from setuptools import find_packages, setup
 
 if LooseVersion(sys.version) < LooseVersion("3.6"):
     raise RuntimeError(
-        "Tensorflow TTS requires python >= 3.6, "
+        "TensorFlowTTS requires python >= 3.6, "
         "but your Python version is {}".format(sys.version)
     )
 
@@ -69,7 +69,7 @@ extras_require = {
 dirname = os.path.dirname(__file__)
 setup(
     name="TensorflowTTS",
-    version="0.0",
+    version="0.8",
     url="https://github.com/dathudeptrai/TensorflowTTS",
     author="Minh Nguyen Quan Anh, Eren Gölge, Kuan Chen, Dawid Kobus, Takuya Ebata, Trinh Le Quang, Yunchao He, Alejandro Miguel Velasquez",
     author_email="nguyenquananhminh@gmail.com, erengolge@gmail.com, azraelkuan@gmail.com, machineko@protonmail.com, meguru.mokke@gmail.com, trinhle.cse@gmail.com, yunchaohe@gmail, xml506ok@gmail.com",
