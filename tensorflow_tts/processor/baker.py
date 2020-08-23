@@ -549,6 +549,9 @@ class BakerProcessor(BaseProcessor):
         super().__post_init__()
         self.pinyin_parser = self.get_pinyin_parser()
 
+    def setup_eos_token(self):
+        return _eos[0]
+
     def create_items(self):
         items = []
         if self.data_dir:

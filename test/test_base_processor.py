@@ -21,6 +21,9 @@ class LJ(BaseProcessor):
     def text_to_sequence(self, text):
         return ["0"]
 
+    def setup_eos_token(self):
+        return None
+
 
 @pytest.fixture
 def processor(tmpdir):
