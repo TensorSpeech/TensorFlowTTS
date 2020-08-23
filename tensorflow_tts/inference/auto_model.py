@@ -24,6 +24,7 @@ from tensorflow_tts.configs import (
     MelGANGeneratorConfig,
     MultiBandMelGANGeneratorConfig,
     Tacotron2Config,
+    ParallelWaveGANGeneratorConfig,
 )
 
 from tensorflow_tts.models import (
@@ -32,6 +33,7 @@ from tensorflow_tts.models import (
     TFMelGANGenerator,
     TFMBMelGANGenerator,
     TFTacotron2,
+    TFParallelWaveGANGenerator,
 )
 
 
@@ -42,6 +44,7 @@ TF_MODEL_MAPPING = OrderedDict(
         (MultiBandMelGANGeneratorConfig, TFMBMelGANGenerator),
         (MelGANGeneratorConfig, TFMelGANGenerator),
         (Tacotron2Config, TFTacotron2),
+        (ParallelWaveGANGeneratorConfig, TFParallelWaveGANGenerator)
     ]
 )
 

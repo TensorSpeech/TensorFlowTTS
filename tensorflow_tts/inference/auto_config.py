@@ -24,6 +24,7 @@ from tensorflow_tts.configs import (
     MelGANGeneratorConfig,
     MultiBandMelGANGeneratorConfig,
     Tacotron2Config,
+    ParallelWaveGANGeneratorConfig,
 )
 
 CONFIG_MAPPING = OrderedDict(
@@ -32,7 +33,8 @@ CONFIG_MAPPING = OrderedDict(
         ("fastspeech2", FastSpeech2Config),
         ("multiband_melgan_generator", MultiBandMelGANGeneratorConfig),
         ("melgan_generator", MelGANGeneratorConfig),
-        ("tacotron2", Tacotron2Config)
+        ("tacotron2", Tacotron2Config),
+        ("parallel_wavegan_generator", ParallelWaveGANGeneratorConfig)
     ]
 )
 

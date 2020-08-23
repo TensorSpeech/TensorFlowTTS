@@ -58,6 +58,7 @@ def test_auto_processor(mapper_path):
         "./examples/multiband_melgan/conf/multiband_melgan.v1.yaml",
         "./examples/tacotron2/conf/tacotron2.v1.yaml",
         "./examples/tacotron2/conf/tacotron2.kss.v1.yaml",
+        "./examples/parallel_wavegan/conf/parallel_wavegan.v1.yaml",
      ]
 )
 def test_auto_model(config_path):
