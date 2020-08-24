@@ -120,7 +120,7 @@ def main():
         utt_ids, mels, mel_lengths = data["utt_ids"], data["mels"], data["mel_lengths"]
 
         # pwgan inference.
-        generated_audios = parallel_wavegan.inference(generated_subbands)
+        generated_audios = parallel_wavegan.inference(mels)
 
         # convert to numpy.
         generated_audios = generated_audios.numpy()  # [B, T]
