@@ -63,6 +63,22 @@ ACT2FN = {
 }
 
 
+class TFEmbedding(tf.keras.layers.Layer):
+    """Faster version of embedding."""
+    def __init__(self, vocab_size, dim, embeddings_initializer, **kwargs):
+        super().__init__(**kwargs)
+        self.embeddings = self.add_weight(
+            "embeddings",
+            shape=[vocab_size, dim],
+            initializer=embeddings_initializer,
+        )
+
+    def call(self, inputs):
+        inputs = tf.cast(tf.expand_dims(inputs, -1), tf.int32)
+        outputs = tf.gather_nd(self.embeddings, inputs)
+        return outputs
+
+
 class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
     """Construct charactor/phoneme/positional/speaker embeddings."""
 
@@ -74,7 +90,7 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         self.initializer_range = config.initializer_range
         self.config = config
 
-        self.position_embeddings = tf.keras.layers.Embedding(
+        self.position_embeddings = TFEmbedding(
             config.max_position_embeddings + 1,
             self.hidden_size,
             weights=[self._sincos_embedding()],
@@ -83,7 +99,7 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         )
 
         if config.n_speakers > 1:
-            self.encoder_speaker_embeddings = tf.keras.layers.Embedding(
+            self.encoder_speaker_embeddings = TFEmbedding(
                 config.n_speakers,
                 self.hidden_size,
                 embeddings_initializer=get_initializer(self.initializer_range),
@@ -439,7 +455,7 @@ class TFFastSpeechDecoder(TFFastSpeechEncoder):
         self.config = config
 
         # create decoder positional embedding
-        self.decoder_positional_embeddings = tf.keras.layers.Embedding(
+        self.decoder_positional_embeddings = TFEmbedding(
             config.max_position_embeddings + 1,
             config.hidden_size,
             weights=[self._sincos_embedding()],
@@ -453,7 +469,7 @@ class TFFastSpeechDecoder(TFFastSpeechEncoder):
             )
 
         if config.n_speakers > 1:
-            self.decoder_speaker_embeddings = tf.keras.layers.Embedding(
+            self.decoder_speaker_embeddings = TFEmbedding(
                 config.n_speakers,
                 config.hidden_size,
                 embeddings_initializer=get_initializer(config.initializer_range),
