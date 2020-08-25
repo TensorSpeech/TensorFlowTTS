@@ -70,6 +70,22 @@ ACT2FN = {
 }
 
 
+class TFEmbedding(tf.keras.layers.Layer):
+    """Faster version of embedding."""
+    def __init__(self, vocab_size, dim, embeddings_initializer, **kwargs):
+        super().__init__(**kwargs)
+        self.embeddings = self.add_weight(
+            "embeddings",
+            shape=[vocab_size, dim],
+            initializer=embeddings_initializer,
+        )
+
+    def call(self, inputs):
+        inputs = tf.cast(tf.expand_dims(inputs, -1), tf.int32)
+        outputs = tf.gather_nd(self.embeddings, inputs)
+        return outputs
+
+
 class TFTacotronConvBatchNorm(tf.keras.layers.Layer):
     """Tacotron-2 Convolutional Batchnorm module."""
 
@@ -112,7 +128,7 @@ class TFTacotronEmbeddings(tf.keras.layers.Layer):
         self.config = config
 
         if config.n_speakers > 1:
-            self.speaker_embeddings = tf.keras.layers.Embedding(
+            self.speaker_embeddings = TFEmbedding(
                 config.n_speakers,
                 config.embedding_hidden_size,
                 embeddings_initializer=get_initializer(self.initializer_range),
@@ -211,7 +227,7 @@ class TFTacotronEncoder(tf.keras.layers.Layer):
         )
 
         if config.n_speakers > 1:
-            self.encoder_speaker_embeddings = tf.keras.layers.Embedding(
+            self.encoder_speaker_embeddings = TFEmbedding(
                 config.n_speakers,
                 config.embedding_hidden_size,
                 embeddings_initializer=get_initializer(config.initializer_range),
