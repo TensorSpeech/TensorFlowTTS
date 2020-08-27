@@ -29,6 +29,12 @@ In case you want to resume the training progress, please following below example
 --resume ./examples/melgan/exp/train.melgan.v1/checkpoints/ckpt-100000
 ```
 
+If you want to finetune a model, use `--pretrained` like this with the filename of the generator
+```bash
+--pretrained ptgenerator.h5
+```
+
+
 ### Step 3: Decode audio from folder mel-spectrogram
 To running inference on folder mel-spectrogram (eg tacotron2.v1), run below command line:
 

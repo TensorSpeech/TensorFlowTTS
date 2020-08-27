@@ -43,6 +43,11 @@ In case you want to resume the training progress, please following below example
 --resume ./examples/melgan.stft/exp/train.melgan.stft.v1/checkpoints/ckpt-100000
 ```
 
+If you want to finetune a model, use `--pretrained` like this with the filename of the generator
+```bash
+--pretrained ptgenerator.h5
+```
+
 **IMPORTANT NOTES**:
 
 - When training generator only, we enable mixed precision to speed-up training progress.

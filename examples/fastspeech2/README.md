@@ -31,6 +31,12 @@ In case you want to resume the training progress, please following below example
 --resume ./examples/fastspeech2/exp/train.fastspeech2.v1/checkpoints/ckpt-100000
 ```
 
+If you want to finetune a model, use `--pretrained` like this with your model filename
+```bash
+--pretrained pretrained.h5
+```
+
+
 ### Step 3: Decode mel-spectrogram from folder ids
 
 ```bash
