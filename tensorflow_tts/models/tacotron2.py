@@ -70,15 +70,10 @@ ACT2FN = {
 }
 
 
-class TFEmbedding(tf.keras.layers.Layer):
+class TFEmbedding(tf.keras.layers.Embedding):
     """Faster version of embedding."""
-    def __init__(self, vocab_size, dim, embeddings_initializer, **kwargs):
-        super().__init__(**kwargs)
-        self.embeddings = self.add_weight(
-            "embeddings",
-            shape=[vocab_size, dim],
-            initializer=embeddings_initializer,
-        )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def call(self, inputs):
         inputs = tf.cast(tf.expand_dims(inputs, -1), tf.int32)
