@@ -209,6 +209,13 @@ def main():
         type=int,
         help="using mixed precision for generator or not.",
     )
+    parser.add_argument(
+        "--pretrained",
+        default="",
+        type=str,
+        nargs="?",
+        help='pretrained checkpoint file to load weights from. Auto-skips non-matching layers',
+    )
     args = parser.parse_args()
 
     # return strategy
@@ -324,6 +331,10 @@ def main():
         )
         fastspeech._build()
         fastspeech.summary()
+        
+        if len(args.pretrained) > 1:
+            print("Loading pretrained parameters...")
+            fastspeech.load_weights(args.pretrained,by_name=True,skip_mismatch=True)
 
         # AdamW for fastspeech
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(

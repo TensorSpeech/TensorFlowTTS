@@ -268,6 +268,13 @@ def main():
         default="dump/stats.npy",
         type=str,
     )
+    parser.add_argument(
+        "--pretrained",
+        default="",
+        type=str,
+        nargs="?",
+        help='pretrained weights .h5 file to load weights from. Auto-skips non-matching layers',
+    )
     args = parser.parse_args()
 
     # return strategy
@@ -387,6 +394,10 @@ def main():
         )
         fastspeech._build()
         fastspeech.summary()
+        
+        if len(args.pretrained) > 1:
+            print("Loading pretrained parameters...")
+            fastspeech.load_weights(args.pretrained,by_name=True,skip_mismatch=True)
 
         # AdamW for fastspeech
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
