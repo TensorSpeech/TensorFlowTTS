@@ -43,6 +43,11 @@ In case you want to resume the training progress, please following below example
 --resume ./examples/multiband_melgan/exp/train.multiband_melgan.v1/checkpoints/ckpt-100000
 ```
 
+If you want to finetune a model, use `--pretrained` like this with the filename of the generator
+```bash
+--pretrained ptgenerator.h5
+```
+
 **IMPORTANT NOTES**:
 
 - If Your Dataset is 16K, upsample_scales = [2, 4, 8] worked.

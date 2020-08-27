@@ -469,9 +469,10 @@ def main():
         y_hat = pqmf.synthesis(y_mb_hat)
         discriminator(y_hat)
         
-        if len(args.pretrained) > 2:
-          print("Loading pretrained weights...")
-          generator.load_weights(args.pretrained)
+        if len(args.pretrained) > 1:
+            generator.load_weights(args.pretrained)
+            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
+
 
         generator.summary()
         discriminator.summary()

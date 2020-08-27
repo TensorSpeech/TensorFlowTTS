@@ -201,6 +201,13 @@ def main():
         type=int,
         help="using mixed precision for discriminator or not.",
     )
+    parser.add_argument(
+        "--pretrained",
+        default="",
+        type=str,
+        nargs="?",
+        help='path of .h5 melgan generator to load weights from',
+    )
     args = parser.parse_args()
 
     # return strategy
@@ -337,6 +344,11 @@ def main():
         fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
         y_hat = generator(fake_mels)
         discriminator(y_hat)
+        
+        if len(args.pretrained) > 1:
+            generator.load_weights(args.pretrained)
+            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
+
 
         generator.summary()
         discriminator.summary()
