@@ -434,8 +434,9 @@ def main():
         tacotron2.summary()
         
         if len(args.pretrained) > 1:
-            print("Loading pretrained parameters...")
-            tacotron2.load_weights(args.pretrained,by_name=True,skip_mismatch=True)
+            tacotron2.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
+            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
+
 
 
 

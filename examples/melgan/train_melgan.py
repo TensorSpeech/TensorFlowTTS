@@ -479,8 +479,9 @@ def main():
         discriminator(y_hat)
         
         if len(args.pretrained) > 1:
-            print("Loading pretrained weights...")
             generator.load_weights(args.pretrained)
+            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
+
 
 
         generator.summary()

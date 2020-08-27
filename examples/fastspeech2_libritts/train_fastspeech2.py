@@ -396,8 +396,9 @@ def main():
         fastspeech.summary()
         
         if len(args.pretrained) > 1:
-            print("Loading pretrained parameters...")
-            fastspeech.load_weights(args.pretrained,by_name=True,skip_mismatch=True)
+            fastspeech.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
+            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
+
 
         # AdamW for fastspeech
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
