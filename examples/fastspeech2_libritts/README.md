@@ -35,7 +35,7 @@ Everything is done from main repo folder so TensorflowTTS/
 - ```
   tensorflow-tts-preprocess --rootdir ./libritts \
     --outdir ./dump_libritts \
-    --config preprocess/preprocess_libritts.yaml \
+    --config preprocess/libritts_preprocess.yaml \
     --dataset libritts
   ```
 
@@ -43,7 +43,7 @@ Everything is done from main repo folder so TensorflowTTS/
 - ```
   tensorflow-tts-normalize --rootdir ./dump_libritts \
     --outdir ./dump_libritts \
-    --config preprocess/preprocess_libritts.yaml \
+    --config preprocess/libritts_preprocess.yaml \
     --dataset libritts
   ```
 
