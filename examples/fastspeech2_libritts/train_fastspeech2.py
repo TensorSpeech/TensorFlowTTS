@@ -32,7 +32,7 @@ import numpy as np
 import yaml
 
 import tensorflow_tts
-from examples.fastspeech2_multispeaker.fastspeech2_dataset import \
+from examples.fastspeech2_libritts.fastspeech2_dataset import \
     CharactorDurationF0EnergyMelDataset
 from tensorflow_tts.configs import FastSpeech2Config
 from tensorflow_tts.models import TFFastSpeech2
@@ -260,7 +260,7 @@ def main():
     )
     parser.add_argument(
         "--dataset_config",
-        default="preprocess/preprocess_multispeaker.yaml",
+        default="preprocess/preprocess_libritts.yaml",
         type=str,
     )
     parser.add_argument(
