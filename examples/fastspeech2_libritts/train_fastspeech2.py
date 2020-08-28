@@ -260,7 +260,7 @@ def main():
     )
     parser.add_argument(
         "--dataset_config",
-        default="preprocess/preprocess_libritts.yaml",
+        default="preprocess/libritts_preprocess.yaml",
         type=str,
     )
     parser.add_argument(

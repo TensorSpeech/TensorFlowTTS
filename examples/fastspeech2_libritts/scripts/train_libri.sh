@@ -7,5 +7,5 @@ CUDA_VISIBLE_DEVICES=0 python examples/fastspeech2_libritts/train_fastspeech2.py
   --f0-stat ./dump/stats_f0.npy \
   --energy-stat ./dump/stats_energy.npy \
   --mixed_precision 1 \
-  --dataset_config preprocess/preprocess_libritts.yaml \
+  --dataset_config preprocess/libritts_preprocess.yaml \
   --dataset_stats dump/stats.npy
