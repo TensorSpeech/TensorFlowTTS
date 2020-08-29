@@ -65,7 +65,6 @@ class CharactorMelDataset(AbstractDataset):
 
         """
         # find all of charactor and mel files.
-        mel_query="*-raw-feats.npy"
         charactor_files = sorted(find_files(root_dir, charactor_query))
         mel_files = sorted(find_files(root_dir, mel_query))
         mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
