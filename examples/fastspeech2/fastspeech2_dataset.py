@@ -39,9 +39,6 @@ def average_by_duration(x, durs):
     return x_char.astype(np.float32)
 
 
-@tf.function(
-    input_signature=[tf.TensorSpec(None, tf.float32), tf.TensorSpec(None, tf.int32)]
-)
 def tf_average_by_duration(x, durs):
     outs = tf.numpy_function(average_by_duration, [x, durs], tf.float32)
     return outs
@@ -134,6 +131,10 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         x[zero_idxs] = 0.0
         return x
 
+    def _norm_mean_std_tf(self, x, mean, std):
+        x = tf.numpy_function(self._norm_mean_std, [x, mean, std], tf.float32)
+        return x
+
     def generator(self, utt_ids):
         for i, utt_id in enumerate(utt_ids):
             mel_file = self.mel_files[i]
@@ -141,33 +142,47 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             duration_file = self.duration_files[i]
             f0_file = self.f0_files[i]
             energy_file = self.energy_files[i]
-            mel = self.mel_load_fn(mel_file)
-            charactor = self.charactor_load_fn(charactor_file)
-            duration = self.duration_load_fn(duration_file)
-            f0 = self.f0_load_fn(f0_file)
-            energy = self.energy_load_fn(energy_file)
-
-            f0 = self._norm_mean_std(f0, self.f0_stat[0], self.f0_stat[1])
-            energy = self._norm_mean_std(
-                energy, self.energy_stat[0], self.energy_stat[1]
-            )
-
-            # calculate charactor f0/energy
-            f0 = tf_average_by_duration(f0, duration)
-            energy = tf_average_by_duration(energy, duration)
 
             items = {
                 "utt_ids": utt_id,
-                "input_ids": charactor,
-                "speaker_ids": 0,
-                "duration_gts": duration,
-                "f0_gts": f0,
-                "energy_gts": energy,
-                "mel_gts": mel,
-                "mel_lengths": len(mel),
+                "mel_files": mel_file,
+                "charactor_files": charactor_file,
+                "duration_files": duration_file,
+                "f0_files": f0_file,
+                "energy_files": energy_file,
             }
 
             yield items
+
+    @tf.function
+    def _load_data(self, items):
+        mel = tf.numpy_function(np.load, [items["mel_files"]], tf.float32)
+        charactor = tf.numpy_function(np.load, [items["charactor_files"]], tf.int32)
+        duration = tf.numpy_function(np.load, [items["duration_files"]], tf.int32)
+        f0 = tf.numpy_function(np.load, [items["f0_files"]], tf.float32)
+        energy = tf.numpy_function(np.load, [items["energy_files"]], tf.float32)
+
+        f0 = self._norm_mean_std_tf(f0, self.f0_stat[0], self.f0_stat[1])
+        energy = self._norm_mean_std_tf(
+            energy, self.energy_stat[0], self.energy_stat[1]
+        )
+
+        # calculate charactor f0/energy
+        f0 = tf_average_by_duration(f0, duration)
+        energy = tf_average_by_duration(energy, duration)
+
+        items = {
+            "utt_ids": items["utt_ids"],
+            "input_ids": charactor,
+            "speaker_ids": 0,
+            "duration_gts": duration,
+            "f0_gts": f0,
+            "energy_gts": energy,
+            "mel_gts": mel,
+            "mel_lengths": len(mel),
+        }
+
+        return items
 
     def create(
         self,
@@ -181,6 +196,11 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
             self.generator, output_types=output_types, args=(self.get_args())
+        )
+
+        # load data
+        datasets = datasets.map(
+            lambda items: self._load_data(items), tf.data.experimental.AUTOTUNE
         )
 
         datasets = datasets.filter(
@@ -215,13 +235,11 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
     def get_output_dtypes(self):
         output_types = {
             "utt_ids": tf.string,
-            "input_ids": tf.int32,
-            "speaker_ids": tf.int32,
-            "duration_gts": tf.int32,
-            "f0_gts": tf.float32,
-            "energy_gts": tf.float32,
-            "mel_gts": tf.float32,
-            "mel_lengths": tf.int32,
+            "mel_files": tf.string,
+            "charactor_files": tf.string,
+            "duration_files": tf.string,
+            "f0_files": tf.string,
+            "energy_files": tf.string,
         }
         return output_types
 

@@ -88,20 +88,32 @@ class CharactorDurationMelDataset(AbstractDataset):
             mel_file = self.mel_files[i]
             charactor_file = self.charactor_files[i]
             duration_file = self.duration_files[i]
-            mel = self.mel_load_fn(mel_file)
-            charactor = self.charactor_load_fn(charactor_file)
-            duration = self.duration_load_fn(duration_file)
 
             items = {
                 "utt_ids": utt_id,
-                "input_ids": charactor,
-                "speaker_ids": 0,
-                "duration_gts": duration,
-                "mel_gts": mel,
-                "mel_lengths": len(mel),
+                "mel_files": mel_file,
+                "charactor_files": charactor_file,
+                "duration_files": duration_file,
             }
 
             yield items
+
+    @tf.function
+    def _load_data(self, items):
+        mel = tf.numpy_function(np.load, [items["mel_files"]], tf.float32)
+        charactor = tf.numpy_function(np.load, [items["charactor_files"]], tf.int32)
+        duration = tf.numpy_function(np.load, [items["duration_files"]], tf.int32)
+
+        items = {
+            "utt_ids": items["utt_ids"],
+            "input_ids": charactor,
+            "speaker_ids": 0,
+            "duration_gts": duration,
+            "mel_gts": mel,
+            "mel_lengths": len(mel),
+        }
+
+        return items
 
     def create(
         self,
@@ -115,6 +127,11 @@ class CharactorDurationMelDataset(AbstractDataset):
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
             self.generator, output_types=output_types, args=(self.get_args())
+        )
+
+        # load data
+        datasets = datasets.map(
+            lambda items: self._load_data(items), tf.data.experimental.AUTOTUNE
         )
 
         datasets = datasets.filter(
@@ -147,11 +164,9 @@ class CharactorDurationMelDataset(AbstractDataset):
     def get_output_dtypes(self):
         output_types = {
             "utt_ids": tf.string,
-            "input_ids": tf.int32,
-            "speaker_ids": tf.int32,
-            "duration_gts": tf.int32,
-            "mel_gts": tf.float32,
-            "mel_lengths": tf.int32,
+            "mel_files": tf.string,
+            "charactor_files": tf.string,
+            "duration_files": tf.string,
         }
         return output_types
 
