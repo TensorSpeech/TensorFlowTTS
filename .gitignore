@@ -6,7 +6,7 @@
 .\#*
 *DS_Store
 out.txt
-TensorflowTTS.egg-info/
+TensorFlowTTS.egg-info/
 doc/_build
 slurm-*.out
 tmp*
@@ -42,3 +42,4 @@ dump_baker/
 dump_ljspeech/
 dump_kss/
 dump_libritts/
+/examples/*/*

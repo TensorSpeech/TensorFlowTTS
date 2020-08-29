@@ -80,18 +80,29 @@ class AudioMelDataset(AbstractDataset):
         for i, utt_id in enumerate(utt_ids):
             audio_file = self.audio_files[i]
             mel_file = self.mel_files[i]
-            audio = self.audio_load_fn(audio_file)  # [T]
-            mel = self.mel_load_fn(mel_file)
-
+            
             items = {
                 "utt_ids": utt_id,
-                "audios": audio,
-                "mels": mel,
-                "mel_lengths": len(mel),
-                "audio_lengths": len(audio),
+                "audio_files": audio_file,
+                "mel_files": mel_file
             }
 
             yield items
+    
+    @tf.function
+    def _load_data(self, items):
+        audio = tf.numpy_function(np.load, [items["audio_files"]], tf.float32)
+        mel = tf.numpy_function(np.load, [items["mel_files"]], tf.float32)
+
+        items = {
+            "utt_ids": items["utt_ids"],
+            "audios": audio,
+            "mels": mel,
+            "mel_lengths": len(mel),
+            "audio_lengths": len(audio),
+        }
+        
+        return items
 
     def create(
         self,
@@ -105,6 +116,12 @@ class AudioMelDataset(AbstractDataset):
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
             self.generator, output_types=output_types, args=(self.get_args())
+        )
+
+        # load dataset
+        datasets = datasets.map(
+            lambda items: self._load_data(items),
+            tf.data.experimental.AUTOTUNE
         )
 
         datasets = datasets.filter(
@@ -157,10 +174,8 @@ class AudioMelDataset(AbstractDataset):
     def get_output_dtypes(self):
         output_types = {
             "utt_ids": tf.string,
-            "audios": tf.float32,
-            "mels": tf.float32,
-            "mel_lengths": tf.int32,
-            "audio_lengths": tf.int32,
+            "audio_files": tf.string,
+            "mel_files": tf.string
         }
         return output_types
 
