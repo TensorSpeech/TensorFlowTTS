@@ -26,25 +26,6 @@ from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
 from tensorflow_tts.utils import find_files
 
 
-def guided_attention(char_len, mel_len, max_char_len, max_mel_len, g=0.2):
-    """Guided attention. Refer to page 3 on the paper."""
-    max_char_seq = np.arange(max_char_len)
-    max_char_seq = tf.expand_dims(max_char_seq, 0)  # [1, t_seq]
-    # [mel_seq, max_t_seq]
-    max_char_seq = tf.tile(max_char_seq, [max_mel_len, 1])
-
-    max_mel_seq = np.arange(max_mel_len)
-    max_mel_seq = tf.expand_dims(max_mel_seq, 1)  # [mel_seq, 1]
-    # [mel_seq, max_t_seq]
-    max_mel_seq = tf.tile(max_mel_seq, [1, max_char_len])
-
-    right = tf.cast(max_mel_seq, tf.float32) / tf.constant(mel_len, dtype=tf.float32)
-    left = tf.cast(max_char_seq, tf.float32) / tf.constant(char_len, dtype=tf.float32)
-
-    ga_ = 1.0 - tf.math.exp(-((right - left) ** 2) / (2 * g * g))
-    return tf.transpose(ga_[:mel_len, :char_len], (1, 0))
-
-
 class CharactorMelDataset(AbstractDataset):
     """Tensorflow Charactor Mel dataset."""
 
@@ -84,6 +65,7 @@ class CharactorMelDataset(AbstractDataset):
 
         """
         # find all of charactor and mel files.
+        mel_query="*-raw-feats.npy"
         charactor_files = sorted(find_files(root_dir, charactor_query))
         mel_files = sorted(find_files(root_dir, mel_query))
         mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
@@ -133,44 +115,56 @@ class CharactorMelDataset(AbstractDataset):
         for i, utt_id in enumerate(utt_ids):
             mel_file = self.mel_files[i]
             charactor_file = self.charactor_files[i]
-            mel = self.mel_load_fn(mel_file)
-            charactor = self.charactor_load_fn(charactor_file)
-            mel_length = self.mel_lengths[i]
-            char_length = self.char_lengths[i]
-
-            # padding mel to make its length is multiple of reduction factor.
-            real_mel_length = mel_length
-            remainder = mel_length % self.reduction_factor
-            if remainder != 0:
-                new_mel_length = mel_length + self.reduction_factor - remainder
-                mel = np.pad(
-                    mel,
-                    [[0, new_mel_length - mel_length], [0, 0]],
-                    constant_values=self.mel_pad_value,
-                )
-                mel_length = new_mel_length
-
-            # create guided attention (default).
-            g_attention = guided_attention(
-                char_length,
-                mel_length // self.reduction_factor,
-                self.max_char_length,
-                self.max_mel_length // self.reduction_factor,
-                self.g,
-            )
 
             items = {
                 "utt_ids": utt_id,
-                "input_ids": charactor,
-                "input_lengths": char_length,
-                "speaker_ids": 0,
-                "mel_gts": mel,
-                "mel_lengths": mel_length,
-                "real_mel_lengths": real_mel_length,
-                "g_attentions": g_attention,
+                "mel_files": mel_file,
+                "charactor_files": charactor_file,
             }
 
             yield items
+    
+    @tf.function
+    def _load_data(self, items):
+        mel = tf.numpy_function(np.load, [items["mel_files"]], tf.float32)
+        charactor = tf.numpy_function(np.load, [items["charactor_files"]], tf.int32)
+        mel_length = len(mel)
+        char_length = len(charactor)
+        # padding mel to make its length is multiple of reduction factor.
+        real_mel_length = mel_length
+        remainder = mel_length % self.reduction_factor
+        if remainder != 0:
+            new_mel_length = mel_length + self.reduction_factor - remainder
+            mel = tf.pad(
+                mel,
+                [[0, new_mel_length - mel_length], [0, 0]],
+                constant_values=self.mel_pad_value,
+            )
+            mel_length = new_mel_length
+
+        items = {
+            "utt_ids": items["utt_ids"],
+            "input_ids": charactor,
+            "input_lengths": char_length,
+            "speaker_ids": 0,
+            "mel_gts": mel,
+            "mel_lengths": mel_length,
+            "real_mel_lengths": real_mel_length,
+        }
+
+        return items
+
+    def _guided_attention(self, items):
+        """Guided attention. Refer to page 3 on the paper (https://arxiv.org/abs/1710.08969)."""
+        items = items.copy()
+        mel_len = items["mel_lengths"] // self.reduction_factor
+        char_len = items["input_lengths"]
+        xv, yv = tf.meshgrid(tf.range(char_len), tf.range(mel_len), indexing="ij")
+        f32_matrix = tf.cast(yv / mel_len - xv / char_len, tf.float32)
+        items["g_attentions"] = 1.0 - tf.math.exp(
+            -(f32_matrix ** 2) / (2 * self.g ** 2)
+        )
+        return items
 
     def create(
         self,
@@ -184,6 +178,18 @@ class CharactorMelDataset(AbstractDataset):
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
             self.generator, output_types=output_types, args=(self.get_args())
+        )
+
+        # load data
+        datasets = datasets.map(
+            lambda items: self._load_data(items),
+            tf.data.experimental.AUTOTUNE
+        )
+
+        # calculate guided attention
+        datasets = datasets.map(
+            lambda items: self._guided_attention(items),
+            tf.data.experimental.AUTOTUNE
         )
 
         datasets = datasets.filter(
@@ -238,13 +244,8 @@ class CharactorMelDataset(AbstractDataset):
     def get_output_dtypes(self):
         output_types = {
             "utt_ids": tf.string,
-            "input_ids": tf.int32,
-            "input_lengths": tf.int32,
-            "speaker_ids": tf.int32,
-            "mel_gts": tf.float32,
-            "mel_lengths": tf.int32,
-            "real_mel_lengths": tf.int32,
-            "g_attentions": tf.float32,
+            "mel_files": tf.string,
+            "charactor_files": tf.string,
         }
         return output_types
 
