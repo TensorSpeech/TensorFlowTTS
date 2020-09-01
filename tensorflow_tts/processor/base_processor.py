@@ -50,6 +50,11 @@ class BaseProcessor(abc.ABC):
 
         if self.loaded_mapper_path is not None:
             self._load_mapper(loaded_path=self.loaded_mapper_path)
+            if self.setup_eos_token():
+                self.add_symbol(
+                    self.setup_eos_token()
+                )  # if this eos token not yet present in symbols list.
+                self.eos_id = self.symbol_to_id[self.setup_eos_token()]
             return
 
         if self.symbols.__len__() < 1:
