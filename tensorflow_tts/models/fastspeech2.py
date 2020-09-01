@@ -64,7 +64,7 @@ class TFFastSpeechVariantPredictor(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
         """Call logic."""
         encoder_hidden_states, speaker_ids, attention_mask = inputs
-        attention_mask = tf.cast(tf.expand_dims(attention_mask, 2), tf.float32)
+        attention_mask = tf.cast(tf.expand_dims(attention_mask, 2), encoder_hidden_states.dtype)
 
         if self.config.n_speakers > 1:
             speaker_embeddings = self.decoder_speaker_embeddings(speaker_ids)
