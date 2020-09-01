@@ -437,9 +437,6 @@ def main():
             tacotron2.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
             logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
 
-
-
-
         # AdamW for tacotron2
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
             initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],

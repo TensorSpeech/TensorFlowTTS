@@ -365,7 +365,6 @@ def main():
             fastspeech.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
             logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
 
-
         # AdamW for fastspeech
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
             initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],

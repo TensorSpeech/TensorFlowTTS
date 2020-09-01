@@ -445,7 +445,7 @@ class GanBasedTrainer(BasedTrainer):
         # reset
         self.reset_states_eval()
 
-    def _one_step_evalute_per_replica(self, batch):
+    def _one_step_evaluate_per_replica(self, batch):
         ################################################
         # one step generator.
         outputs = self._generator(**batch, training=False)
@@ -469,7 +469,7 @@ class GanBasedTrainer(BasedTrainer):
     ################################################
 
     def _one_step_evaluate(self, batch):
-        self._strategy.run(self._one_step_evalute_per_replica, args=(batch,))
+        self._strategy.run(self._one_step_evaluate_per_replica, args=(batch,))
 
     def _one_step_predict_per_replica(self, batch):
         outputs = self._generator(**batch, training=False)
@@ -763,14 +763,14 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
         # reset
         self.reset_states_eval()
 
-    def _one_step_evalute_per_replica(self, batch):
+    def _one_step_evaluate_per_replica(self, batch):
         outputs = self._model(**batch, training=False)
         _, dict_metrics_losses = self.compute_per_example_losses(batch, outputs)
 
         self.update_eval_metrics(dict_metrics_losses)
 
     def _one_step_evaluate(self, batch):
-        self._strategy.run(self._one_step_evalute_per_replica, args=(batch,))
+        self._strategy.run(self._one_step_evaluate_per_replica, args=(batch,))
 
     def _one_step_predict_per_replica(self, batch):
         outputs = self._model(**batch, training=False)
