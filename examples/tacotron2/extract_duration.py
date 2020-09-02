@@ -17,6 +17,7 @@
 import argparse
 import logging
 import os
+from numba import jit
 import sys
 
 sys.path.append(".")
@@ -32,11 +33,12 @@ from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
 
 
+@jit(nopython=True)
 def get_duration_from_alignment(alignment):
     D = np.array([0 for _ in range(np.shape(alignment)[0])])
 
     for i in range(np.shape(alignment)[1]):
-        max_index = alignment[:, i].tolist().index(alignment[:, i].max())
+        max_index = list(alignment[:, i]).index(alignment[:, i].max())
         D[max_index] = D[max_index] + 1
 
     return D
@@ -130,7 +132,8 @@ def main():
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
-        reduction_factor=config["tacotron2_params"]["reduction_factor"]
+        reduction_factor=config["tacotron2_params"]["reduction_factor"],
+        use_fixed_shapes=True,
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
@@ -142,6 +145,9 @@ def main():
     )
     tacotron2._build()  # build model to be able load_weights.
     tacotron2.load_weights(args.checkpoint)
+
+    # apply tf.function for tacotron2.
+    tacotron2 = tf.function(tacotron2, experimental_relax_shapes=True)
 
     for data in tqdm(dataset, desc="[Extract Duration]"):
         utt_ids = data["utt_ids"]
@@ -164,16 +170,20 @@ def main():
         alignment_historys = alignment_historys.numpy()
 
         for i, alignment in enumerate(alignment_historys):
-            real_char_length = (
-                input_lengths[i].numpy()
-            )
+            real_char_length = input_lengths[i].numpy()
             real_mel_length = real_mel_lengths[i].numpy()
-            alignment_mel_length = int(np.ceil(real_mel_length / config["tacotron2_params"]["reduction_factor"]))
+            alignment_mel_length = int(
+                np.ceil(
+                    real_mel_length / config["tacotron2_params"]["reduction_factor"]
+                )
+            )
             alignment = alignment[:real_char_length, :alignment_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
 
             d = d * config["tacotron2_params"]["reduction_factor"]
-            assert np.sum(d) >= real_mel_length, f"{d}, {np.sum(d)}, {alignment_mel_length}, {real_mel_length}"
+            assert (
+                np.sum(d) >= real_mel_length
+            ), f"{d}, {np.sum(d)}, {alignment_mel_length}, {real_mel_length}"
             if np.sum(d) > real_mel_length:
                 rest = np.sum(d) - real_mel_length
                 # print(d, np.sum(d), real_mel_length)
@@ -183,9 +193,9 @@ def main():
                     d[0] -= rest
                 else:
                     d[-1] -= rest // 2
-                    d[0] -= (rest - rest // 2)
+                    d[0] -= rest - rest // 2
 
-                assert d[-1] > 0 and d[0] > 0, f'{d}, {np.sum(d)}, {real_mel_length}'
+                assert d[-1] > 0 and d[0] > 0, f"{d}, {np.sum(d)}, {real_mel_length}"
 
             saved_name = utt_ids[i].decode("utf-8")
 
