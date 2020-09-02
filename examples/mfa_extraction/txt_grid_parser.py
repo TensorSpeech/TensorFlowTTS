@@ -34,6 +34,7 @@ logging.basicConfig(
     format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
 )
 
+
 @dataclass
 class TxtGridParser:
     sample_rate: int
@@ -52,10 +53,13 @@ class TxtGridParser:
     def parse(self):
         speakers = (
             [
-                i for i in os.listdir(self.txt_grid_path) if os.path.isdir(os.path.join(self.txt_grid_path, i))
+                i
+                for i in os.listdir(self.txt_grid_path)
+                if os.path.isdir(os.path.join(self.txt_grid_path, i))
             ]
             if self.multi_speaker
-            else [])
+            else []
+        )
         data = []
 
         if speakers:
@@ -70,7 +74,9 @@ class TxtGridParser:
             f.writelines(data)
 
     def parse_text_grid(self, file_list: list, data: list, speaker_name: str):
-        logging.info(f"\n Parse: {len(file_list)} files, speaker name: {speaker_name} \n")
+        logging.info(
+            f"\n Parse: {len(file_list)} files, speaker name: {speaker_name} \n"
+        )
         for f_name in tqdm(file_list):
             text_grid = textgrid.TextGrid.fromFile(
                 os.path.join(self.txt_grid_path, speaker_name, f_name)
@@ -97,7 +103,9 @@ class TxtGridParser:
 
             base_name = f_name.split(".TextGrid")[0]
             np.save(
-                os.path.join(self.output_durations_path, f"{base_name}-durations.npy"), np.array(durations)
+                os.path.join(self.output_durations_path, f"{base_name}-durations.npy"),
+                np.array(durations).astype(np.int32),
+                allow_pickle=False,
             )
             data.append(f"{speaker_name}/{base_name}|{full_ph}|{speaker_name}\n")
 
