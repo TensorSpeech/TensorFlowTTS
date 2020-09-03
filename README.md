@@ -284,7 +284,7 @@ ids = tf.expand_dims(ids, 0)
 
 masked_mel_before, masked_mel_after, duration_outputs = fastspeech.inference(
     ids,
-    speaker_ids=tf.zeros(shape=[tf.shape(ids)[0]]),
+    speaker_ids=tf.zeros(shape=[tf.shape(ids)[0]], dtype=tf.int32),
     speed_ratios=tf.constant([1.0], dtype=tf.float32)
 )
 
