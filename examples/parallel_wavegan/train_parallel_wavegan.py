@@ -200,16 +200,18 @@ class ParallelWaveganTrainer(GanBasedTrainer):
             y_batch = y_batch.numpy()
 
         # check directory
+        utt_ids = batch["utt_ids"].numpy()
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for idx, (y, y_) in enumerate(zip(y_batch, y_batch_), 1):
+        for idx, (y, y_) in enumerate(zip(y_batch, y_batch_), 0):
             # convert to ndarray
             y, y_ = tf.reshape(y, [-1]).numpy(), tf.reshape(y_, [-1]).numpy()
 
             # plit figure and save it
-            figname = os.path.join(dirname, f"{idx}.png")
+            utt_id = utt_ids[idx]
+            figname = os.path.join(dirname, f"{utt_id}.png")
             plt.subplot(2, 1, 1)
             plt.plot(y)
             plt.title("groundtruth speech")

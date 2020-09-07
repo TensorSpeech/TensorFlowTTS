@@ -212,19 +212,21 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             alignment_historys = alignment_historys.numpy()
 
         # check directory
+        utt_ids = batch["utt_ids"].numpy()
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
         for idx, (mel_gt, mel_before, mel_after, alignment_history) in enumerate(
-            zip(mel_gts, mels_before, mels_after, alignment_historys), 1
+            zip(mel_gts, mels_before, mels_after, alignment_historys), 0
         ):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
             mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
 
             # plot figure and save it
-            figname = os.path.join(dirname, f"{idx}.png")
+            utt_id = utt_ids[idx]
+            figname = os.path.join(dirname, f"{utt_id}.png")
             fig = plt.figure(figsize=(10, 8))
             ax1 = fig.add_subplot(311)
             ax2 = fig.add_subplot(312)
