@@ -43,3 +43,4 @@ dump_ljspeech/
 dump_kss/
 dump_libritts/
 /examples/*/*
+/notebooks/test_saved/
