@@ -292,8 +292,8 @@ def gen_audio_features(item, config):
         )
     item["audio"] = audio
     item["mel"] = mel
-    item["f0"] = f0
-    item["energy"] = energy
+    item["f0"] = remove_outlier(f0)
+    item["energy"] = remove_outlier(energy)
     return True, mel, energy, f0, item
 
 
@@ -444,9 +444,6 @@ def preprocess():
             id_to_remove.append(features["utt_id"])
             continue
         save_features_to_file(features, "train", config)
-        # remove outliers
-        energy = remove_outlier(energy)
-        f0 = remove_outlier(f0)
         # partial fitting of scalers
         if len(energy[energy != 0]) == 0 or len(f0[f0 != 0]) == 0:
             id_to_remove.append(features["utt_id"])
@@ -560,8 +557,8 @@ def compute_statistics():
         zip(glob_mel, glob_f0, glob_energy), total=len(glob_mel)
     ):
         # remove outliers
-        energy = remove_outlier(np.load(energy))
-        f0 = remove_outlier(np.load(f0))
+        energy = np.load(energy)
+        f0 = np.load(f0)
         # partial fitting of scalers
         scaler_mel.partial_fit(np.load(mel))
         scaler_energy.partial_fit(energy[energy != 0].reshape(-1, 1))

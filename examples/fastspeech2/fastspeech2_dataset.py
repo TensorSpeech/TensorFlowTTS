@@ -23,7 +23,7 @@ import numpy as np
 import tensorflow as tf
 
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
-from tensorflow_tts.utils import find_files, remove_outlier
+from tensorflow_tts.utils import find_files
 
 
 def average_by_duration(x, durs):
@@ -125,7 +125,6 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         return [self.utt_ids]
 
     def _norm_mean_std(self, x, mean, std):
-        x = remove_outlier(x)
         zero_idxs = np.where(x == 0.0)[0]
         x = (x - mean) / std
         x[zero_idxs] = 0.0
