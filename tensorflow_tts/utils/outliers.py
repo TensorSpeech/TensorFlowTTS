@@ -14,7 +14,6 @@
 # limitations under the License.
 """Outliers detection and remove."""
 import numpy as np
-from numba import jit
 
 
 def is_outlier(x, p25, p75):
@@ -24,7 +23,6 @@ def is_outlier(x, p25, p75):
     return x <= lower or x >= upper
 
 
-@jit(nopython=True)
 def remove_outlier(x, p_bottom: int = 25, p_top: int = 75):
     """Remove outlier from x."""
     p_bottom = np.percentile(x, p_bottom)
