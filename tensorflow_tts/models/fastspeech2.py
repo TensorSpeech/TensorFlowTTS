@@ -93,7 +93,7 @@ class TFFastSpeech2(TFFastSpeech):
         super().__init__(config, **kwargs)
         self.f0_predictor = TFFastSpeechVariantPredictor(config, name="f0_predictor")
         self.energy_predictor = TFFastSpeechVariantPredictor(
-            config, name="energy_predictor"
+            config, name="energy_predictor",
         )
         self.duration_predictor = TFFastSpeechVariantPredictor(
             config, name="duration_predictor"

@@ -745,8 +745,8 @@ class TFFastSpeech(tf.keras.Model):
             == config.decoder_self_attention_params.hidden_size,
             name="decoder",
         )
-        self.mel_dense = tf.keras.layers.Dense(units=config.num_mels, name="mel_before")
-        self.postnet = TFTacotronPostnet(config=config, name="postnet")
+        self.mel_dense = tf.keras.layers.Dense(units=config.num_mels, dtype=tf.float32, name="mel_before")
+        self.postnet = TFTacotronPostnet(config=config, dtype=tf.float32, name="postnet")
 
         self.setup_inference_fn()
 
