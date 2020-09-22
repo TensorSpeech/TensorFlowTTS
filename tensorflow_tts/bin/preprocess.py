@@ -278,6 +278,10 @@ def gen_audio_features(item, config):
     energy = np.sqrt(np.sum(S ** 2, axis=0))
     assert len(mel) == len(f0) == len(energy)
 
+    # remove outlier f0/energy
+    f0 = remove_outlier(f0)
+    energy = remove_outlier(energy)
+
     # apply global gain
     if config["global_gain_scale"] > 0.0:
         audio *= config["global_gain_scale"]
@@ -287,8 +291,8 @@ def gen_audio_features(item, config):
         )
     item["audio"] = audio
     item["mel"] = mel
-    item["f0"] = remove_outlier(f0)
-    item["energy"] = remove_outlier(energy)
+    item["f0"] = f0
+    item["energy"] = energy
     return True, mel, energy, f0, item
 
 
