@@ -25,7 +25,7 @@ def get_initializer(initializer_seed=42):
     Returns:
         HeNormal initializer with seed = `initializer_seed`.
     """
-    return tf.keras.initializers.HeNormal(seed=initializer_seed)
+    return tf.keras.initializers.he_normal(seed=initializer_seed)
 
 
 class TFConv1d1x1(tf.keras.layers.Conv1D):
