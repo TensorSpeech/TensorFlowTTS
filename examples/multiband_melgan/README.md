@@ -52,6 +52,7 @@ If you want to finetune a model, use `--pretrained` like this with the filename 
 
 - If Your Dataset is 16K, upsample_scales = [2, 4, 8] worked.
 - If Your Dataset is > 16K (22K, 24K, ...), upsample_scales = [2, 4, 8] didn't worked, used [8, 4, 2] instead.
+- Mixed precision make Group Convolution training slower on Discriminator, both pytorch (apex) and tensorflow also has this problems. So, **DO NOT USE** mixed precision when discriminator enable.
 
 ### Step 3: Decode audio from folder mel-spectrogram
 To running inference on folder mel-spectrogram (eg valid folder), run below command line:
