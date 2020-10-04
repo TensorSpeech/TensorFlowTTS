@@ -260,7 +260,7 @@ from tensorflow_tts.inference import TFAutoModel
 from tensorflow_tts.inference import AutoProcessor
 
 # initialize fastspeech model.
-fs_config = AutoConfig.from_pretrained('/examples/fastspeech/conf/fastspeech.v1.yaml')
+fs_config = AutoConfig.from_pretrained('./examples/fastspeech/conf/fastspeech.v1.yaml')
 fastspeech = TFAutoModel.from_pretrained(
     config=fs_config,
     pretrained_path="./examples/fastspeech/pretrained/model-195000.h5"
