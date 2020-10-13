@@ -1,4 +1,4 @@
-# Multi-band MelGAN: Faster Waveform Generation for High-Quality Text-to-Speech
+﻿# Multi-band MelGAN: Faster Waveform Generation for High-Quality Text-to-Speech
 Based on the script [`train_multiband_melgan.py`](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan/train_multiband_melgan.py).
 
 ## Training Multi-band MelGAN from scratch with LJSpeech dataset.
@@ -78,10 +78,14 @@ Here is a learning curves of melgan based on this config [`multiband_melgan.v1.y
 <img src="fig/train.png" height="300" width="850">
 
 ## Pretrained Models and Audio samples
-| Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
-| :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
-| [multiband_melgan.v1](https://drive.google.com/drive/folders/1Hg82YnPbX6dfF7DxVs4c96RBaiFbh-cT?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 940K    |
-| [multiband_melgan.v1](https://drive.google.com/drive/folders/199XCXER51PWf_VzUpOwxfY_8XDfeXuZl?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 1000K    |
+| Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters | Notes |
+| :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----:   | :-----: |
+| [multiband_melgan.v1](https://drive.google.com/drive/folders/1Hg82YnPbX6dfF7DxVs4c96RBaiFbh-cT?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 940K    |  -|
+| [multiband_melgan.v1](https://drive.google.com/drive/folders/199XCXER51PWf_VzUpOwxfY_8XDfeXuZl?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/multiband_melgan/conf/multiband_melgan.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 1000K    | -|
+| [multiband_melgan.v1_24k](https://drive.google.com/drive/folders/14H6Oa8kGxlIhfZZFf6JFzWL5NVHDpKai?usp=sharing)             | [link](https://drive.google.com/file/d/1l2jBwTWVVsRuT5FLDOIDToEhqWBmuCMe/view?usp=sharing)          | EN | 24k  | 80-7600        | 2048 / 300 / 1200    | 1000K    | Converted from [kan-bayashi's model](https://drive.google.com/drive/folders/1jfB15igea6tOQ0hZJGIvnpf3QyNhTLnq?usp=sharing); good universal vocoder|
+
+
+
 
 ## Reference
 
