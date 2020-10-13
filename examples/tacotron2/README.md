@@ -87,9 +87,9 @@ tacotron2 = TFTacotron2(config=tacotron_config, training=True, name='tacotron2')
 tacotron2._build()
 tacotron2.summary()
 tacotron2.load_weights("./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-120000.h5", by_name=True, skip_mismatch=True)
-
 ... # training as normal.
 ```
+You can also define `var_train_expr` in config file to let model training only on some layers in case you want to fine-tune on your dataset with the same pretrained language and processor. For example, `var_train_expr: "embeddings|encoder|decoder"` means we just training all variables that `embeddings`, `encoder`, `decoder` exist in its name.
 
 ## Results
 Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml) but with reduction_factor = 7, we will update learning curves for reduction_factor = 1.

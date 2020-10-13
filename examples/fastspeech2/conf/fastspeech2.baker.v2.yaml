@@ -63,7 +63,9 @@ optimizer_params:
     warmup_proportion: 0.02
     weight_decay: 0.001
     
-    
+var_train_expr: null  # trainable variable expr (eg. 'embeddings|encoder|decoder' )
+                      # must separate by |. if var_train_expr is null then we 
+                      # training all variable
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################

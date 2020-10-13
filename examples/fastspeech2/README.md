@@ -36,6 +36,8 @@ If you want to finetune a model, use `--pretrained` like this with your model fi
 --pretrained pretrained.h5
 ```
 
+You can also define `var_train_expr` in config file to let model training only on some layers in case you want to fine-tune on your dataset with the same pretrained language and processor. For example, `var_train_expr: "embeddings|encoder|decoder"` means we just training all variables that `embeddings`, `encoder`, `decoder` exist in its name.
+
 
 ### Step 3: Decode mel-spectrogram from folder ids
 

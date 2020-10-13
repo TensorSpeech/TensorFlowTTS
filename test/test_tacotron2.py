@@ -16,6 +16,7 @@
 import logging
 import os
 import time
+import yaml
 
 import numpy as np
 import pytest
@@ -23,6 +24,9 @@ import tensorflow as tf
 
 from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
+from tensorflow_tts.utils import return_strategy
+
+from examples.tacotron2.train_tacotron2 import Tacotron2Trainer
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -30,6 +34,46 @@ logging.basicConfig(
     level=logging.WARNING,
     format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
 )
+
+
+@pytest.mark.parametrize(
+    "var_train_expr, config_path",
+    [
+        ("embeddings|decoder_cell", "./examples/tacotron2/conf/tacotron2.v1.yaml"),
+        (None, "./examples/tacotron2/conf/tacotron2.v1.yaml"),
+        (
+            "embeddings|decoder_cell",
+            "./examples/tacotron2/conf/tacotron2.baker.v1.yaml",
+        ),
+        ("embeddings|decoder_cell", "./examples/tacotron2/conf/tacotron2.kss.v1.yaml"),
+    ],
+)
+def test_tacotron2_train_some_layers(var_train_expr, config_path):
+    config = Tacotron2Config(n_speakers=5, reduction_factor=1)
+    model = TFTacotron2(config, training=True)
+    model._build()
+    optimizer = tf.keras.optimizers.Adam(lr=0.001)
+
+    with open(config_path) as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+
+    config.update({"outdir": "./"})
+    config.update({"var_train_expr": var_train_expr})
+
+    STRATEGY = return_strategy()
+
+    trainer = Tacotron2Trainer(
+        config=config, strategy=STRATEGY, steps=0, epochs=0, is_mixed_precision=False,
+    )
+    trainer.compile(model, optimizer)
+
+    len_trainable_vars = len(trainer._trainable_variables)
+    all_trainable_vars = len(model.trainable_variables)
+
+    if var_train_expr is None:
+        tf.debugging.assert_equal(len_trainable_vars, all_trainable_vars)
+    else:
+        tf.debugging.assert_less(len_trainable_vars, all_trainable_vars)
 
 
 @pytest.mark.parametrize(
