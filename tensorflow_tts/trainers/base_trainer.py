@@ -606,6 +606,9 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
         super().__init__(steps, epochs, config)
         self._is_mixed_precision = is_mixed_precision
         self._strategy = strategy
+        self._model = None
+        self._optimizer = None
+        self._trainable_variables = None
 
         # check if we already apply input_signature for train_step.
         self._already_apply_input_signature = False
@@ -640,6 +643,23 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
     def compile(self, model, optimizer):
         self.set_model(model)
         self.set_optimizer(optimizer)
+        self._trainable_variables = self._train_vars()
+
+    def _train_vars(self):
+        if self.config["var_train_expr"]:
+            list_freeze_var = self.config["var_train_expr"].split("|")
+            return [
+                v
+                for v in self._model.trainable_variables
+                if self._check_string_exist(list_freeze_var, v.name)
+            ]
+        return self._model.trainable_variables
+
+    def _check_string_exist(self, list_string, inp_string):
+        for string in list_string:
+            if string in inp_string:
+                return True
+        return False
 
     def _get_train_element_signature(self):
         return self.train_data_loader.element_spec
@@ -704,9 +724,7 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
                 per_replica_losses, self._model.trainable_variables
             )
 
-        self._optimizer.apply_gradients(
-            zip(gradients, self._model.trainable_variables), 1.0
-        )
+        self._optimizer.apply_gradients(zip(gradients, self._trainable_variables), 1.0)
 
         # accumulate loss into metrics
         self.update_train_metrics(dict_metrics_losses)
