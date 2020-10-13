@@ -3,6 +3,7 @@ mkdir mfa
 cd mfa
 wget https://github.com/MontrealCorpusTools/Montreal-Forced-Aligner/releases/download/v1.1.0-beta.2/montreal-forced-aligner_linux.tar.gz
 tar -zxvf montreal-forced-aligner_linux.tar.gz
+mv montreal-forced-aligner mfa
 cd mfa
 mkdir lexicon
 cd lexicon
