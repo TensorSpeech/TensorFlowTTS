@@ -716,12 +716,12 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
 
         if self._is_mixed_precision:
             scaled_gradients = tape.gradient(
-                scaled_per_replica_losses, self._model.trainable_variables
+                scaled_per_replica_losses, self._trainable_variables
             )
             gradients = self._optimizer.get_unscaled_gradients(scaled_gradients)
         else:
             gradients = tape.gradient(
-                per_replica_losses, self._model.trainable_variables
+                per_replica_losses, self._trainable_variables
             )
 
         self._optimizer.apply_gradients(zip(gradients, self._trainable_variables), 1.0)
