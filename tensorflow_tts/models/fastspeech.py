@@ -65,6 +65,7 @@ ACT2FN = {
 
 class TFEmbedding(tf.keras.layers.Embedding):
     """Faster version of embedding."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -226,13 +227,17 @@ class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
         value_layer = self.transpose_for_scores(mixed_value_layer, batch_size)
 
         attention_scores = tf.matmul(query_layer, key_layer, transpose_b=True)
-        dk = tf.cast(tf.shape(key_layer)[-1], attention_scores.dtype)  # scale attention_scores
+        dk = tf.cast(
+            tf.shape(key_layer)[-1], attention_scores.dtype
+        )  # scale attention_scores
         attention_scores = attention_scores / tf.math.sqrt(dk)
 
         if attention_mask is not None:
             # extended_attention_masks for self attention encoder.
             extended_attention_mask = attention_mask[:, tf.newaxis, tf.newaxis, :]
-            extended_attention_mask = tf.cast(extended_attention_mask, attention_scores.dtype)
+            extended_attention_mask = tf.cast(
+                extended_attention_mask, attention_scores.dtype
+            )
             extended_attention_mask = (1.0 - extended_attention_mask) * -1e9
             attention_scores = attention_scores + extended_attention_mask
 
@@ -481,7 +486,9 @@ class TFFastSpeechDecoder(TFFastSpeechEncoder):
             hidden_states = self.project_compatible_decoder(hidden_states)
 
         # calculate new hidden states.
-        hidden_states += tf.cast(self.decoder_positional_embeddings(decoder_pos), hidden_states.dtype)
+        hidden_states += tf.cast(
+            self.decoder_positional_embeddings(decoder_pos), hidden_states.dtype
+        )
 
         if self.config.n_speakers > 1:
             speaker_embeddings = self.decoder_speaker_embeddings(speaker_ids)
@@ -580,7 +587,9 @@ class TFFastSpeechDurationPredictor(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
         """Call logic."""
         encoder_hidden_states, attention_mask = inputs
-        attention_mask = tf.cast(tf.expand_dims(attention_mask, 2), encoder_hidden_states.dtype)
+        attention_mask = tf.cast(
+            tf.expand_dims(attention_mask, 2), encoder_hidden_states.dtype
+        )
 
         # mask encoder hidden states
         masked_encoder_hidden_states = encoder_hidden_states * attention_mask
@@ -641,7 +650,9 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
             outputs = repeat_encoder_hidden_states
             encoder_masks = masks
         else:
-            outputs = tf.zeros(shape=[0, max_durations, hidden_size], dtype=encoder_hidden_states.dtype)
+            outputs = tf.zeros(
+                shape=[0, max_durations, hidden_size], dtype=encoder_hidden_states.dtype
+            )
             encoder_masks = tf.zeros(shape=[0, max_durations], dtype=tf.int32)
 
             def condition(
@@ -732,7 +743,7 @@ class TFFastSpeech(tf.keras.Model):
             config.encoder_self_attention_params, name="encoder"
         )
         self.duration_predictor = TFFastSpeechDurationPredictor(
-            config, name="duration_predictor"
+            config, dtype=tf.float32, name="duration_predictor"
         )
         self.length_regulator = TFFastSpeechLengthRegulator(
             config,
@@ -745,8 +756,12 @@ class TFFastSpeech(tf.keras.Model):
             == config.decoder_self_attention_params.hidden_size,
             name="decoder",
         )
-        self.mel_dense = tf.keras.layers.Dense(units=config.num_mels, dtype=tf.float32, name="mel_before")
-        self.postnet = TFTacotronPostnet(config=config, dtype=tf.float32, name="postnet")
+        self.mel_dense = tf.keras.layers.Dense(
+            units=config.num_mels, dtype=tf.float32, name="mel_before"
+        )
+        self.postnet = TFTacotronPostnet(
+            config=config, dtype=tf.float32, name="postnet"
+        )
 
         self.setup_inference_fn()
 

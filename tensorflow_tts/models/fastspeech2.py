@@ -64,7 +64,9 @@ class TFFastSpeechVariantPredictor(tf.keras.layers.Layer):
     def call(self, inputs, training=False):
         """Call logic."""
         encoder_hidden_states, speaker_ids, attention_mask = inputs
-        attention_mask = tf.cast(tf.expand_dims(attention_mask, 2), encoder_hidden_states.dtype)
+        attention_mask = tf.cast(
+            tf.expand_dims(attention_mask, 2), encoder_hidden_states.dtype
+        )
 
         if self.config.n_speakers > 1:
             speaker_embeddings = self.decoder_speaker_embeddings(speaker_ids)
@@ -91,12 +93,14 @@ class TFFastSpeech2(TFFastSpeech):
     def __init__(self, config, **kwargs):
         """Init layers for fastspeech."""
         super().__init__(config, **kwargs)
-        self.f0_predictor = TFFastSpeechVariantPredictor(config, name="f0_predictor")
+        self.f0_predictor = TFFastSpeechVariantPredictor(
+            config, dtype=tf.float32, name="f0_predictor"
+        )
         self.energy_predictor = TFFastSpeechVariantPredictor(
-            config, name="energy_predictor",
+            config, dtype=tf.float32, name="energy_predictor",
         )
         self.duration_predictor = TFFastSpeechVariantPredictor(
-            config, name="duration_predictor"
+            config, dtype=tf.float32, name="duration_predictor"
         )
 
         # define f0_embeddings and energy_embeddings
