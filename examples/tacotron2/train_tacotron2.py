@@ -197,6 +197,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             alignment_historys,
         ) = outputs
         mel_gts = batch["mel_gts"]
+        utt_ids = batch["utt_ids"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
@@ -205,14 +206,15 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             mels_after = mel_outputs.values[0].numpy()
             mel_gts = mel_gts.values[0].numpy()
             alignment_historys = alignment_historys.values[0].numpy()
+            utt_ids = utt_ids.values[0].numpy()
         except Exception:
             mels_before = decoder_output.numpy()
             mels_after = mel_outputs.numpy()
             mel_gts = mel_gts.numpy()
             alignment_historys = alignment_historys.numpy()
+            utt_ids = utt_ids.numpy()
 
         # check directory
-        utt_ids = batch["utt_ids"].numpy()
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)

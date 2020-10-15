@@ -217,20 +217,22 @@ class MultiBandMelganTrainer(MelganTrainer):
 
         y_mb_batch_ = self.one_step_predict(batch)  # [B, T // subbands, subbands]
         y_batch = batch["audios"]
+        utt_ids = batch["utt_ids"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
         try:
             y_mb_batch_ = y_mb_batch_.values[0].numpy()
             y_batch = y_batch.values[0].numpy()
+            utt_ids = utt_ids.values[0].numpy()
         except Exception:
             y_mb_batch_ = y_mb_batch_.numpy()
             y_batch = y_batch.numpy()
+            utt_ids = utt_ids.numpy()
 
         y_batch_ = self.pqmf.synthesis(y_mb_batch_).numpy()  # [B, T, 1]
 
         # check directory
-        utt_ids = batch["utt_ids"].numpy()
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)

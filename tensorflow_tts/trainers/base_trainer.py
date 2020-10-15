@@ -647,11 +647,11 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
 
     def _train_vars(self):
         if self.config["var_train_expr"]:
-            list_freeze_var = self.config["var_train_expr"].split("|")
+            list_train_var = self.config["var_train_expr"].split("|")
             return [
                 v
                 for v in self._model.trainable_variables
-                if self._check_string_exist(list_freeze_var, v.name)
+                if self._check_string_exist(list_train_var, v.name)
             ]
         return self._model.trainable_variables
 

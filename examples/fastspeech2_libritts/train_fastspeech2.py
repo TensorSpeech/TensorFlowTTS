@@ -142,6 +142,7 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
 
         mels_before, mels_after, *_ = outputs
         mel_gts = batch["mel_gts"]
+        utt_ids = batch["utt_ids"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
@@ -149,10 +150,12 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             mels_before = mels_before.values[0].numpy()
             mels_after = mels_after.values[0].numpy()
             mel_gts = mel_gts.values[0].numpy()
+            utt_ids = utt_ids.values[0].numpy()
         except Exception:
             mels_before = mels_before.numpy()
             mels_after = mels_after.numpy()
             mel_gts = mel_gts.numpy()
+            utt_ids = utt_ids.numpy()
 
         # check directory
         if self.use_griffin:
@@ -167,22 +170,25 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         for idx, (mel_gt, mel_before, mel_after) in enumerate(
             zip(mel_gts, mels_before, mels_after), 1
         ):
-
+            
+            
             if self.use_griffin:
+                utt_id = utt_ids[idx]
                 grif_before = self.griffin_lim_tf(tf.reshape(mel_before, [-1, 80])[tf.newaxis, :], n_iter=32)
                 grif_after = self.griffin_lim_tf(tf.reshape(mel_after, [-1, 80])[tf.newaxis, :], n_iter=32)
                 grif_gt = self.griffin_lim_tf(tf.reshape(mel_gt, [-1, 80])[tf.newaxis, :], n_iter=32)
-                self.griffin_lim_tf.save_wav(grif_before, griff_dir_name, f"{idx}_before")
-                self.griffin_lim_tf.save_wav(grif_after, griff_dir_name, f"{idx}_after")
-                self.griffin_lim_tf.save_wav(grif_gt, griff_dir_name, f"{idx}_gt")
-
+                self.griffin_lim_tf.save_wav(grif_before, griff_dir_name, f"{utt_id}_before")
+                self.griffin_lim_tf.save_wav(grif_after, griff_dir_name, f"{utt_id}_after")
+                self.griffin_lim_tf.save_wav(grif_gt, griff_dir_name, f"{utt_id}_gt")
+            
+            utt_id = utt_ids[idx]
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
             mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
 
 
             # plit figure and save it
-            figname = os.path.join(dirname, f"{idx}.png")
+            figname = os.path.join(dirname, f"{utt_id}.png")
             fig = plt.figure(figsize=(10, 8))
             ax1 = fig.add_subplot(311)
             ax2 = fig.add_subplot(312)

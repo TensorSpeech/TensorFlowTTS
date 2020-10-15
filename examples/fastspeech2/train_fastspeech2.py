@@ -132,6 +132,7 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
 
         mels_before, mels_after, *_ = outputs
         mel_gts = batch["mel_gts"]
+        utt_ids = batch["utt_ids"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
@@ -139,13 +140,14 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             mels_before = mels_before.values[0].numpy()
             mels_after = mels_after.values[0].numpy()
             mel_gts = mel_gts.values[0].numpy()
+            utt_ids = utt_ids.values[0].numpy()
         except Exception:
             mels_before = mels_before.numpy()
             mels_after = mels_after.numpy()
             mel_gts = mel_gts.numpy()
+            utt_ids = utt_ids.numpy()
 
         # check directory
-        utt_ids = batch["utt_ids"].numpy()
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
