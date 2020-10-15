@@ -105,7 +105,7 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
 
         logging.info(
             f"{t} stats: number of mfa with longer duration: {len(mfa_longer)}, total diff: {sum(mfa_longer)}"
-            f", mean diff: {sum(mfa_longer)/len(mfa_longer)}"
+            f", mean diff: {sum(mfa_longer)/len(mfa_longer) if len(mfa_longer) > 0 else 0}"
         )
         logging.info(
             f"{t} stats: number of mfa with shorter duration: {len(mfa_shorter)}, total diff: {sum(mfa_shorter)}"
