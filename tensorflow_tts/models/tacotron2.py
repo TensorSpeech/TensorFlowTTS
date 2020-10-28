@@ -52,7 +52,7 @@ def gelu_new(x):
 
 def swish(x):
     """Swish activation function."""
-    return x * tf.sigmoid(x)
+    return tf.nn.swish(x)
 
 
 def mish(x):
