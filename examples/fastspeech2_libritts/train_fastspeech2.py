@@ -168,7 +168,7 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             os.makedirs(dirname)
 
         for idx, (mel_gt, mel_before, mel_after) in enumerate(
-            zip(mel_gts, mels_before, mels_after), 1
+            zip(mel_gts, mels_before, mels_after), 0
         ):
             
             
