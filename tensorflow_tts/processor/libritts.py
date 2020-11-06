@@ -114,7 +114,6 @@ class LibriTTSProcessor(BaseProcessor):
                         "@END"
                     )  # TODO try learning without end token and compare results
                 break
-            data.append("@" + txt) if txt != " " else data.append(
-                "@SIL"
-            )  # TODO change it in inference
+            if txt != " ":
+                data.append("@" + txt) 
         return data
