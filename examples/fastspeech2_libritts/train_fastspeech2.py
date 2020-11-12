@@ -360,6 +360,7 @@ def main():
         dataset_mapping = json.load(f)
         speakers_map = dataset_mapping["speakers_map"]
         print("SPEAKERS MAP TYPE IS: " , type(speakers_map))
+        print(speakers_map)
 
     # define train/valid dataset
     train_dataset = CharactorDurationF0EnergyMelDataset(
