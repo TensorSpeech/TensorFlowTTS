@@ -6,7 +6,7 @@
 .\#*
 *DS_Store
 out.txt
-TensorflowTTS.egg-info/
+TensorFlowTTS.egg-info/
 doc/_build
 slurm-*.out
 tmp*
@@ -32,3 +32,15 @@ ljspeech
 /datasets
 /examples/tacotron2/exp/
 /temp/
+LibriTTS/
+dataset/
+mfa/
+kss/
+baker/
+libritts/
+dump_baker/
+dump_ljspeech/
+dump_kss/
+dump_libritts/
+/examples/*/*
+/notebooks/test_saved/

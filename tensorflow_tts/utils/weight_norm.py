@@ -14,8 +14,9 @@
 # limitations under the License.
 """Weight Norm Modules."""
 
-import tensorflow as tf
 import warnings
+
+import tensorflow as tf
 
 
 class WeightNormalization(tf.keras.layers.Wrapper):

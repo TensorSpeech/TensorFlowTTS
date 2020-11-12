@@ -17,9 +17,11 @@
 # Compatible with https://github.com/kan-bayashi/ParallelWaveGAN/blob/master/parallel_wavegan/layers/pqmf.py.
 """Multi-band MelGAN Modules."""
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from scipy.signal import kaiser
+
+from tensorflow_tts.models import TFMelGANGenerator
 
 
 def design_prototype_filter(taps=62, cutoff_ratio=0.15, beta=9.0):
@@ -80,7 +82,7 @@ class TFPQMF(tf.keras.layers.Layer):
                 * np.cos(
                     (2 * k + 1)
                     * (np.pi / (2 * subbands))
-                    * (np.arange(taps + 1) - ((taps - 1) / 2))
+                    * (np.arange(taps + 1) - (taps / 2))
                     + (-1) ** k * np.pi / 4
                 )
             )
@@ -90,7 +92,7 @@ class TFPQMF(tf.keras.layers.Layer):
                 * np.cos(
                     (2 * k + 1)
                     * (np.pi / (2 * subbands))
-                    * (np.arange(taps + 1) - ((taps - 1) / 2))
+                    * (np.arange(taps + 1) - (taps / 2))
                     - (-1) ** k * np.pi / 4
                 )
             )
@@ -99,7 +101,7 @@ class TFPQMF(tf.keras.layers.Layer):
         analysis_filter = np.expand_dims(h_analysis, 1)
         analysis_filter = np.transpose(analysis_filter, (2, 1, 0))
 
-        synthesis_filter = np.expand_dims(h_analysis, 0)
+        synthesis_filter = np.expand_dims(h_synthesis, 0)
         synthesis_filter = np.transpose(synthesis_filter, (2, 1, 0))
 
         # filter for downsampling & upsampling
@@ -152,3 +154,38 @@ class TFPQMF(tf.keras.layers.Layer):
         )
         x = tf.pad(x, [[0, 0], [self.taps // 2, self.taps // 2], [0, 0]])
         return tf.nn.conv1d(x, self.synthesis_filter, stride=1, padding="VALID")
+
+
+class TFMBMelGANGenerator(TFMelGANGenerator):
+    """Tensorflow MBMelGAN generator module."""
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        self.pqmf = TFPQMF(config=config, name="pqmf")
+
+    def call(self, mels, **kwargs):
+        """Calculate forward propagation.
+        Args:
+            c (Tensor): Input tensor (B, T, channels)
+        Returns:
+            Tensor: Output tensor (B, T ** prod(upsample_scales), out_channels)
+        """
+        return self.inference(mels)
+
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")
+        ]
+    )
+    def inference(self, mels):
+        mb_audios = self.melgan(mels)
+        return self.pqmf.synthesis(mb_audios)
+
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")
+        ]
+    )
+    def inference_tflite(self, mels):
+        mb_audios = self.melgan(mels)
+        return self.pqmf.synthesis(mb_audios)

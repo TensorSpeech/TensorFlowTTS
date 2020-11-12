@@ -1,0 +1,85 @@
+# This is the hyperparameter configuration file for Tacotron2 v1.
+# Please make sure this is adjusted for the KSS dataset. If you want to
+# apply to the other dataset, you might need to carefully change some parameters.
+# This configuration performs 200k iters but 65k iters is enough to get a good models.
+
+###########################################################
+#                FEATURE EXTRACTION SETTING               #
+###########################################################
+hop_size: 256            # Hop size.
+format: "npy"
+
+
+###########################################################
+#              NETWORK ARCHITECTURE SETTING               #
+###########################################################
+model_type: "tacotron2"
+
+tacotron2_params:
+    dataset: "kss"
+    embedding_hidden_size: 512
+    initializer_range: 0.02
+    embedding_dropout_prob: 0.1
+    n_speakers: 1
+    n_conv_encoder: 5
+    encoder_conv_filters: 512
+    encoder_conv_kernel_sizes: 5
+    encoder_conv_activation: 'relu'
+    encoder_conv_dropout_rate: 0.5
+    encoder_lstm_units: 256
+    n_prenet_layers: 2
+    prenet_units: 256
+    prenet_activation: 'relu'
+    prenet_dropout_rate: 0.5
+    n_lstm_decoder: 1
+    reduction_factor: 1
+    decoder_lstm_units: 1024
+    attention_dim: 128
+    attention_filters: 32
+    attention_kernel: 31
+    n_mels: 80
+    n_conv_postnet: 5
+    postnet_conv_filters: 512
+    postnet_conv_kernel_sizes: 5
+    postnet_dropout_rate: 0.1
+    attention_type: "lsa"
+
+###########################################################
+#                  DATA LOADER SETTING                    #
+###########################################################
+batch_size: 32             # Batch size.
+remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
+allow_cache: true          # Whether to allow cache in dataset. If true, it requires cpu memory.
+mel_length_threshold: 32   # remove all targets has mel_length <= 32 
+is_shuffle: true           # shuffle dataset after each epoch.
+use_fixed_shapes: false    # use_fixed_shapes for training (2x speed-up)
+                           # refer (https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118)
+
+###########################################################
+#             OPTIMIZER & SCHEDULER SETTING               #
+###########################################################
+optimizer_params:
+    initial_learning_rate: 0.001
+    end_learning_rate: 0.00001
+    decay_steps: 150000          # < train_max_steps is recommend.
+    warmup_proportion: 0.02
+    weight_decay: 0.001
+
+var_train_expr: null  # trainable variable expr (eg. 'embeddings|decoder_cell' )
+                      # must separate by |. if var_train_expr is null then we 
+                      # training all variable
+###########################################################
+#                    INTERVAL SETTING                     #
+###########################################################
+train_max_steps: 200000                 # Number of training steps.
+save_interval_steps: 2000               # Interval steps to save checkpoint.
+eval_interval_steps: 500                # Interval steps to evaluate the network.
+log_interval_steps: 200                 # Interval steps to record the training log.
+start_schedule_teacher_forcing: 200001  # don't need to apply schedule teacher forcing.
+start_ratio_value: 0.5                  # start ratio of scheduled teacher forcing.
+schedule_decay_steps: 50000             # decay step scheduled teacher forcing.
+end_ratio_value: 0.0                    # end ratio of scheduled teacher forcing.
+###########################################################
+#                     OTHER SETTING                       #
+###########################################################
+num_save_intermediate_results: 1  # Number of results to be saved as intermediate results.

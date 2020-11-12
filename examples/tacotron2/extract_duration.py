@@ -17,27 +17,28 @@
 import argparse
 import logging
 import os
+from numba import jit
 import sys
+
 sys.path.append(".")
 
+import matplotlib.pyplot as plt
 import numpy as np
-import yaml
 import tensorflow as tf
-
+import yaml
 from tqdm import tqdm
 
-from tensorflow_tts.configs import Tacotron2Config
 from examples.tacotron2.tacotron_dataset import CharactorMelDataset
+from tensorflow_tts.configs import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
 
-import matplotlib.pyplot as plt
 
-
+@jit(nopython=True)
 def get_duration_from_alignment(alignment):
     D = np.array([0 for _ in range(np.shape(alignment)[0])])
 
     for i in range(np.shape(alignment)[1]):
-        max_index = alignment[:, i].tolist().index(alignment[:, i].max())
+        max_index = list(alignment[:, i]).index(alignment[:, i].max())
         D[max_index] = D[max_index] + 1
 
     return D
@@ -68,6 +69,9 @@ def main():
     parser.add_argument("--batch-size", default=8, type=int, help="batch size.")
     parser.add_argument("--win-front", default=2, type=int, help="win-front.")
     parser.add_argument("--win-back", default=2, type=int, help="win-front.")
+    parser.add_argument(
+        "--use-window-mask", default=1, type=int, help="toggle window masking."
+    )
     parser.add_argument("--save-alignment", default=0, type=int, help="save-alignment.")
     parser.add_argument(
         "--config",
@@ -122,13 +126,14 @@ def main():
 
     # define data-loader
     dataset = CharactorMelDataset(
+        dataset=config["tacotron2_params"]["dataset"],
         root_dir=args.rootdir,
         charactor_query=char_query,
         mel_query=mel_query,
         charactor_load_fn=char_load_fn,
         mel_load_fn=mel_load_fn,
-        return_utt_id=True,
-        return_guided_attention=False,
+        reduction_factor=config["tacotron2_params"]["reduction_factor"],
+        use_fixed_shapes=True,
     )
     dataset = dataset.create(allow_cache=True, batch_size=args.batch_size)
 
@@ -141,18 +146,21 @@ def main():
     tacotron2._build()  # build model to be able load_weights.
     tacotron2.load_weights(args.checkpoint)
 
+    # apply tf.function for tacotron2.
+    tacotron2 = tf.function(tacotron2, experimental_relax_shapes=True)
+
     for data in tqdm(dataset, desc="[Extract Duration]"):
-        utt_id, charactor, char_length, mel, mel_length = data
-        utt_id = utt_id.numpy()
+        utt_ids = data["utt_ids"]
+        input_lengths = data["input_lengths"]
+        mel_lengths = data["mel_lengths"]
+        utt_ids = utt_ids.numpy()
+        real_mel_lengths = data["real_mel_lengths"]
+        del data["real_mel_lengths"]
 
         # tacotron2 inference.
         mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = tacotron2(
-            charactor,
-            char_length,
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-            mel_outputs=mel,
-            mel_lengths=mel_length,
-            use_window_mask=True,
+            **data,
+            use_window_mask=args.use_window_mask,
             win_front=args.win_front,
             win_back=args.win_back,
             training=True,
@@ -162,14 +170,34 @@ def main():
         alignment_historys = alignment_historys.numpy()
 
         for i, alignment in enumerate(alignment_historys):
-            real_char_length = (
-                char_length[i].numpy() - 1
-            )  # minus 1 because char have eos tokens.
-            real_mel_length = mel_length[i].numpy()
-            alignment = alignment[:real_char_length, :real_mel_length]
+            real_char_length = input_lengths[i].numpy()
+            real_mel_length = real_mel_lengths[i].numpy()
+            alignment_mel_length = int(
+                np.ceil(
+                    real_mel_length / config["tacotron2_params"]["reduction_factor"]
+                )
+            )
+            alignment = alignment[:real_char_length, :alignment_mel_length]
             d = get_duration_from_alignment(alignment)  # [max_char_len]
 
-            saved_name = utt_id[i].decode("utf-8")
+            d = d * config["tacotron2_params"]["reduction_factor"]
+            assert (
+                np.sum(d) >= real_mel_length
+            ), f"{d}, {np.sum(d)}, {alignment_mel_length}, {real_mel_length}"
+            if np.sum(d) > real_mel_length:
+                rest = np.sum(d) - real_mel_length
+                # print(d, np.sum(d), real_mel_length)
+                if d[-1] > rest:
+                    d[-1] -= rest
+                elif d[0] > rest:
+                    d[0] -= rest
+                else:
+                    d[-1] -= rest // 2
+                    d[0] -= rest - rest // 2
+
+                assert d[-1] > 0 and d[0] > 0, f"{d}, {np.sum(d)}, {real_mel_length}"
+
+            saved_name = utt_ids[i].decode("utf-8")
 
             # check a length compatible
             assert (

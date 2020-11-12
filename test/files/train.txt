@@ -1,0 +1,2 @@
+speaker1/libri1.wav|in fact its just a test.|One
+speaker2/libri2|in fact its just a speaker number one.|Two

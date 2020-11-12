@@ -15,7 +15,9 @@ format: "npy"
 ###########################################################
 #         GENERATOR NETWORK ARCHITECTURE SETTING          #
 ###########################################################
-generator_params:
+model_type: "melgan_generator"
+
+melgan_generator_params:
     out_channels: 1               # Number of output channels.
     kernel_size: 7                # Kernel size of initial and final conv layers.
     filters: 512                  # Initial number of channels for conv layers.
@@ -27,7 +29,7 @@ generator_params:
 ###########################################################
 #       DISCRIMINATOR NETWORK ARCHITECTURE SETTING        #
 ###########################################################
-discriminator_params:
+melgan_discriminator_params:
     out_channels: 1                   # Number of output channels.
     scales: 3                         # Number of multi-scales.
     downsample_pooling: "AveragePooling1D"   # Pooling type for the input downsampling.
@@ -75,9 +77,10 @@ discriminator_optimizer_params:
 #                    INTERVAL SETTING                     #
 ###########################################################
 train_max_steps: 4000000                # Number of training steps.
-save_interval_steps: 10000               # Interval steps to save checkpoint.
-eval_interval_steps: 5000              # Interval steps to evaluate the network.
-log_interval_steps: 200                # Interval steps to record the training log.
+save_interval_steps: 3               # Interval steps to save checkpoint.
+eval_interval_steps: 2              # Interval steps to evaluate the network.
+log_interval_steps: 1                # Interval steps to record the training log.
+discriminator_train_start_steps: 0     # step to start training discriminator.
 
 ###########################################################
 #                     OTHER SETTING                       #

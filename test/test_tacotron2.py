@@ -15,15 +15,18 @@
 
 import logging
 import os
-import pytest
+import time
+import yaml
+
 import numpy as np
+import pytest
 import tensorflow as tf
 
-import time
-
-from tensorflow_tts.models import TFTacotron2
 from tensorflow_tts.configs import Tacotron2Config
+from tensorflow_tts.models import TFTacotron2
+from tensorflow_tts.utils import return_strategy
 
+from examples.tacotron2.train_tacotron2 import Tacotron2Trainer
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -31,6 +34,46 @@ logging.basicConfig(
     level=logging.WARNING,
     format="%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s",
 )
+
+
+@pytest.mark.parametrize(
+    "var_train_expr, config_path",
+    [
+        ("embeddings|decoder_cell", "./examples/tacotron2/conf/tacotron2.v1.yaml"),
+        (None, "./examples/tacotron2/conf/tacotron2.v1.yaml"),
+        (
+            "embeddings|decoder_cell",
+            "./examples/tacotron2/conf/tacotron2.baker.v1.yaml",
+        ),
+        ("embeddings|decoder_cell", "./examples/tacotron2/conf/tacotron2.kss.v1.yaml"),
+    ],
+)
+def test_tacotron2_train_some_layers(var_train_expr, config_path):
+    config = Tacotron2Config(n_speakers=5, reduction_factor=1)
+    model = TFTacotron2(config, training=True)
+    model._build()
+    optimizer = tf.keras.optimizers.Adam(lr=0.001)
+
+    with open(config_path) as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+
+    config.update({"outdir": "./"})
+    config.update({"var_train_expr": var_train_expr})
+
+    STRATEGY = return_strategy()
+
+    trainer = Tacotron2Trainer(
+        config=config, strategy=STRATEGY, steps=0, epochs=0, is_mixed_precision=False,
+    )
+    trainer.compile(model, optimizer)
+
+    len_trainable_vars = len(trainer._trainable_variables)
+    all_trainable_vars = len(model.trainable_variables)
+
+    if var_train_expr is None:
+        tf.debugging.assert_equal(len_trainable_vars, all_trainable_vars)
+    else:
+        tf.debugging.assert_less(len_trainable_vars, all_trainable_vars)
 
 
 @pytest.mark.parametrize(
@@ -49,7 +92,7 @@ def test_tacotron2_trainable(
         [batch_size, max_input_length], maxval=n_chars, dtype=tf.int32
     )
     speaker_ids = tf.convert_to_tensor([0] * batch_size, tf.int32)
-    mel_outputs = tf.random.uniform(shape=[batch_size, max_mel_length, 80])
+    mel_gts = tf.random.uniform(shape=[batch_size, max_mel_length, 80])
     mel_lengths = np.random.randint(
         max_mel_length, high=max_mel_length + 1, size=[batch_size]
     )
@@ -64,18 +107,18 @@ def test_tacotron2_trainable(
     binary_crossentropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
     @tf.function(experimental_relax_shapes=True)
-    def one_step_training(input_ids, speaker_ids, mel_outputs, mel_lengths):
+    def one_step_training(input_ids, speaker_ids, mel_gts, mel_lengths):
         with tf.GradientTape() as tape:
             mel_preds, post_mel_preds, stop_preds, alignment_history = model(
                 input_ids,
                 tf.constant([max_input_length, max_input_length]),
                 speaker_ids,
-                mel_outputs,
+                mel_gts,
                 mel_lengths,
                 training=True,
             )
-            loss_before = tf.keras.losses.MeanSquaredError()(mel_outputs, mel_preds)
-            loss_after = tf.keras.losses.MeanSquaredError()(mel_outputs, post_mel_preds)
+            loss_before = tf.keras.losses.MeanSquaredError()(mel_gts, mel_preds)
+            loss_after = tf.keras.losses.MeanSquaredError()(mel_gts, post_mel_preds)
 
             stop_gts = tf.expand_dims(
                 tf.range(tf.reduce_max(mel_lengths), dtype=tf.int32), 0
@@ -99,7 +142,7 @@ def test_tacotron2_trainable(
         if i == 1:
             start = time.time()
         loss, alignment_history = one_step_training(
-            input_ids, speaker_ids, mel_outputs, mel_lengths
+            input_ids, speaker_ids, mel_gts, mel_lengths
         )
         print(f" > loss: {loss}")
     total_runtime = time.time() - start

@@ -13,37 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Train Tacotron2."""
+import tensorflow as tf
+
+physical_devices = tf.config.list_physical_devices("GPU")
+for i in range(len(physical_devices)):
+    tf.config.experimental.set_memory_growth(physical_devices[i], True)
+
+import sys
+
+sys.path.append(".")
 
 import argparse
 import logging
 import os
-import sys
-sys.path.append(".")
 
 import numpy as np
-import tensorflow as tf
 import yaml
-
-import tensorflow_tts
-
 from tqdm import tqdm
 
-from tensorflow_tts.trainers import Seq2SeqBasedTrainer
+import tensorflow_tts
 from examples.tacotron2.tacotron_dataset import CharactorMelDataset
-
 from tensorflow_tts.configs.tacotron2 import Tacotron2Config
-
 from tensorflow_tts.models import TFTacotron2
-
-from tensorflow_tts.optimizers import WarmUp
-from tensorflow_tts.optimizers import AdamWeightDecay
+from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
+from tensorflow_tts.trainers import Seq2SeqBasedTrainer
+from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
+                                  return_strategy)
 
 
 class Tacotron2Trainer(Seq2SeqBasedTrainer):
     """Tacotron2 Trainer class based on Seq2SeqBasedTrainer."""
 
     def __init__(
-        self, config, steps=0, epochs=0, is_mixed_precision=False,
+        self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
     ):
         """Initialize trainer.
 
@@ -58,6 +60,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             steps=steps,
             epochs=epochs,
             config=config,
+            strategy=strategy,
             is_mixed_precision=is_mixed_precision,
         )
         # define metrics to aggregates data and use tf.summary logs them
@@ -73,273 +76,159 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
 
         self.config = config
 
-    def init_train_eval_metrics(self, list_metrics_name):
-        """Init train and eval metrics to save it to tensorboard."""
-        self.train_metrics = {}
-        self.eval_metrics = {}
-        for name in list_metrics_name:
-            self.train_metrics.update(
-                {name: tf.keras.metrics.Mean(name="train_" + name, dtype=tf.float32)}
-            )
-            self.eval_metrics.update(
-                {name: tf.keras.metrics.Mean(name="eval_" + name, dtype=tf.float32)}
-            )
-
-    def reset_states_train(self):
-        """Reset train metrics after save it to tensorboard."""
-        for metric in self.train_metrics.keys():
-            self.train_metrics[metric].reset_states()
-
-    def reset_states_eval(self):
-        """Reset eval metrics after save it to tensorboard."""
-        for metric in self.eval_metrics.keys():
-            self.eval_metrics[metric].reset_states()
-
     def compile(self, model, optimizer):
         super().compile(model, optimizer)
-        self.binary_crossentropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        self.mse = tf.keras.losses.MeanSquaredError()
-        self.mae = tf.keras.losses.MeanAbsoluteError()
-
-        # create scheduler for teacher forcing.
-        self.teacher_forcing_scheduler = tf.keras.optimizers.schedules.PolynomialDecay(
-            initial_learning_rate=self.config["start_ratio_value"],
-            decay_steps=self.config["schedule_decay_steps"],
-            end_learning_rate=self.config["end_ratio_value"],
-            cycle=True,
-            name="teacher_forcing_scheduler",
+        self.binary_crossentropy = tf.keras.losses.BinaryCrossentropy(
+            from_logits=True, reduction=tf.keras.losses.Reduction.NONE
+        )
+        self.mse = tf.keras.losses.MeanSquaredError(
+            reduction=tf.keras.losses.Reduction.NONE
+        )
+        self.mae = tf.keras.losses.MeanAbsoluteError(
+            reduction=tf.keras.losses.Reduction.NONE
         )
 
     def _train_step(self, batch):
-        """Train model one step."""
-        charactor, char_length, mel, mel_length, guided_attention = batch
-        self._one_step_tacotron2(
-            charactor, char_length, mel, mel_length, guided_attention
-        )
+        """Here we re-define _train_step because apply input_signature make
+        the training progress slower on my experiment. Note that input_signature
+        is apply on based_trainer by default.
+        """
+        if self._already_apply_input_signature is False:
+            self.one_step_forward = tf.function(
+                self._one_step_forward, experimental_relax_shapes=True
+            )
+            self.one_step_evaluate = tf.function(
+                self._one_step_evaluate, experimental_relax_shapes=True
+            )
+            self.one_step_predict = tf.function(
+                self._one_step_predict, experimental_relax_shapes=True
+            )
+            self._already_apply_input_signature = True
+
+        # run one_step_forward
+        self.one_step_forward(batch)
 
         # update counts
         self.steps += 1
         self.tqdm.update(1)
         self._check_train_finish()
-        self._apply_schedule_teacher_forcing()
 
-    def _apply_schedule_teacher_forcing(self):
-        if self.steps >= self.config["start_schedule_teacher_forcing"]:
-            # change _ratio on sampler.
-            self.model.decoder.sampler._ratio = self.teacher_forcing_scheduler(
-                self.steps - self.config["start_schedule_teacher_forcing"]
-            )
-            if self.steps == self.config["start_schedule_teacher_forcing"]:
-                logging.info(
-                    f"(Steps: {self.steps}) Starting apply schedule teacher forcing."
-                )
+    def compute_per_example_losses(self, batch, outputs):
+        """Compute per example losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and 
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
-    @tf.function(experimental_relax_shapes=True)
-    def _one_step_tacotron2(
-        self, charactor, char_length, mel, mel_length, guided_attention
-    ):
-        with tf.GradientTape() as tape:
-            (
-                mel_outputs,
-                post_mel_outputs,
-                stop_outputs,
-                alignment_historys,
-            ) = self.model(
-                charactor,
-                char_length,
-                speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-                mel_outputs=mel,
-                mel_lengths=mel_length,
-                training=True,
-            )
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+        
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
+        (
+            decoder_output,
+            post_mel_outputs,
+            stop_token_predictions,
+            alignment_historys,
+        ) = outputs
 
-            # calculate mel loss.
-            mel_loss_before = self.mae(mel, mel_outputs)
-            mel_loss_after = self.mae(mel, post_mel_outputs)
-
-            # calculate stop grounth truth based-on mel_length.
-            max_mel_length = (
-                tf.reduce_max(mel_length)
-                if self.config["use_fixed_shapes"] is False
-                else [self.config["max_mel_length"]]
-            )
-            stop_gts = tf.expand_dims(
-                tf.range(tf.reduce_max(max_mel_length), dtype=tf.int32), 0
-            )  # [1, max_len]
-            stop_gts = tf.tile(stop_gts, [tf.shape(mel_length)[0], 1])  # [B, max_len]
-            stop_gts = tf.cast(
-                tf.math.greater_equal(stop_gts, tf.expand_dims(mel_length, 1)),
-                tf.float32,
-            )
-
-            stop_token_loss = self.binary_crossentropy(stop_gts, stop_outputs)
-
-            # calculate guided attention loss.
-            attention_masks = tf.cast(
-                tf.math.not_equal(guided_attention, -1.0), tf.float32
-            )
-            loss_att = tf.reduce_sum(
-                tf.abs(alignment_historys * guided_attention) * attention_masks
-            )
-            loss_att /= tf.reduce_sum(attention_masks)
-
-            # sum all loss
-            loss = stop_token_loss + mel_loss_before + mel_loss_after + loss_att
-
-            if self.is_mixed_precision:
-                scaled_loss = self.optimizer.get_scaled_loss(loss)
-
-        if self.is_mixed_precision:
-            scaled_gradients = tape.gradient(
-                scaled_loss, self.model.trainable_variables
-            )
-            gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)
-        else:
-            gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables), 5.0
+        mel_loss_before = calculate_3d_loss(
+            batch["mel_gts"], decoder_output, loss_fn=self.mae
+        )
+        mel_loss_after = calculate_3d_loss(
+            batch["mel_gts"], post_mel_outputs, loss_fn=self.mae
         )
 
-        # accumulate loss into metrics
-        self.train_metrics["stop_token_loss"].update_state(stop_token_loss)
-        self.train_metrics["mel_loss_before"].update_state(mel_loss_before)
-        self.train_metrics["mel_loss_after"].update_state(mel_loss_after)
-        self.train_metrics["guided_attention_loss"].update_state(loss_att)
-
-    def _eval_epoch(self):
-        """Evaluate model one epoch."""
-        logging.info(f"(Steps: {self.steps}) Start evaluation.")
-
-        # set traing = False on decoder_cell
-        self.model.decoder.cell.training = False
-
-        # calculate loss for each batch
-        for eval_steps_per_epoch, batch in enumerate(
-            tqdm(self.eval_data_loader, desc="[eval]"), 1
-        ):
-            # eval one step
-            charactor, char_length, mel, mel_length, guided_attention = batch
-            self._eval_step(charactor, char_length, mel, mel_length, guided_attention)
-
-            if eval_steps_per_epoch <= self.config["num_save_intermediate_results"]:
-                # save intermedia
-                self.generate_and_save_intermediate_result(batch)
-
-        logging.info(
-            f"(Steps: {self.steps}) Finished evaluation "
-            f"({eval_steps_per_epoch} steps per epoch)."
+        # calculate stop_loss
+        max_mel_length = (
+            tf.reduce_max(batch["mel_lengths"])
+            if self.config["use_fixed_shapes"] is False
+            else [self.config["max_mel_length"]]
         )
-
-        # average loss
-        for key in self.eval_metrics.keys():
-            logging.info(
-                f"(Steps: {self.steps}) eval_{key} = {self.eval_metrics[key].result():.4f}."
-            )
-
-        # record
-        self._write_to_tensorboard(self.eval_metrics, stage="eval")
-
-        # reset
-        self.reset_states_eval()
-
-        # enable training = True on decoder_cell
-        self.model.decoder.cell.training = True
-
-    @tf.function(experimental_relax_shapes=True)
-    def _eval_step(self, charactor, char_length, mel, mel_length, guided_attention):
-        """Evaluate model one step."""
-        mel_outputs, post_mel_outputs, stop_outputs, alignment_historys = self.model(
-            charactor,
-            char_length,
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-            mel_outputs=mel,
-            mel_lengths=mel_length,
-            training=False,
-        )
-
-        # calculate mel loss.
-        mel_loss_before = self.mae(mel, mel_outputs)
-        mel_loss_after = self.mae(mel, post_mel_outputs)
-
-        # calculate stop grounth truth based-on mel_length.
         stop_gts = tf.expand_dims(
-            tf.range(tf.reduce_max(mel_length), dtype=tf.int32), 0
+            tf.range(tf.reduce_max(max_mel_length), dtype=tf.int32), 0
         )  # [1, max_len]
-        stop_gts = tf.tile(stop_gts, [tf.shape(mel_length)[0], 1])  # [B, max_len]
+        stop_gts = tf.tile(
+            stop_gts, [tf.shape(batch["mel_lengths"])[0], 1]
+        )  # [B, max_len]
         stop_gts = tf.cast(
-            tf.math.greater_equal(stop_gts, tf.expand_dims(mel_length, 1)), tf.float32
+            tf.math.greater_equal(stop_gts, tf.expand_dims(batch["mel_lengths"], 1)),
+            tf.float32,
         )
 
-        stop_token_loss = self.binary_crossentropy(stop_gts, stop_outputs)
+        stop_token_loss = calculate_2d_loss(
+            stop_gts, stop_token_predictions, loss_fn=self.binary_crossentropy
+        )
 
         # calculate guided attention loss.
-        attention_masks = tf.cast(tf.math.not_equal(guided_attention, -1.0), tf.float32)
+        attention_masks = tf.cast(
+            tf.math.not_equal(batch["g_attentions"], -1.0), tf.float32
+        )
         loss_att = tf.reduce_sum(
-            tf.abs(alignment_historys * guided_attention) * attention_masks
+            tf.abs(alignment_historys * batch["g_attentions"]) * attention_masks,
+            axis=[1, 2],
         )
-        loss_att /= tf.reduce_sum(attention_masks)
+        loss_att /= tf.reduce_sum(attention_masks, axis=[1, 2])
 
-        # accumulate loss into metrics
-        self.eval_metrics["stop_token_loss"].update_state(stop_token_loss)
-        self.eval_metrics["mel_loss_before"].update_state(mel_loss_before)
-        self.eval_metrics["mel_loss_after"].update_state(mel_loss_after)
-        self.eval_metrics["guided_attention_loss"].update_state(loss_att)
-
-    def _check_log_interval(self):
-        """Log to tensorboard."""
-        if self.steps % self.config["log_interval_steps"] == 0:
-            for metric_name in self.list_metrics_name:
-                logging.info(
-                    f"(Step: {self.steps}) train_{metric_name} = {self.train_metrics[metric_name].result():.4f}."
-                )
-            self._write_to_tensorboard(self.train_metrics, stage="train")
-
-            # reset
-            self.reset_states_train()
-
-    @tf.function(experimental_relax_shapes=True)
-    def predict(self, charactor, char_length, mel, mel_length):
-        """Predict."""
-        mel_outputs, post_mel_outputs, _, alignment = self.model(
-            charactor,
-            char_length,
-            speaker_ids=tf.zeros(shape=[tf.shape(charactor)[0]]),
-            mel_outputs=mel,
-            mel_lengths=mel_length,
-            training=False,
+        per_example_losses = (
+            stop_token_loss + mel_loss_before + mel_loss_after + loss_att
         )
-        return mel_outputs, post_mel_outputs, alignment
+
+        dict_metrics_losses = {
+            "stop_token_loss": stop_token_loss,
+            "mel_loss_before": mel_loss_before,
+            "mel_loss_after": mel_loss_after,
+            "guided_attention_loss": loss_att,
+        }
+
+        return per_example_losses, dict_metrics_losses
 
     def generate_and_save_intermediate_result(self, batch):
         """Generate and save intermediate result."""
         import matplotlib.pyplot as plt
 
-        # unpack input.
-        charactor, char_length, mel, mel_length, _ = batch
-
         # predict with tf.function for faster.
-        masked_mel_before, masked_mel_after, alignments = self.predict(
-            charactor, char_length, mel, mel_length
-        )
+        outputs = self.one_step_predict(batch)
+        (
+            decoder_output,
+            mel_outputs,
+            stop_token_predictions,
+            alignment_historys,
+        ) = outputs
+        mel_gts = batch["mel_gts"]
+        utt_ids = batch["utt_ids"]
+
+        # convert to tensor.
+        # here we just take a sample at first replica.
+        try:
+            mels_before = decoder_output.values[0].numpy()
+            mels_after = mel_outputs.values[0].numpy()
+            mel_gts = mel_gts.values[0].numpy()
+            alignment_historys = alignment_historys.values[0].numpy()
+            utt_ids = utt_ids.values[0].numpy()
+        except Exception:
+            mels_before = decoder_output.numpy()
+            mels_after = mel_outputs.numpy()
+            mel_gts = mel_gts.numpy()
+            alignment_historys = alignment_historys.numpy()
+            utt_ids = utt_ids.numpy()
 
         # check directory
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for idx, (mel_gt, mel_pred_before, mel_pred_after, alignment) in enumerate(
-            zip(mel, masked_mel_before, masked_mel_after, alignments), 1
+        for idx, (mel_gt, mel_before, mel_after, alignment_history) in enumerate(
+            zip(mel_gts, mels_before, mels_after, alignment_historys), 0
         ):
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
-            mel_pred_before = tf.reshape(
-                mel_pred_before, (-1, 80)
-            ).numpy()  # [length, 80]
-            mel_pred_after = tf.reshape(
-                mel_pred_after, (-1, 80)
-            ).numpy()  # [length, 80]
+            mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
+            mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
 
             # plot figure and save it
-            figname = os.path.join(dirname, f"{idx}.png")
+            utt_id = utt_ids[idx]
+            figname = os.path.join(dirname, f"{utt_id}.png")
             fig = plt.figure(figsize=(10, 8))
             ax1 = fig.add_subplot(311)
             ax2 = fig.add_subplot(312)
@@ -348,14 +237,10 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             ax1.set_title("Target Mel-Spectrogram")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax1)
             ax2.set_title(f"Predicted Mel-before-Spectrogram @ {self.steps} steps")
-            im = ax2.imshow(
-                np.rot90(mel_pred_before), aspect="auto", interpolation="none"
-            )
+            im = ax2.imshow(np.rot90(mel_before), aspect="auto", interpolation="none")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax2)
             ax3.set_title(f"Predicted Mel-after-Spectrogram @ {self.steps} steps")
-            im = ax3.imshow(
-                np.rot90(mel_pred_after), aspect="auto", interpolation="none"
-            )
+            im = ax3.imshow(np.rot90(mel_after), aspect="auto", interpolation="none")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax3)
             plt.tight_layout()
             plt.savefig(figname)
@@ -367,7 +252,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             ax = fig.add_subplot(111)
             ax.set_title(f"Alignment @ {self.steps} steps")
             im = ax.imshow(
-                alignment, aspect="auto", origin="lower", interpolation="none"
+                alignment_history, aspect="auto", origin="lower", interpolation="none"
             )
             fig.colorbar(im, ax=ax)
             xlabel = "Decoder timestep"
@@ -376,20 +261,6 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
             plt.tight_layout()
             plt.savefig(figname)
             plt.close()
-
-    def _check_train_finish(self):
-        """Check training finished."""
-        if self.steps >= self.config["train_max_steps"]:
-            self.finish_train = True
-
-    def fit(self, train_dataset, valid_dataset, saved_path, resume=None):
-        self.set_train_data_loader(train_dataset)
-        self.set_eval_data_loader(valid_dataset)
-        self.create_checkpoint_manager(saved_path=saved_path, max_to_keep=10000)
-        if len(resume) > 2:
-            self.load_checkpoint(resume)
-            logging.info(f"Successfully resumed from {resume}.")
-        self.run()
 
 
 def main():
@@ -437,7 +308,17 @@ def main():
         type=int,
         help="using mixed precision for generator or not.",
     )
+    parser.add_argument(
+        "--pretrained",
+        default="",
+        type=str,
+        nargs="?",
+        help='pretrained weights .h5 file to load weights from. Auto-skips non-matching layers',
+    )
     args = parser.parse_args()
+
+    # return strategy
+    STRATEGY = return_strategy()
 
     # set mixed precision config
     if args.mixed_precision == 1:
@@ -487,7 +368,7 @@ def main():
     if config["remove_short_samples"]:
         mel_length_threshold = config["mel_length_threshold"]
     else:
-        mel_length_threshold = None
+        mel_length_threshold = 0
 
     if config["format"] == "npy":
         charactor_query = "*-ids.npy"
@@ -498,13 +379,13 @@ def main():
         raise ValueError("Only npy are supported.")
 
     train_dataset = CharactorMelDataset(
+        dataset=config["tacotron2_params"]["dataset"],
         root_dir=args.train_dir,
         charactor_query=charactor_query,
         mel_query=mel_query,
         charactor_load_fn=charactor_load_fn,
         mel_load_fn=mel_load_fn,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False,
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
         use_fixed_shapes=config["use_fixed_shapes"],
     )
@@ -521,58 +402,71 @@ def main():
     train_dataset = train_dataset.create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"],
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
     )
 
     valid_dataset = CharactorMelDataset(
+        dataset=config["tacotron2_params"]["dataset"],
         root_dir=args.dev_dir,
         charactor_query=charactor_query,
         mel_query=mel_query,
         charactor_load_fn=charactor_load_fn,
         mel_load_fn=mel_load_fn,
         mel_length_threshold=mel_length_threshold,
-        return_utt_id=False,
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
         use_fixed_shapes=False,  # don't need apply fixed shape for evaluation.
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"],
+        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
     )
-
-    tacotron_config = Tacotron2Config(**config["tacotron2_params"])
-    tacotron2 = TFTacotron2(config=tacotron_config, training=True, name="tacotron2")
-    tacotron2._build()
-    tacotron2.summary()
 
     # define trainer
     trainer = Tacotron2Trainer(
-        config=config, steps=0, epochs=0, is_mixed_precision=args.mixed_precision
+        config=config,
+        strategy=STRATEGY,
+        steps=0,
+        epochs=0,
+        is_mixed_precision=args.mixed_precision,
     )
 
-    # AdamW for tacotron2
-    learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
-        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
-        decay_steps=config["optimizer_params"]["decay_steps"],
-        end_learning_rate=config["optimizer_params"]["end_learning_rate"],
-    )
+    with STRATEGY.scope():
+        # define model.
+        tacotron_config = Tacotron2Config(**config["tacotron2_params"])
+        tacotron2 = TFTacotron2(config=tacotron_config, training=True, name="tacotron2")
+        tacotron2._build()
+        tacotron2.summary()
+        
+        if len(args.pretrained) > 1:
+            tacotron2.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
+            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
 
-    learning_rate_fn = WarmUp(
-        initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
-        decay_schedule_fn=learning_rate_fn,
-        warmup_steps=int(
-            config["train_max_steps"] * config["optimizer_params"]["warmup_proportion"]
-        ),
-    )
+        # AdamW for tacotron2
+        learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
+            initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+            decay_steps=config["optimizer_params"]["decay_steps"],
+            end_learning_rate=config["optimizer_params"]["end_learning_rate"],
+        )
 
-    optimizer = AdamWeightDecay(
-        learning_rate=learning_rate_fn,
-        weight_decay_rate=config["optimizer_params"]["weight_decay"],
-        beta_1=0.9,
-        beta_2=0.98,
-        epsilon=1e-6,
-        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"],
-    )
+        learning_rate_fn = WarmUp(
+            initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
+            decay_schedule_fn=learning_rate_fn,
+            warmup_steps=int(
+                config["train_max_steps"]
+                * config["optimizer_params"]["warmup_proportion"]
+            ),
+        )
+
+        optimizer = AdamWeightDecay(
+            learning_rate=learning_rate_fn,
+            weight_decay_rate=config["optimizer_params"]["weight_decay"],
+            beta_1=0.9,
+            beta_2=0.98,
+            epsilon=1e-6,
+            exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"],
+        )
+
+        _ = optimizer.iterations
 
     # compile trainer
     trainer.compile(model=tacotron2, optimizer=optimizer)

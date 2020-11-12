@@ -15,11 +15,9 @@
 """MelGAN Modules."""
 
 import numpy as np
-
 import tensorflow as tf
 
-from tensorflow_tts.utils import WeightNormalization
-from tensorflow_tts.utils import GroupConv1D
+from tensorflow_tts.utils import GroupConv1D, WeightNormalization
 
 
 def get_initializer(initializer_seed=42):
@@ -275,17 +273,30 @@ class TFMelGANGenerator(tf.keras.Model):
 
         self.melgan = tf.keras.models.Sequential(layers)
 
-    @tf.function(
-        input_signature=[tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32)]
-    )
-    def call(self, c):
+    def call(self, mels, **kwargs):
         """Calculate forward propagation.
         Args:
             c (Tensor): Input tensor (B, T, channels)
         Returns:
             Tensor: Output tensor (B, T ** prod(upsample_scales), out_channels)
         """
-        return self.melgan(c)
+        return self.inference(mels)
+
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[None, None, 80], dtype=tf.float32, name="mels")
+        ]
+    )
+    def inference(self, mels):
+        return self.melgan(mels)
+
+    @tf.function(
+        input_signature=[
+            tf.TensorSpec(shape=[1, None, 80], dtype=tf.float32, name="mels")
+        ]
+    )
+    def inference_tflite(self, mels):
+        return self.melgan(mels)
 
     def _apply_weightnorm(self, list_layers):
         """Try apply weightnorm for all layer in list_layers."""
@@ -414,7 +425,7 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
 
         self.disciminator = discriminator
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         """Calculate forward propagation.
         Args:
             x (Tensor): Input noise signal (B, T, 1).
@@ -471,7 +482,7 @@ class TFMelGANMultiScaleDiscriminator(tf.keras.Model):
                 **config.downsample_pooling_params
             )
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         """Calculate forward propagation.
         Args:
             x (Tensor): Input noise signal (B, T, 1).

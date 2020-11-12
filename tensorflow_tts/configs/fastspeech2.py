@@ -22,20 +22,16 @@ class FastSpeech2Config(FastSpeechConfig):
 
     def __init__(
         self,
-        f0_kernel_size,
-        energy_kernel_size,
-        f0_dropout_rate,
-        energy_dropout_rate,
-        f0_energy_predictor_filters,
-        f0_energy_predictor_kernel_sizes,
-        f0_energy_predictor_dropout_probs,
+        variant_prediction_num_conv_layers=2,
+        variant_kernel_size=9,
+        variant_dropout_rate=0.5,
+        variant_predictor_filter=256,
+        variant_predictor_kernel_size=3,
+        variant_predictor_dropout_rate=0.5,
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.f0_kernel_size = f0_kernel_size
-        self.energy_kernel_size = energy_kernel_size
-        self.f0_dropout_rate = f0_dropout_rate
-        self.energy_dropout_rate = energy_dropout_rate
-        self.f0_energy_predictor_filters = f0_energy_predictor_filters
-        self.f0_energy_predictor_kernel_sizes = f0_energy_predictor_kernel_sizes
-        self.f0_energy_predictor_dropout_probs = f0_energy_predictor_dropout_probs
+        self.variant_prediction_num_conv_layers = variant_prediction_num_conv_layers
+        self.variant_predictor_kernel_size = variant_predictor_kernel_size
+        self.variant_predictor_dropout_rate = variant_predictor_dropout_rate
+        self.variant_predictor_filter = variant_predictor_filter

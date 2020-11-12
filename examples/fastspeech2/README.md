@@ -23,6 +23,22 @@ CUDA_VISIBLE_DEVICES=0 python examples/fastspeech2/train_fastspeech2.py \
   --resume ""
 ```
 
+IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode.
+
+In case you want to resume the training progress, please following below example command line:
+
+```bash
+--resume ./examples/fastspeech2/exp/train.fastspeech2.v1/checkpoints/ckpt-100000
+```
+
+If you want to finetune a model, use `--pretrained` like this with your model filename
+```bash
+--pretrained pretrained.h5
+```
+
+You can also define `var_train_expr` in config file to let model training only on some layers in case you want to fine-tune on your dataset with the same pretrained language and processor. For example, `var_train_expr: "embeddings|encoder|decoder"` means we just training all variables that `embeddings`, `encoder`, `decoder` exist in its name.
+
+
 ### Step 3: Decode mel-spectrogram from folder ids
 
 ```bash
@@ -44,7 +60,9 @@ CUDA_VISIBLE_DEVICES=0 python examples/fastspeech2/decode_fastspeech2.py \
 ## Pretrained Models and Audio samples
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters |
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |
-| [fastspeech2.v1](https://drive.google.com/drive/folders/158vFyC2pxw9xKdxp-C5WPEtgtUiWZYE0?usp=sharing)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/fastspeech2/conf/fastspeech2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 150k    |
+| [fastspeech2.v1](https://drive.google.com/drive/folders/158vFyC2pxw9xKdxp-C5WPEtgtUiWZYE0?usp=sharing)             | [link](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/examples/fastspeech2/conf/fastspeech2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 150k    |
+| [fastspeech2.kss.v1](https://drive.google.com/drive/folders/1DU952--jVnJ5SZDSINRs7dVVSpdB7tC_?usp=sharing)             | [link](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/examples/fastspeech2/conf/fastspeech2.kss.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 200k    |
+| [fastspeech2.kss.v2](https://drive.google.com/drive/folders/1G3-AJnEsu2rYXYgo2iGIVJfCqqfbpwMu?usp=sharing)             | [link](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/examples/fastspeech2/conf/fastspeech2.kss.v2.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 200k    |
 
 ## Reference
 

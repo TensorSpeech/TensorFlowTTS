@@ -16,13 +16,12 @@
 
 import logging
 import os
-import numpy as np
 
+import numpy as np
 import tensorflow as tf
 
-from tensorflow_tts.utils import find_files
-
 from tensorflow_tts.datasets.abstract_dataset import AbstractDataset
+from tensorflow_tts.utils import find_files
 
 
 class AudioMelDataset(AbstractDataset):
@@ -35,9 +34,8 @@ class AudioMelDataset(AbstractDataset):
         mel_query="*-raw-feats.npy",
         audio_load_fn=np.load,
         mel_load_fn=np.load,
-        audio_length_threshold=None,
-        mel_length_threshold=None,
-        return_utt_id=False,
+        audio_length_threshold=0,
+        mel_length_threshold=0,
     ):
         """Initialize dataset.
 
@@ -56,36 +54,6 @@ class AudioMelDataset(AbstractDataset):
         audio_files = sorted(find_files(root_dir, audio_query))
         mel_files = sorted(find_files(root_dir, mel_query))
 
-        # filter by threshold
-        if audio_length_threshold is not None:
-            audio_lengths = [audio_load_fn(f).shape[0] for f in audio_files]
-            idxs = [
-                idx
-                for idx in range(len(audio_files))
-                if audio_lengths[idx] > audio_length_threshold
-            ]
-            if len(audio_files) != len(idxs):
-                logging.warning(
-                    f"Some files are filtered by audio length threshold "
-                    f"({len(audio_files)} -> {len(idxs)})."
-                )
-            audio_files = [audio_files[idx] for idx in idxs]
-            mel_files = [mel_files[idx] for idx in idxs]
-        if mel_length_threshold is not None:
-            mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
-            idxs = [
-                idx
-                for idx in range(len(mel_files))
-                if mel_lengths[idx] > mel_length_threshold
-            ]
-            if len(mel_files) != len(idxs):
-                logging.warning(
-                    f"Some files are filtered by mel length threshold "
-                    f"({len(mel_files)} -> {len(idxs)})."
-                )
-            audio_files = [audio_files[idx] for idx in idxs]
-            mel_files = [mel_files[idx] for idx in idxs]
-
         # assert the number of files
         assert len(audio_files) != 0, f"Not found any audio files in ${root_dir}."
         assert len(audio_files) == len(
@@ -102,7 +70,8 @@ class AudioMelDataset(AbstractDataset):
         self.mel_files = mel_files
         self.audio_load_fn = audio_load_fn
         self.mel_load_fn = mel_load_fn
-        self.return_utt_id = return_utt_id
+        self.audio_length_threshold = audio_length_threshold
+        self.mel_length_threshold = mel_length_threshold
 
     def get_args(self):
         return [self.utt_ids]
@@ -111,18 +80,103 @@ class AudioMelDataset(AbstractDataset):
         for i, utt_id in enumerate(utt_ids):
             audio_file = self.audio_files[i]
             mel_file = self.mel_files[i]
-            audio = self.audio_load_fn(audio_file)  # [T]
-            mel = self.mel_load_fn(mel_file)
-            if self.return_utt_id:
-                items = utt_id, audio, mel
-            else:
-                items = audio, mel
+            
+            items = {
+                "utt_ids": utt_id,
+                "audio_files": audio_file,
+                "mel_files": mel_file
+            }
+
             yield items
+    
+    @tf.function
+    def _load_data(self, items):
+        audio = tf.numpy_function(np.load, [items["audio_files"]], tf.float32)
+        mel = tf.numpy_function(np.load, [items["mel_files"]], tf.float32)
+
+        items = {
+            "utt_ids": items["utt_ids"],
+            "audios": audio,
+            "mels": mel,
+            "mel_lengths": len(mel),
+            "audio_lengths": len(audio),
+        }
+        
+        return items
+
+    def create(
+        self,
+        allow_cache=False,
+        batch_size=1,
+        is_shuffle=False,
+        map_fn=None,
+        reshuffle_each_iteration=True,
+    ):
+        """Create tf.dataset function."""
+        output_types = self.get_output_dtypes()
+        datasets = tf.data.Dataset.from_generator(
+            self.generator, output_types=output_types, args=(self.get_args())
+        )
+
+        # load dataset
+        datasets = datasets.map(
+            lambda items: self._load_data(items),
+            tf.data.experimental.AUTOTUNE
+        )
+
+        datasets = datasets.filter(
+            lambda x: x["mel_lengths"] > self.mel_length_threshold
+        )
+        datasets = datasets.filter(
+            lambda x: x["audio_lengths"] > self.audio_length_threshold
+        )
+
+        if allow_cache:
+            datasets = datasets.cache()
+
+        if is_shuffle:
+            datasets = datasets.shuffle(
+                self.get_len_dataset(),
+                reshuffle_each_iteration=reshuffle_each_iteration,
+            )
+
+        if batch_size > 1 and map_fn is None:
+            raise ValueError("map function must define when batch_size > 1.")
+
+        if map_fn is not None:
+            datasets = datasets.map(map_fn, tf.data.experimental.AUTOTUNE)
+
+        # define padded shapes
+        padded_shapes = {
+            "utt_ids": [],
+            "audios": [None],
+            "mels": [None, 80],
+            "mel_lengths": [],
+            "audio_lengths": [],
+        }
+
+        # define padded values
+        padding_values = {
+            "utt_ids": "",
+            "audios": 0.0,
+            "mels": 0.0,
+            "mel_lengths": 0,
+            "audio_lengths": 0,
+        }
+
+        datasets = datasets.padded_batch(
+            batch_size, padded_shapes=padded_shapes, padding_values=padding_values
+        )
+        datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
+
+        return datasets
 
     def get_output_dtypes(self):
-        output_types = (tf.float32, tf.float32)
-        if self.return_utt_id:
-            output_types = (tf.dtypes.string, *output_types)
+        output_types = {
+            "utt_ids": tf.string,
+            "audio_files": tf.string,
+            "mel_files": tf.string
+        }
         return output_types
 
     def get_len_dataset(self):

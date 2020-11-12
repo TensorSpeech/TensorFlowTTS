@@ -21,6 +21,19 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/train_tacotron2.py \
   --resume ""
 ```
 
+IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode.
+
+In case you want to resume the training progress, please following below example command line:
+
+```bash
+--resume ./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/ckpt-100000
+```
+
+If you want to finetune a model, use `--pretrained` like this with your model filename
+```bash
+--pretrained pretrained.h5
+```
+
 ### Step 3: Decode mel-spectrogram from folder ids
 To running inference on folder ids (charactor), run below command line:
 
@@ -28,7 +41,7 @@ To running inference on folder ids (charactor), run below command line:
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/decode_tacotron2.py \
   --rootdir ./dump/valid/ \
   --outdir ./prediction/tacotron2-120k/ \
-  --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-120000.h5 \
+  --checkpoint ./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-120000.h5 \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --batch-size 32
 ```
@@ -41,7 +54,7 @@ Extract for valid set:
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
   --rootdir ./dump/valid/ \
   --outdir ./dump/valid/durations/ \
-  --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-65000.h5 \
+  --checkpoint ./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-65000.h5 \
   --use-norm 1 \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --batch-size 32
@@ -54,7 +67,7 @@ Extract for training set:
 CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
   --rootdir ./dump/train/ \
   --outdir ./dump/train/durations/ \
-  --checkpoint ./examples/tacotron2/exp/train.tracotron2.v1/checkpoints/model-65000.h5 \
+  --checkpoint ./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-65000.h5 \
   --use-norm 1 \
   --config ./examples/tacotron2/conf/tacotron2.v1.yaml \
   --batch-size 32
@@ -74,9 +87,9 @@ tacotron2 = TFTacotron2(config=tacotron_config, training=True, name='tacotron2')
 tacotron2._build()
 tacotron2.summary()
 tacotron2.load_weights("./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/model-120000.h5", by_name=True, skip_mismatch=True)
-
 ... # training as normal.
 ```
+You can also define `var_train_expr` in config file to let model training only on some layers in case you want to fine-tune on your dataset with the same pretrained language and processor. For example, `var_train_expr: "embeddings|encoder|decoder"` means we just training all variables that `embeddings`, `encoder`, `decoder` exist in its name.
 
 ## Results
 Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml) but with reduction_factor = 7, we will update learning curves for reduction_factor = 1.
@@ -101,7 +114,8 @@ Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https:/
 ## Pretrained Models and Audio samples
 | Model                                                                                                          | Conf                                                                                                                        | Lang  | Fs [Hz] | Mel range [Hz] | FFT / Hop / Win [pt] | # iters | reduction factor|
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |  :-----: |
-| [tacotron2.v1](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_)             | [link](https://github.com/dathudeptrai/TensorflowTTS/tree/master/examples/tacotron2/conf/tacotron2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 65k    | 1
+| [tacotron2.v1](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 65K    | 1
+| [tacotron2.v1](https://drive.google.com/drive/folders/1WMBe01BBnYf3sOxMhbvnF2CUHaRTpBXJ?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.kss.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 100K    | 1
 
 ## Reference
 
