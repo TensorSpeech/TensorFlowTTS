@@ -98,7 +98,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             == len(energy_files)
         ), f"Number of charactor, mel, duration, f0 and energy files are different"
 
-        assert speakers_map == None, f"No speakers map found. Did you set --dataset_mapping?"
+        assert speakers_map != None, f"No speakers map found. Did you set --dataset_mapping?"
 
         if ".npy" in charactor_query:
             suffix = charactor_query[1:]
