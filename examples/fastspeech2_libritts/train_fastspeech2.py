@@ -359,8 +359,10 @@ def main():
     with open(args.dataset_mapping) as f:
         dataset_mapping = json.load(f)
         speakers_map = dataset_mapping["speakers_map"]
-        print("SPEAKERS MAP TYPE IS: " , type(speakers_map))
-        print(speakers_map)
+
+    # Check n_speakers matches number of speakers in speakers_map
+    n_speakers = config["fastspeech2_params"]["n_speakers"]
+    assert n_speakers == len(speakers_map)
 
     # define train/valid dataset
     train_dataset = CharactorDurationF0EnergyMelDataset(
