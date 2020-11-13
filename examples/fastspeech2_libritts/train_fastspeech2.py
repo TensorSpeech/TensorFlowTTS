@@ -30,6 +30,7 @@ import os
 
 import numpy as np
 import yaml
+import json
 
 import tensorflow_tts
 from examples.fastspeech2_libritts.fastspeech2_dataset import \
@@ -275,6 +276,11 @@ def main():
         type=str,
     )
     parser.add_argument(
+        "--dataset_mapping",
+        default="dump/libritts_mapper.npy",
+        type=str,
+    )
+    parser.add_argument(
         "--pretrained",
         default="",
         type=str,
@@ -349,6 +355,15 @@ def main():
     else:
         raise ValueError("Only npy are supported.")
 
+    # load speakers map from dataset map
+    with open(args.dataset_mapping) as f:
+        dataset_mapping = json.load(f)
+        speakers_map = dataset_mapping["speakers_map"]
+
+    # Check n_speakers matches number of speakers in speakers_map
+    n_speakers = config["fastspeech2_params"]["n_speakers"]
+    assert n_speakers == len(speakers_map), f"Number of speakers in dataset does not match n_speakers in config"
+
     # define train/valid dataset
     train_dataset = CharactorDurationF0EnergyMelDataset(
         root_dir=args.train_dir,
@@ -360,6 +375,7 @@ def main():
         f0_stat=args.f0_stat,
         energy_stat=args.energy_stat,
         mel_length_threshold=mel_length_threshold,
+        speakers_map=speakers_map
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
@@ -376,6 +392,7 @@ def main():
         f0_stat=args.f0_stat,
         energy_stat=args.energy_stat,
         mel_length_threshold=mel_length_threshold,
+        speakers_map=speakers_map
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],

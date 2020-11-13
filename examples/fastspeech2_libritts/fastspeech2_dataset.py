@@ -59,6 +59,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         f0_load_fn=np.load,
         energy_load_fn=np.load,
         mel_length_threshold=0,
+        speakers_map=None
     ):
         """Initialize dataset.
 
@@ -77,6 +78,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             f0_load_fn (func): Function to load f0 file.
             energy_load_fn (func): Function to load energy file.
             mel_length_threshold (int): Threshold to remove short feature files.
+            speakers_map (dict): Speakers map generated in dataset preprocessing
 
         """
         # find all of charactor and mel files.
@@ -96,6 +98,8 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             == len(energy_files)
         ), f"Number of charactor, mel, duration, f0 and energy files are different"
 
+        assert speakers_map != None, f"No speakers map found. Did you set --dataset_mapping?"
+
         if ".npy" in charactor_query:
             suffix = charactor_query[1:]
             utt_ids = [os.path.basename(f).replace(suffix, "") for f in charactor_files]
@@ -113,18 +117,9 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         self.f0_load_fn = f0_load_fn
         self.energy_load_fn = energy_load_fn
         self.mel_length_threshold = mel_length_threshold
-
-        self.speakers_map = {}  # TODO
-        sp_id = 0
-        for i in self.utt_ids:
-            sp_name = i.split("_")[0]
-            if sp_name not in self.speakers_map:
-                self.speakers_map[sp_name] = sp_id
-                sp_id += 1
-        self.speakers = [
-            self.speakers_map[i.split("_")[0]] for i in self.utt_ids
-        ]  # TODO change but at the moment mfa folder name = speaker name
-
+        self.speakers_map = speakers_map
+        self.speakers = [self.speakers_map[i.split("_")[0]] for i in self.utt_ids]
+        print("Speaker: utt_id", list(zip(self.speakers, self.utt_ids)))
         self.f0_stat = np.load(f0_stat)
         self.energy_stat = np.load(energy_stat)
 
