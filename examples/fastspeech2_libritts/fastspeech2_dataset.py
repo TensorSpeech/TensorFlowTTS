@@ -118,6 +118,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
         self.energy_load_fn = energy_load_fn
         self.mel_length_threshold = mel_length_threshold
         self.speakers_map = speakers_map
+        self.speakers = [self.speakers_map[i.split("_")[0]] for i in self.utt_ids]
         self.f0_stat = np.load(f0_stat)
         self.energy_stat = np.load(energy_stat)
 
@@ -141,7 +142,7 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             duration_file = self.duration_files[i]
             f0_file = self.f0_files[i]
             energy_file = self.energy_files[i]
-            speaker_id = self.speakers_map[utt_id.split("_")[0]]
+            speaker_id = self.speakers[0]
 
             items = {
                 "utt_ids": utt_id,
