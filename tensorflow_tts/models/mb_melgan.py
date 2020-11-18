@@ -161,7 +161,7 @@ class TFMBMelGANGenerator(TFMelGANGenerator):
 
     def __init__(self, config, **kwargs):
         super().__init__(config, **kwargs)
-        self.pqmf = TFPQMF(config=config, name="pqmf")
+        self.pqmf = TFPQMF(config=config, dtype=tf.float32, name="pqmf")
 
     def call(self, mels, **kwargs):
         """Calculate forward propagation.

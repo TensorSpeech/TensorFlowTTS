@@ -263,10 +263,11 @@ class TFMelGANGenerator(tf.keras.Model):
                 kernel_size=config.kernel_size,
                 use_bias=config.use_bias,
                 kernel_initializer=get_initializer(config.initializer_seed),
+                dtype=tf.float32,
             ),
         ]
         if config.use_final_nolinear_activation:
-            layers += [tf.keras.layers.Activation("tanh")]
+            layers += [tf.keras.layers.Activation("tanh", dtype=tf.float32)]
 
         if config.is_weight_norm is True:
             self._apply_weightnorm(layers)

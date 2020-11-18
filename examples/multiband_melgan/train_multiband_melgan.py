@@ -36,13 +36,17 @@ from tensorflow.keras.mixed_precision import experimental as mixed_precision
 import tensorflow_tts
 from examples.melgan.audio_mel_dataset import AudioMelDataset
 from examples.melgan.train_melgan import MelganTrainer, collater
-from tensorflow_tts.configs import (MultiBandMelGANDiscriminatorConfig,
-                                    MultiBandMelGANGeneratorConfig)
+from tensorflow_tts.configs import (
+    MultiBandMelGANDiscriminatorConfig,
+    MultiBandMelGANGeneratorConfig,
+)
 from tensorflow_tts.losses import TFMultiResolutionSTFT
-from tensorflow_tts.models import (TFPQMF, TFMelGANGenerator,
-                                   TFMelGANMultiScaleDiscriminator)
-from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
-                                  return_strategy)
+from tensorflow_tts.models import (
+    TFPQMF,
+    TFMelGANGenerator,
+    TFMelGANMultiScaleDiscriminator,
+)
+from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
 
 
 class MultiBandMelganTrainer(MelganTrainer):
@@ -313,7 +317,7 @@ def main():
         default="",
         type=str,
         nargs="?",
-        help='path of .h5 mb-melgan generator to load weights from',
+        help="path of .h5 mb-melgan generator to load weights from",
     )
     args = parser.parse_args()
 
@@ -438,17 +442,25 @@ def main():
     with STRATEGY.scope():
         # define generator and discriminator
         generator = TFMelGANGenerator(
-            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]),
+            MultiBandMelGANGeneratorConfig(
+                **config["multiband_melgan_generator_params"]
+            ),
             name="multi_band_melgan_generator",
         )
 
         discriminator = TFMelGANMultiScaleDiscriminator(
-            MultiBandMelGANDiscriminatorConfig(**config["multiband_melgan_discriminator_params"]),
+            MultiBandMelGANDiscriminatorConfig(
+                **config["multiband_melgan_discriminator_params"]
+            ),
             name="multi_band_melgan_discriminator",
         )
 
         pqmf = TFPQMF(
-            MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]), name="pqmf"
+            MultiBandMelGANGeneratorConfig(
+                **config["multiband_melgan_generator_params"]
+            ),
+            dtype=tf.float32,
+            name="pqmf",
         )
 
         # dummy input to build model.
@@ -456,10 +468,12 @@ def main():
         y_mb_hat = generator(fake_mels)
         y_hat = pqmf.synthesis(y_mb_hat)
         discriminator(y_hat)
-        
+
         if len(args.pretrained) > 1:
             generator.load_weights(args.pretrained)
-            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
+            logging.info(
+                f"Successfully loaded pretrained weight from {args.pretrained}."
+            )
 
         generator.summary()
         discriminator.summary()
