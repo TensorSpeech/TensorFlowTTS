@@ -61,7 +61,7 @@ lambda_adv: 2.5              # Loss balancing coefficient for adversarial loss.
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 64                 # Batch size.
+batch_size: 64                 # Batch size for each GPU with assuming that gradient_accumulation_steps == 1.
 batch_max_steps: 8192          # Length of each audio in batch for training. Make sure dividable by hop_size.
 batch_max_steps_valid: 81920   # Length of each audio for validation. Make sure dividable by hope_size.
 remove_short_samples: true     # Whether to remove samples the length of which are less than batch_max_steps.
@@ -85,7 +85,7 @@ discriminator_optimizer_params:
         decay_steps: 200000
         decay_rate: 0.5
 
-
+gradient_accumulation_steps: 1
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
