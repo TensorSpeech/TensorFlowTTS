@@ -19,16 +19,17 @@
 :zany_face: TensorFlowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems.
 
 ## What's new
-- 2020/08/23 **(NEW!)** Add Parallel WaveGAN tensorflow implementation. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/parallel_wavegan)
-- 2020/08/23 **(NEW!)** Add MBMelGAN G + ParallelWaveGAN G example. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/multiband_pwgan)
-- 2020/08/20 **(NEW!)** Add C++ inference code. Thank [@ZDisket](https://github.com/ZDisket). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/cppwin)
-- 2020/08/18 **(NEW!)** Update [new base processor](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/tensorflow_tts/processor/base_processor.py). Add [AutoProcessor](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/tensorflow_tts/inference/auto_processor.py) and [pretrained processor](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/tensorflow_tts/processor/pretrained/) json file.
-- 2020/08/14 **(NEW!)** Support Chinese TTS. Pls see the [colab](https://colab.research.google.com/drive/1YpSHRBRPBI7cnTkQn1UcVTWEQVbsUm1S?usp=sharing). Thank [@azraelkuan](https://github.com/azraelkuan).
-- 2020/08/05 **(NEW!)** Support Korean TTS. Pls see the [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing). Thank [@crux153](https://github.com/crux153).
-- 2020/07/17 Support MultiGPU for all Trainer.
-- 2020/07/05 Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from the TFlite team for his support.
+- 2020/11/19 **(NEW!)** Add Multi-GPU gradient accumulator. See [here](https://github.com/TensorSpeech/TensorFlowTTS/pull/377)
+- 2020/08/23  Add Parallel WaveGAN tensorflow implementation. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/parallel_wavegan)
+- 2020/08/23 Add MBMelGAN G + ParallelWaveGAN G example. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/multiband_pwgan)
+- 2020/08/20  Add C++ inference code. Thank [@ZDisket](https://github.com/ZDisket). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/cppwin)
+- 2020/08/18 Update [new base processor](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/tensorflow_tts/processor/base_processor.py). Add [AutoProcessor](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/tensorflow_tts/inference/auto_processor.py) and [pretrained processor](https://github.com/TensorSpeech/TensorFlowTTS/blob/master/tensorflow_tts/processor/pretrained/) json file
+- 2020/08/14 Support Chinese TTS. Pls see the [colab](https://colab.research.google.com/drive/1YpSHRBRPBI7cnTkQn1UcVTWEQVbsUm1S?usp=sharing). Thank [@azraelkuan](https://github.com/azraelkuan)
+- 2020/08/05 Support Korean TTS. Pls see the [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing). Thank [@crux153](https://github.com/crux153)
+- 2020/07/17 Support MultiGPU for all Trainer
+- 2020/07/05 Support Convert Tacotron-2, FastSpeech to Tflite. Pls see the [colab](https://colab.research.google.com/drive/1HudLLpT9CQdh2k04c06bHUwLubhGTWxA?usp=sharing). Thank @jaeyoo from the TFlite team for his support
 - 2020/06/20 [FastSpeech2](https://arxiv.org/abs/2006.04558) implementation with Tensorflow is supported.
-- 2020/06/07 [Multi-band MelGAN (MB MelGAN)](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported.
+- 2020/06/07 [Multi-band MelGAN (MB MelGAN)](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/multiband_melgan/) implementation with Tensorflow is supported
 
 
 ## Features
@@ -38,6 +39,7 @@
 - Suitable for deployment.
 - Easy to implement a new model, based-on abstract class.
 - Mixed precision to speed-up training if possible.
+- Support Single/Multi GPU gradient Accumulate.
 - Support both Single/Multi GPU in base trainer class.
 - TFlite conversion for all supported models.
 - Android example.
