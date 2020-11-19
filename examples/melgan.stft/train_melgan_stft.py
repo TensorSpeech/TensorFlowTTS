@@ -36,10 +36,8 @@ import tensorflow_tts.configs.melgan as MELGAN_CONFIG
 from examples.melgan.audio_mel_dataset import AudioMelDataset
 from examples.melgan.train_melgan import MelganTrainer, collater
 from tensorflow_tts.losses import TFMultiResolutionSTFT
-from tensorflow_tts.models import (TFMelGANGenerator,
-                                   TFMelGANMultiScaleDiscriminator)
-from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
-                                  return_strategy)
+from tensorflow_tts.models import TFMelGANGenerator, TFMelGANMultiScaleDiscriminator
+from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
 
 
 class MultiSTFTMelganTrainer(MelganTrainer):
@@ -206,7 +204,7 @@ def main():
         default="",
         type=str,
         nargs="?",
-        help='path of .h5 melgan generator to load weights from',
+        help="path of .h5 melgan generator to load weights from",
     )
     args = parser.parse_args()
 
@@ -295,7 +293,9 @@ def main():
             hop_size=tf.constant(config["hop_size"], dtype=tf.int32),
         ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        batch_size=config["batch_size"]
+        * STRATEGY.num_replicas_in_sync
+        * config["gradient_accumulation_steps"],
     )
 
     valid_dataset = AudioMelDataset(
@@ -336,7 +336,9 @@ def main():
         )
 
         discriminator = TFMelGANMultiScaleDiscriminator(
-            MELGAN_CONFIG.MelGANDiscriminatorConfig(**config["melgan_discriminator_params"]),
+            MELGAN_CONFIG.MelGANDiscriminatorConfig(
+                **config["melgan_discriminator_params"]
+            ),
             name="melgan_discriminator",
         )
 
@@ -344,11 +346,12 @@ def main():
         fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
         y_hat = generator(fake_mels)
         discriminator(y_hat)
-        
+
         if len(args.pretrained) > 1:
             generator.load_weights(args.pretrained)
-            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
-
+            logging.info(
+                f"Successfully loaded pretrained weight from {args.pretrained}."
+            )
 
         generator.summary()
         discriminator.summary()

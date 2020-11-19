@@ -36,8 +36,7 @@ from examples.fastspeech.fastspeech_dataset import CharactorDurationMelDataset
 from tensorflow_tts.models import TFFastSpeech
 from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from tensorflow_tts.utils import (calculate_2d_loss, calculate_3d_loss,
-                                  return_strategy)
+from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
 
 
 class FastSpeechTrainer(Seq2SeqBasedTrainer):
@@ -218,7 +217,7 @@ def main():
         default="",
         type=str,
         nargs="?",
-        help='pretrained checkpoint file to load weights from. Auto-skips non-matching layers',
+        help="pretrained checkpoint file to load weights from. Auto-skips non-matching layers",
     )
     args = parser.parse_args()
 
@@ -302,7 +301,9 @@ def main():
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        batch_size=config["batch_size"]
+        * STRATEGY.num_replicas_in_sync
+        * config["gradient_accumulation_steps"],
     )
 
     valid_dataset = CharactorDurationMelDataset(
@@ -335,11 +336,12 @@ def main():
         )
         fastspeech._build()
         fastspeech.summary()
-        
+
         if len(args.pretrained) > 1:
             fastspeech.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
-            logging.info(f"Successfully loaded pretrained weight from {args.pretrained}.")
-
+            logging.info(
+                f"Successfully loaded pretrained weight from {args.pretrained}."
+            )
 
         # AdamW for fastspeech
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(

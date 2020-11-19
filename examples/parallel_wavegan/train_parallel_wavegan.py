@@ -379,7 +379,9 @@ def main():
             hop_size=tf.constant(config["hop_size"], dtype=tf.int32),
         ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        batch_size=config["batch_size"]
+        * STRATEGY.num_replicas_in_sync
+        * config["gradient_accumulation_steps"],
     )
 
     valid_dataset = AudioMelDataset(
@@ -445,12 +447,8 @@ def main():
             config["discriminator_optimizer_params"]["lr_fn"],
         )(**config["discriminator_optimizer_params"]["lr_params"])
 
-        gen_optimizer = RectifiedAdam(
-            learning_rate=generator_lr_fn, amsgrad=False
-        )
-        dis_optimizer = RectifiedAdam(
-            learning_rate=discriminator_lr_fn, amsgrad=False
-        )
+        gen_optimizer = RectifiedAdam(learning_rate=generator_lr_fn, amsgrad=False)
+        dis_optimizer = RectifiedAdam(learning_rate=discriminator_lr_fn, amsgrad=False)
 
     trainer.compile(
         gen_model=generator,
