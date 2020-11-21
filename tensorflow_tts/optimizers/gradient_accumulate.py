@@ -60,7 +60,6 @@ class GradientAccumulator(object):
                         tf.zeros_like(gradient),
                         trainable=False,
                         synchronization=tf.VariableSynchronization.ON_READ,
-                        aggregation=tf.VariableAggregation.ONLY_FIRST_REPLICA,
                     )
                     if gradient is not None
                     else gradient
