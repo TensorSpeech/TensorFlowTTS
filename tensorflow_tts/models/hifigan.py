@@ -238,7 +238,7 @@ class TFHifiGANGenerator(tf.keras.Model):
         self(fake_mels)
 
 
-class TFPeriodDiscriminator(tf.keras.layers.Layer):
+class TFHifiGANPeriodDiscriminator(tf.keras.layers.Layer):
     """Tensorflow Hifigan period discriminator module."""
 
     def __init__(
@@ -315,7 +315,7 @@ class TFPeriodDiscriminator(tf.keras.layers.Layer):
                 pass
 
 
-class TFMultiPeriodDiscriminator(tf.keras.Model):
+class TFHifiGANMultiPeriodDiscriminator(tf.keras.Model):
     """Tensorflow Hifigan Multi Period discriminator module."""
 
     def __init__(self, config, **kwargs):
@@ -325,7 +325,7 @@ class TFMultiPeriodDiscriminator(tf.keras.Model):
         # add discriminator
         for i in range(len(config.period_scales)):
             self.discriminator += [
-                TFPeriodDiscriminator(
+                TFHifiGANPeriodDiscriminator(
                     config.period_scales[i],
                     out_channels=config.out_channels,
                     n_layers=config.n_layers,
