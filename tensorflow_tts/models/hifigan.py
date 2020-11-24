@@ -38,6 +38,7 @@ class TFHifiResBlock(tf.keras.layers.Layer):
         nonlinear_activation,
         nonlinear_activation_params,
         is_weight_norm,
+        initializer_seed,
         **kwargs
     ):
         """Initialize TFHifiResBlock module.
