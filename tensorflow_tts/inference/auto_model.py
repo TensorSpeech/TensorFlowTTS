@@ -23,6 +23,7 @@ from tensorflow_tts.configs import (
     FastSpeech2Config,
     MelGANGeneratorConfig,
     MultiBandMelGANGeneratorConfig,
+    HifiGANGeneratorConfig,
     Tacotron2Config,
     ParallelWaveGANGeneratorConfig,
 )
@@ -32,6 +33,7 @@ from tensorflow_tts.models import (
     TFFastSpeech2,
     TFMelGANGenerator,
     TFMBMelGANGenerator,
+    TFHifiGANGenerator,
     TFTacotron2,
     TFParallelWaveGANGenerator,
 )
@@ -39,11 +41,12 @@ from tensorflow_tts.models import (
 
 TF_MODEL_MAPPING = OrderedDict(
     [
-        (FastSpeechConfig, TFFastSpeech),
         (FastSpeech2Config, TFFastSpeech2),
+        (FastSpeechConfig, TFFastSpeech),
         (MultiBandMelGANGeneratorConfig, TFMBMelGANGenerator),
         (MelGANGeneratorConfig, TFMelGANGenerator),
         (Tacotron2Config, TFTacotron2),
+        (HifiGANGeneratorConfig, TFHifiGANGenerator),
         (ParallelWaveGANGeneratorConfig, TFParallelWaveGANGenerator)
     ]
 )

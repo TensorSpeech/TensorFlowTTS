@@ -54,11 +54,13 @@ def test_auto_processor(mapper_path):
         "./examples/fastspeech2/conf/fastspeech2.kss.v1.yaml",
         "./examples/fastspeech2/conf/fastspeech2.kss.v2.yaml",
         "./examples/melgan/conf/melgan.v1.yaml",
-        "./examples/melgan.stft/conf/melgan.stft.v1.yaml",
+        "./examples/melgan_stft/conf/melgan_stft.v1.yaml",
         "./examples/multiband_melgan/conf/multiband_melgan.v1.yaml",
         "./examples/tacotron2/conf/tacotron2.v1.yaml",
         "./examples/tacotron2/conf/tacotron2.kss.v1.yaml",
         "./examples/parallel_wavegan/conf/parallel_wavegan.v1.yaml",
+        "./examples/hifigan/conf/hifigan.v1.yaml",
+        "./examples/hifigan/conf/hifigan.v2.yaml",
      ]
 )
 def test_auto_model(config_path):
