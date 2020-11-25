@@ -114,6 +114,12 @@ class MultiSTFTMelganTrainer(MelganTrainer):
         sc_loss, mag_loss = calculate_2d_loss(
             audios, tf.squeeze(y_hat, -1), self.stft_loss
         )
+
+        # trick to prevent loss expoded here
+        sc_loss = tf.where(sc_loss >= 15.0, 0.0, sc_loss)
+        mag_loss = tf.where(mag_loss >= 15.0, 0.0, mag_loss)
+
+        # compute generator loss
         gen_loss = 0.5 * (sc_loss + mag_loss)
 
         if self.steps >= self.config["discriminator_train_start_steps"]:
