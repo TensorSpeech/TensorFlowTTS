@@ -235,7 +235,10 @@ class CharactorMelDataset(AbstractDataset):
         }
 
         datasets = datasets.padded_batch(
-            batch_size, padded_shapes=padded_shapes, padding_values=padding_values
+            batch_size,
+            padded_shapes=padded_shapes,
+            padding_values=padding_values,
+            drop_remainder=True,
         )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
