@@ -231,7 +231,9 @@ class CharactorDurationF0EnergyMelDataset(AbstractDataset):
             "mel_lengths": [],
         }
 
-        datasets = datasets.padded_batch(batch_size, padded_shapes=padded_shapes)
+        datasets = datasets.padded_batch(
+            batch_size, padded_shapes=padded_shapes, drop_remainder=True
+        )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
 

@@ -246,7 +246,9 @@ class CharactorDataset(AbstractDataset):
         # define padded shapes
         padded_shapes = {"utt_ids": [], "input_ids": [None]}
 
-        datasets = datasets.padded_batch(batch_size, padded_shapes=padded_shapes)
+        datasets = datasets.padded_batch(
+            batch_size, padded_shapes=padded_shapes, drop_remainder=True
+        )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
 
