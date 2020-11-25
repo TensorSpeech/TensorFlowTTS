@@ -213,8 +213,6 @@ class GanBasedTrainer(BasedTrainer):
         self._generator_gradient_accumulator.reset()
         self._discriminator_gradient_accumulator.reset()
 
-
-
     def init_train_eval_metrics(self, list_metrics_name):
         with self._strategy.scope():
             super().init_train_eval_metrics(list_metrics_name)
@@ -706,7 +704,6 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
         self._gradient_accumulator = GradientAccumulator()
         self._gradient_accumulator.reset()
 
-
     def init_train_eval_metrics(self, list_metrics_name):
         with self._strategy.scope():
             super().init_train_eval_metrics(list_metrics_name)
@@ -833,7 +830,7 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
         if self.config["gradient_accumulation_steps"] == 1:
             gradients, per_replica_losses = self._calculate_gradient_per_batch(batch)
             self._optimizer.apply_gradients(
-                zip(gradients, self._trainable_variables)
+                zip(gradients, self._trainable_variables), 1.0
             )
         else:
             # gradient acummulation here.
@@ -856,7 +853,7 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
 
             gradients = self._gradient_accumulator.gradients
             self._optimizer.apply_gradients(
-                zip(gradients, self._trainable_variables)
+                zip(gradients, self._trainable_variables), 1.0
             )
             self._gradient_accumulator.reset()
 
