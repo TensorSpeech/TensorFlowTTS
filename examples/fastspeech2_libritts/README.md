@@ -3,7 +3,7 @@
 ## Prepare
 Everything is done from main repo folder so TensorflowTTS/
 
-0. Optional* [Download](http://www.openslr.org/60/) and prepare libritts (helper to prepare libri in examplesfastspeech2_libritts/libri_experiment/prepare_libri.ipynb)
+0. Optional* [Download](http://www.openslr.org/60/) and prepare libritts (helper to prepare libri in examples/fastspeech2_libritts/libri_experiment/prepare_libri.ipynb)
 - Dataset structure after finish this step:
     ```
     |- TensorFlowTTS/
