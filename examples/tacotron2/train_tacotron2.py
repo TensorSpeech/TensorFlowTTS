@@ -434,7 +434,7 @@ def main():
     with STRATEGY.scope():
         # define model.
         tacotron_config = Tacotron2Config(**config["tacotron2_params"])
-        tacotron2 = TFTacotron2(config=tacotron_config, training=True, name="tacotron2")
+        tacotron2 = TFTacotron2(config=tacotron_config, name="tacotron2")
         tacotron2._build()
         tacotron2.summary()
 

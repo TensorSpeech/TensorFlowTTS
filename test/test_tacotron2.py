@@ -50,7 +50,7 @@ logging.basicConfig(
 )
 def test_tacotron2_train_some_layers(var_train_expr, config_path):
     config = Tacotron2Config(n_speakers=5, reduction_factor=1)
-    model = TFTacotron2(config, training=True)
+    model = TFTacotron2(config, name="tacotron2")
     model._build()
     optimizer = tf.keras.optimizers.Adam(lr=0.001)
 
@@ -84,9 +84,8 @@ def test_tacotron2_trainable(
     n_speakers, n_chars, max_input_length, max_mel_length, batch_size
 ):
     config = Tacotron2Config(n_speakers=n_speakers, reduction_factor=1)
-    model = TFTacotron2(config, training=True)
-    # model._build()
-
+    model = TFTacotron2(config, name="tacotron2")
+    model._build()
     # fake input
     input_ids = tf.random.uniform(
         [batch_size, max_input_length], maxval=n_chars, dtype=tf.int32
