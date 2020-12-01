@@ -166,7 +166,7 @@ class MultiBandMelganTrainer(MelganTrainer):
         # init adv_loss
         adv_loss = tf.zeros(shape=tf.shape(gen_loss), dtype=tf.float32)
 
-        if self.steps >= self.config["discriminator_train_start_steps"]:
+        if self._gen_optimizer.iterations >= self.config["discriminator_train_start_steps"]:
             p_hat = self._discriminator(y_hat)
             p = self._discriminator(tf.expand_dims(audios, 2))
             adv_loss = 0.0
