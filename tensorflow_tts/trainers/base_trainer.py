@@ -463,7 +463,7 @@ class GanBasedTrainer(BasedTrainer):
 
         # one step discriminator
         # recompute y_hat after 1 step generator for discriminator training.
-        if self.steps >= self.config["discriminator_train_start_steps"]:
+        if self._gen_optimizer.iterations >= self.config["discriminator_train_start_steps"]:
             if self.config["gradient_accumulation_steps"] == 1:
                 (
                     gradients,
@@ -635,15 +635,6 @@ class GanBasedTrainer(BasedTrainer):
         """Check training finished."""
         if self.steps >= self.config["train_max_steps"]:
             self.finish_train = True
-
-        if (
-            self.steps != 0
-            and self.steps == self.config["discriminator_train_start_steps"]
-        ):
-            self.finish_train = True
-            logging.info(
-                f"Finished training only generator at {self.steps}steps, pls resume and continue training."
-            )
 
     def _check_log_interval(self):
         """Log to tensorboard."""
