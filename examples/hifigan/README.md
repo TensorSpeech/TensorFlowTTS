@@ -10,7 +10,6 @@ First, you need define data loader based on AbstractDataset class (see [`abstrac
 ### Step 2: Training from scratch
 After you re-define your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_hifigan.py`](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/hifigan/train_hifigan.py). Here is an example command line to training HiFi-GAN from scratch:
 
-First, you need training generator with only stft loss: 
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/hifigan/train_hifigan.py \
@@ -18,21 +17,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/hifigan/train_hifigan.py \
   --dev-dir ./dump/valid/ \
   --outdir ./examples/hifigan/exp/train.hifigan.v1/ \
   --config ./examples/hifigan/conf/hifigan.v1.yaml \
-  --use-norm 1
-  --generator_mixed_precision 1 \
+  --use-norm 1 \
   --resume ""
-```
-
-Then resume and start training generator + discriminator:
-
-```bash
-CUDA_VISIBLE_DEVICES=0 python examples/hifigan/train_hifigan.py \
-  --train-dir ./dump/train/ \
-  --dev-dir ./dump/valid/ \
-  --outdir ./examples/hifigan/exp/train.hifigan.v1/ \
-  --config ./examples/hifigan/conf/hifigan.v1.yaml \
-  --use-norm 1
-  --resume ./examples/hifigan/exp/train.hifigan.v1/checkpoints/ckpt-100000
 ```
 
 IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode.
@@ -50,9 +36,7 @@ If you want to finetune a model, use `--pretrained` like this with the filename 
 
 **IMPORTANT NOTES**:
 
-- When training generator only, we enable mixed precision to speed-up training progress.
-- We don't apply mixed precision when training both generator and discriminator. (Discriminator include group-convolution, which cause discriminator slower when enable mixed precision).
-- 100k here is a *discriminator_train_start_steps* parameters from [hifigan.v1.yaml](https://github.com/tensorspeech/TensorflowTTS/tree/master/examples/hifigan/conf/hifigan.v1.yaml)
+- We don't apply mixed precision because Discriminator include group-convolution, which cause discriminator slower when enable mixed precision.
 
 
 ## Reference

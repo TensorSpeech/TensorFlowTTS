@@ -15,8 +15,6 @@ Please see detail at [examples/melgan/](https://github.com/tensorspeech/TensorFl
 ### Step 2: Training from scratch
 After you re-define your dataloader, pls modify an input arguments, train_dataset and valid_dataset from [`train_parallel_wavegan.py`](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/parallel_wavegan/train_parallel_wavegan.py). Here is an example command line to training Parallel WaveGAN from scratch:
 
-First, you need training generator 100K steps with only stft loss:
-
 ```bash
 CUDA_VISIBLE_DEVICES=0 python examples/parallel_wavegan/train_parallel_wavegan.py \
   --train-dir ./dump/train/ \
@@ -24,20 +22,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/parallel_wavegan/train_parallel_wavegan.p
   --outdir ./examples/parallel_wavegan/exp/train.parallel_wavegan.v1/ \
   --config ./examples/parallel_wavegan/conf/parallel_wavegan.v1.yaml \
   --use-norm 1 \
-  --generator_mixed_precision 1 \
   --resume ""
-```
-
-Then resume and start training generator + discriminator:
-
-```bash
-CUDA_VISIBLE_DEVICES=0 python examples/parallel_wavegan/parallel_wavegan.py \
-  --train-dir ./dump/train/ \
-  --dev-dir ./dump/valid/ \
-  --outdir ./examples/parallel_wavegan/exp/train.parallel_wavegan.v1/ \
-  --config ./examples/parallel_wavegan/conf/parallel_wavegan.v1.yaml \
-  --use-norm 1 \
-  --resume ./examples/parallel_wavegan/exp/train.parallel_wavegan.v1/checkpoints/ckpt-100000
 ```
 
 IF you want to use MultiGPU to training you can replace `CUDA_VISIBLE_DEVICES=0` by `CUDA_VISIBLE_DEVICES=0,1,2,3` for example. You also need to tune the `batch_size` for each GPU (in config file) by yourself to maximize the performance. Note that MultiGPU now support for Training but not yet support for Decode. 
