@@ -158,7 +158,10 @@ class MultiBandMelganTrainer(MelganTrainer):
             full_sc_loss + full_mag_loss
         )
 
-        if self.steps >= self.config["discriminator_train_start_steps"]:
+        # init adv_loss
+        adv_loss = tf.zeros(shape=tf.shape(gen_loss), dtype=tf.float32)
+
+        if self._gen_optimizer.iterations >= self.config["discriminator_train_start_steps"]:
             p_hat = self._discriminator(y_hat)
             p = self._discriminator(tf.expand_dims(audios, 2))
             adv_loss = 0.0
@@ -169,13 +172,12 @@ class MultiBandMelganTrainer(MelganTrainer):
             adv_loss /= i + 1
             gen_loss += self.config["lambda_adv"] * adv_loss
 
-            dict_metrics_losses.update({"adversarial_loss": adv_loss},)
-
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"subband_spectral_convergence_loss": sub_sc_loss})
         dict_metrics_losses.update({"subband_log_magnitude_loss": sub_mag_loss})
         dict_metrics_losses.update({"fullband_spectral_convergence_loss": full_sc_loss})
         dict_metrics_losses.update({"fullband_log_magnitude_loss": full_mag_loss})
+        dict_metrics_losses.update({"adversarial_loss": adv_loss})
 
         per_example_losses = gen_loss
         return per_example_losses, dict_metrics_losses
@@ -497,6 +499,9 @@ def main():
             learning_rate=discriminator_lr_fn,
             amsgrad=config["discriminator_optimizer_params"]["amsgrad"],
         )
+
+        _ = gen_optimizer.iterations
+        _ = dis_optimizer.iterations
 
     trainer.compile(
         gen_model=generator,

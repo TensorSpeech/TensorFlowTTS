@@ -301,6 +301,9 @@ def main():
             amsgrad=config["discriminator_optimizer_params"]["amsgrad"],
         )
 
+        _ = gen_optimizer.iterations
+        _ = dis_optimizer.iterations
+
     trainer.compile(
         gen_model=generator,
         dis_model=discriminator,

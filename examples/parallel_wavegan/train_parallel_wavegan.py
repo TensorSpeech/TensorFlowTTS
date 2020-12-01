@@ -134,21 +134,22 @@ class ParallelWaveganTrainer(GanBasedTrainer):
         )
         gen_loss = 0.5 * (sc_loss + mag_loss)
 
-        if self.steps >= self.config["discriminator_train_start_steps"]:
+        # init adv_loss
+        adv_loss = tf.zeros(shape=tf.shape(gen_loss), dtype=tf.float32)
+
+        if self._gen_optimizer.iterations >= self.config["discriminator_train_start_steps"]:
             p_hat = self._discriminator(y_hat)
             p = self._discriminator(tf.expand_dims(audios, 2))
             adv_loss = 0.0
             adv_loss += calculate_3d_loss(
                 tf.ones_like(p_hat), p_hat, loss_fn=self.mse_loss
             )
-            gen_loss += self.config["lambda_adv"] * adv_loss
-
-            # update dict_metrics_losses
-            dict_metrics_losses.update({"adversarial_loss": adv_loss})
+            gen_loss += self.config["lambda_adv"] * adv_loss            
 
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"spectral_convergence_loss": sc_loss})
         dict_metrics_losses.update({"log_magnitude_loss": mag_loss})
+        dict_metrics_losses.update({"adversarial_loss": adv_loss})
 
         per_example_losses = gen_loss
         return per_example_losses, dict_metrics_losses
@@ -449,6 +450,9 @@ def main():
 
         gen_optimizer = RectifiedAdam(learning_rate=generator_lr_fn, amsgrad=False)
         dis_optimizer = RectifiedAdam(learning_rate=discriminator_lr_fn, amsgrad=False)
+
+        _ = gen_optimizer.iterations
+        _ = dis_optimizer.iterations
 
     trainer.compile(
         gen_model=generator,
