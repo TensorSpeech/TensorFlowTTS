@@ -123,7 +123,6 @@ def main():
     # define model and load checkpoint
     tacotron2 = TFTacotron2(
         config=Tacotron2Config(**config["tacotron2_params"]),
-        training=False,  # disble teacher forcing mode.
         name="tacotron2",
     )
     tacotron2._build()  # build model to be able load_weights.
