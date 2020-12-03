@@ -42,7 +42,8 @@ requirements = {
         "textgrid",
         "click",
         "g2p_en",
-        "dataclasses"
+        "dataclasses",
+        "german_transliterate @ git+https://github.com/repodiac/german_transliterate.git#egg=german_transliterate"
     ],
     "setup": ["numpy", "pytest-runner",],
     "test": [
