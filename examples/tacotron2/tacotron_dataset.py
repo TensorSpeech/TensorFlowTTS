@@ -172,6 +172,7 @@ class CharactorMelDataset(AbstractDataset):
         is_shuffle=False,
         map_fn=None,
         reshuffle_each_iteration=True,
+        drop_remainder=True
     ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
@@ -238,7 +239,7 @@ class CharactorMelDataset(AbstractDataset):
             batch_size,
             padded_shapes=padded_shapes,
             padding_values=padding_values,
-            drop_remainder=True,
+            drop_remainder=drop_remainder,
         )
         datasets = datasets.prefetch(tf.data.experimental.AUTOTUNE)
         return datasets
