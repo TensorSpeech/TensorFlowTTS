@@ -614,7 +614,7 @@ class GanBasedTrainer(BasedTrainer):
                 "discriminator_train_start_steps"
             ]
             discriminator_train_start_steps = tf.math.maximum(
-                0, discriminator_train_start_steps - self.steps
+                0, self.steps - discriminator_train_start_steps 
             )
         except Exception:
             discriminator_train_start_steps = self.steps
