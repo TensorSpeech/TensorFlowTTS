@@ -34,6 +34,16 @@ logging.basicConfig(
 )
 
 
+@pytest.mark.parametrize("new_size", [100, 200, 300])
+def test_fastspeech_resize_positional_embeddings(new_size):
+    config = FastSpeech2Config()
+    fastspeech2 = TFFastSpeech2(config, name="fastspeech")
+    fastspeech2._build()
+    fastspeech2.save_weights("./test.h5")
+    fastspeech2.resize_positional_embeddings(new_size)
+    fastspeech2.load_weights("./test.h5", by_name=True, skip_mismatch=True)
+
+
 @pytest.mark.parametrize(
     "var_train_expr, config_path",
     [
