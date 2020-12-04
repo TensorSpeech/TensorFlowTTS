@@ -19,6 +19,7 @@
 :zany_face: TensorFlowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems.
 
 ## What's new
+- 2020/12/02 **(NEW!)** Support German TTS with [Thorsten dataset](https://github.com/thorstenMueller/deep-learning-german-tts). See the [Colab](https://colab.research.google.com/drive/1W0nSFpsz32M0OcIkY9uMOiGrLTPKVhTy?usp=sharing). Thanks [thorstenMueller](https://github.com/thorstenMueller) and [monatis](https://github.com/monatis).
 - 2020/11/24 **(NEW!)** Add HiFi-GAN vocoder. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/hifigan)
 - 2020/11/19 **(NEW!)** Add Multi-GPU gradient accumulator. See [here](https://github.com/TensorSpeech/TensorFlowTTS/pull/377)
 - 2020/08/23  Add Parallel WaveGAN tensorflow implementation. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/parallel_wavegan)
@@ -128,11 +129,11 @@ The preprocessing has two steps:
 
 To reproduce the steps above:
 ```
-tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
-tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts] --outdir ./dump_[ljspeech/kss/baker/libritts] --config preprocess/[ljspeech/kss/baker/libritts]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts]
+tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts/thorsten] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --config preprocess/[ljspeech/kss/baker/thorsten]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten]
+tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --config preprocess/[ljspeech/kss/baker/libritts/thorsten]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten]
 ```
 
-Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar) and [`libritts`](http://www.openslr.org/60/) for dataset argument. In the future, we intend to support more datasets.
+Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), [`libritts`](http://www.openslr.org/60/) and [`thorsten`](https://github.com/thorstenMueller/deep-learning-german-tts) for dataset argument. In the future, we intend to support more datasets.
 
 **Note**: To run `libritts` preprocessing, please first read the instruction in [examples/fastspeech2_libritts](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/fastspeech2_libritts). We need to reformat it first before run preprocessing.
 
@@ -143,7 +144,7 @@ After preprocessing, the structure of the project folder should be:
 |   |- wav/
 |       |- file1.wav
 |       |- ...
-|- dump_[ljspeech/kss/baker/libritts]/
+|- dump_[ljspeech/kss/baker/libritts/thorsten]/
 |   |- train/
 |       |- ids/
 |           |- LJ001-0001-ids.npy

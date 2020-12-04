@@ -24,6 +24,7 @@ import re
 from tensorflow_tts.utils.korean import tokenize as ko_tokenize
 from tensorflow_tts.utils.number_norm import normalize_numbers
 from unidecode import unidecode
+from german_transliterate.core import GermanTransliterate
 
 # Regular expression matching whitespace:
 _whitespace_re = re.compile(r"\s+")
@@ -106,4 +107,9 @@ def korean_cleaners(text):
     text = ko_tokenize(
         text
     )  # '존경하는' --> ['ᄌ', 'ᅩ', 'ᆫ', 'ᄀ', 'ᅧ', 'ᆼ', 'ᄒ', 'ᅡ', 'ᄂ', 'ᅳ', 'ᆫ']
+    return text
+
+def german_cleaners(text):
+    """Pipeline for German text, including number and abbreviation expansion."""
+    text = GermanTransliterate(replace={';': ',', ':': ' '}, sep_abbreviation=' -- ').transliterate(text)
     return text
