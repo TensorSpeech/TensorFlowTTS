@@ -47,7 +47,7 @@ TF_MODEL_MAPPING = OrderedDict(
         (MelGANGeneratorConfig, TFMelGANGenerator),
         (Tacotron2Config, TFTacotron2),
         (HifiGANGeneratorConfig, TFHifiGANGenerator),
-        (ParallelWaveGANGeneratorConfig, TFParallelWaveGANGenerator)
+        (ParallelWaveGANGeneratorConfig, TFParallelWaveGANGenerator),
     ]
 )
 
@@ -69,7 +69,9 @@ class TFAutoModel(object):
                 if is_build:
                     model._build()
                 if pretrained_path is not None and ".h5" in pretrained_path:
-                    model.load_weights(pretrained_path)
+                    model.load_weights(
+                        pretrained_path, by_name=True, skip_mismatch=True
+                    )
                 return model
         raise ValueError(
             "Unrecognized configuration class {} for this kind of TFAutoModel: {}.\n"
