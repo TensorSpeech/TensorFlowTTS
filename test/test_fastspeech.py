@@ -30,6 +30,16 @@ logging.basicConfig(
 )
 
 
+@pytest.mark.parametrize("new_size", [100, 200, 300])
+def test_fastspeech_resize_positional_embeddings(new_size):
+    config = FastSpeechConfig()
+    fastspeech = TFFastSpeech(config, name="fastspeech")
+    fastspeech._build()
+    fastspeech.save_weights("./test.h5")
+    fastspeech.resize_positional_embeddings(new_size)
+    fastspeech.load_weights("./test.h5", by_name=True, skip_mismatch=True)
+
+
 @pytest.mark.parametrize("num_hidden_layers,n_speakers", [(2, 1), (3, 2), (4, 3)])
 def test_fastspeech_trainable(num_hidden_layers, n_speakers):
     config = FastSpeechConfig(

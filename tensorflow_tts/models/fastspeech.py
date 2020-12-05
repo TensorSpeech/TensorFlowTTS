@@ -89,7 +89,11 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         self.position_embeddings = TFEmbedding(
             config.max_position_embeddings + 1,
             self.hidden_size,
-            weights=[self._sincos_embedding()],
+            weights=[
+                self._sincos_embedding(
+                    self.hidden_size, self.config.max_position_embeddings
+                )
+            ],
             name="position_embeddings",
             trainable=False,
         )
@@ -151,14 +155,16 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
 
         return embeddings
 
-    def _sincos_embedding(self):
+    def _sincos_embedding(
+        self, hidden_size, max_positional_embedding,
+    ):
         position_enc = np.array(
             [
                 [
-                    pos / np.power(10000, 2.0 * (i // 2) / self.hidden_size)
-                    for i in range(self.hidden_size)
+                    pos / np.power(10000, 2.0 * (i // 2) / hidden_size)
+                    for i in range(hidden_size)
                 ]
-                for pos in range(self.config.max_position_embeddings + 1)
+                for pos in range(max_positional_embedding + 1)
             ]
         )
 
@@ -169,6 +175,15 @@ class TFFastSpeechEmbeddings(tf.keras.layers.Layer):
         position_enc[0] = 0.0
 
         return position_enc
+
+    def resize_positional_embeddings(self, new_size):
+        self.position_embeddings = TFEmbedding(
+            new_size + 1,
+            self.hidden_size,
+            weights=[self._sincos_embedding(self.hidden_size, new_size)],
+            name="position_embeddings",
+            trainable=False,
+        )
 
 
 class TFFastSpeechSelfAttention(tf.keras.layers.Layer):
@@ -772,6 +787,10 @@ class TFFastSpeech(tf.keras.Model):
         speaker_ids = tf.convert_to_tensor([0], tf.int32)
         duration_gts = tf.convert_to_tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], tf.int32)
         self(input_ids, speaker_ids, duration_gts)
+
+    def resize_positional_embeddings(self, new_size):
+        self.embeddings.resize_positional_embeddings(new_size)
+        self._build()
 
     def call(
         self, input_ids, speaker_ids, duration_gts, training=False, **kwargs,
