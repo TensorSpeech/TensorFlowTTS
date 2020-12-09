@@ -25,7 +25,6 @@ ljspeech
 *.h5
 *.npy
 ./*.wav
-*.yml
 !docker-compose.yml
 /Pipfile
 /Pipfile.lock
