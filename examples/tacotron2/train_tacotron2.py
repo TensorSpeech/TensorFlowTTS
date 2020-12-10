@@ -124,6 +124,16 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
 
         self.update_eval_metrics(dict_metrics_losses)
 
+    def _one_step_predict_per_replica(self, batch):
+        """One step predict per GPU
+
+        Tacotron-2 used teacher-forcing when training and evaluation.
+        So we need pass `training=True` for inference step.
+        
+        """
+        outputs = self._model(**batch, training=True)
+        return outputs
+
     def compute_per_example_losses(self, batch, outputs):
         """Compute per example losses and return dict_metrics_losses
         Note that all element of the loss MUST has a shape [batch_size] and 
