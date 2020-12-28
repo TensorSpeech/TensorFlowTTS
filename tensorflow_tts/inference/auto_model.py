@@ -29,23 +29,26 @@ from tensorflow_tts.configs import (
 )
 
 from tensorflow_tts.models import (
-    TFFastSpeech,
-    TFFastSpeech2,
     TFMelGANGenerator,
     TFMBMelGANGenerator,
     TFHifiGANGenerator,
-    TFTacotron2,
     TFParallelWaveGANGenerator,
+)
+
+from tensorflow_tts.inference.savable_models import (
+    SavableTFFastSpeech,
+    SavableTFFastSpeech2,
+    SavableTFTacotron2
 )
 
 
 TF_MODEL_MAPPING = OrderedDict(
     [
-        (FastSpeech2Config, TFFastSpeech2),
-        (FastSpeechConfig, TFFastSpeech),
+        (FastSpeech2Config, SavableTFFastSpeech2),
+        (FastSpeechConfig, SavableTFFastSpeech),
         (MultiBandMelGANGeneratorConfig, TFMBMelGANGenerator),
         (MelGANGeneratorConfig, TFMelGANGenerator),
-        (Tacotron2Config, TFTacotron2),
+        (Tacotron2Config, SavableTFTacotron2),
         (HifiGANGeneratorConfig, TFHifiGANGenerator),
         (ParallelWaveGANGeneratorConfig, TFParallelWaveGANGenerator),
     ]
