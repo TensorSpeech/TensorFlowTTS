@@ -32,10 +32,9 @@ def calculate_3d_loss(y_gt, y_pred, loss_fn):
     y_pred_T = tf.shape(y_pred)[1]
 
     # there is a mismath length when training multiple GPU.
-    # we need slice the longer tensor to make sure the loss
-    # calculated correctly.
+    # we need to pad shorter tensor to calculated correctly or slice prediction.
     if y_gt_T > y_pred_T:
-        y_gt = tf.slice(y_gt, [0, 0, 0], [-1, y_pred_T, -1])
+        y_pred = tf.pad(y_pred, tf.constant([0, 0, 0], [0, y_pred_T, 0]), "CONSTANT")
     elif y_pred_T > y_gt_T:
         y_pred = tf.slice(y_pred, [0, 0, 0], [-1, y_gt_T, -1])
 
@@ -57,10 +56,9 @@ def calculate_2d_loss(y_gt, y_pred, loss_fn):
     y_pred_T = tf.shape(y_pred)[1]
 
     # there is a mismath length when training multiple GPU.
-    # we need slice the longer tensor to make sure the loss
-    # calculated correctly.
+    # we need to pad shorter tensor to calculated correctly or slice prediction.
     if y_gt_T > y_pred_T:
-        y_gt = tf.slice(y_gt, [0, 0], [-1, y_pred_T])
+        y_pred = tf.pad(y_pred, tf.constant([0, 0], [0, y_pred_T]), "CONSTANT")
     elif y_pred_T > y_gt_T:
         y_pred = tf.slice(y_pred, [0, 0], [-1, y_gt_T])
 
