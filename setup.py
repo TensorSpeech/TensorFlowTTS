@@ -43,13 +43,9 @@ requirements = {
         "click",
         "g2p_en",
         "dataclasses",
-        "german_transliterate @ git+https://github.com/repodiac/german_transliterate.git#egg=german_transliterate"
     ],
     "setup": ["numpy", "pytest-runner",],
-    "test": [
-        "pytest>=3.3.0",
-        "hacking>=1.1.0",
-    ],
+    "test": ["pytest>=3.3.0", "hacking>=1.1.0",],
 }
 
 # TODO(@dathudeptrai) update console_scripts.
