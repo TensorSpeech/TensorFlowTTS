@@ -123,8 +123,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Load the voice itself
-	Voice LJSpeech(Name,Name,&StdPh);
-	
+	Voice CurrentVox(Name,Name,&StdPh);
 	std::vector<float> AllAud;
 
 	// Begin interactive console
@@ -144,7 +143,7 @@ int main(int argc, char* argv[])
 
 		// Split the prompt into chunks (if the user inputs like that)
 		for (const auto& Spli : SuperWordSplit(Prompt, MaxLen)) {
-			std::vector<float> ImmediateAudata = LJSpeech.Vocalize(Prompt);
+			std::vector<float> ImmediateAudata = CurrentVox.Vocalize(Prompt + CurrentVox.GetInfo().EndPadding);
 			// Insert the audio data to the end of the mid-level audata vector
 			Audata.insert(Audata.end(), ImmediateAudata.begin(), ImmediateAudata.end());
 
@@ -156,7 +155,7 @@ int main(int argc, char* argv[])
 
 		std::string Filename = Prompt.substr(0, std::min(16, (int)Prompt.size())) + ".wav";
 
-		VoxUtil::ExportWAV(Filename, Audata, LJSpeech.GetInfo().SampleRate);
+		VoxUtil::ExportWAV(Filename, Audata, CurrentVox.GetInfo().SampleRate);
 
 		// Insert the audio into the AllAud vector
 		AllAud.insert(AllAud.end(), Audata.begin(), Audata.end());
@@ -170,7 +169,7 @@ int main(int argc, char* argv[])
 
 
 	// Export all the audio
-	VoxUtil::ExportWAV(OutputFileName, AllAud, LJSpeech.GetInfo().SampleRate);
+	VoxUtil::ExportWAV(OutputFileName, AllAud, CurrentVox.GetInfo().SampleRate);
 	LOGF("Saved ALL to " + OutputFileName);
 
 	std::cout << "Hello TensorflowTTS!\n";
