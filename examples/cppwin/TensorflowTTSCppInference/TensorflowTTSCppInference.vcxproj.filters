@@ -51,6 +51,12 @@
     <ClInclude Include="ext\CppFlow\include\Tensor.h">
       <Filter>ext\CppFlow</Filter>
     </ClInclude>
+    <ClInclude Include="phonemizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tfg2p.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TensorflowTTSCppInference.cpp">
@@ -82,6 +88,12 @@
     </ClCompile>
     <ClCompile Include="ext\CppFlow\src\Tensor.cpp">
       <Filter>ext\CppFlow</Filter>
+    </ClCompile>
+    <ClCompile Include="phonemizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tfg2p.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
