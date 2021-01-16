@@ -3,8 +3,6 @@
 
 #include "TfliteBase.h"
 
-using std::vector;
-
 class MelGenerateTF : public TfliteBase
 {
 public:
@@ -13,17 +11,17 @@ public:
                                              inputIndexs(interpreter->inputs()),
                                              ouptIndex(interpreter->outputs()[1]) {};
 
-    MelGenData infer(const vector<int32_t> inputIds);
+    MelGenData infer(const std::vector<int32_t> inputIds);
 
 private:
-    vector<int32_t> _speakerId{0};
-    vector<float> _speedRatio{1.0};
-    vector<float> _f0Ratio{1.0};
-    vector<float> _enegyRatio{1.0};
+    std::vector<int32_t> _speakerId{0};
+    std::vector<float> _speedRatio{1.0};
+    std::vector<float> _f0Ratio{1.0};
+    std::vector<float> _enegyRatio{1.0};
 
-    const vector<int32_t> inputIndexs;
+    const std::vector<int32_t> inputIndexs;
     const int32_t ouptIndex;
 
 };
 
-#endif
+#endif // MELGENERATETF_H

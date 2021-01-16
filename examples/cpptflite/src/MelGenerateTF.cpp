@@ -1,14 +1,14 @@
 #include <iostream>
 #include "MelGenerateTF.h"
 
-MelGenData MelGenerateTF::infer(const vector<int32_t> inputIds)
+MelGenData MelGenerateTF::infer(const std::vector<int32_t> inputIds)
 {
 
     MelGenData output;
 
     int32_t idsLen = inputIds.size();
 
-    vector<vector<int32_t>> inputIndexsShape{ {1, idsLen}, {1}, {1}, {1}, {1} };
+    std::vector<std::vector<int32_t>> inputIndexsShape{ {1, idsLen}, {1}, {1}, {1}, {1} };
 
     int32_t shapeI = 0;
     for (auto index : inputIndexs)

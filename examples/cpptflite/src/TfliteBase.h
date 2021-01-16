@@ -37,4 +37,4 @@ private:
     void interpreterBuild(const char* modelFilename);
 };
 
-#endif
+#endif // TFLITEBASE_H

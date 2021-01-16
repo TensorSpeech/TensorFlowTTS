@@ -1,8 +1,8 @@
 #include "VocoderTF.h"
 
-vector<float> VocoderTF::infer(const MelGenData mel)
+std::vector<float> VocoderTF::infer(const MelGenData mel)
 {
-    vector<float> audio;
+    std::vector<float> audio;
 
     interpreter->ResizeInputTensor(inputIndex, mel.melShape);
     TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);

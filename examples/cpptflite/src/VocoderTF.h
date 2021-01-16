@@ -3,8 +3,6 @@
 
 #include "TfliteBase.h"
 
-using std::vector;
-
 class VocoderTF : public TfliteBase
 {
 public:
@@ -13,7 +11,7 @@ public:
                                          inputIndex(interpreter->inputs()[0]),
                                          outputIndex(interpreter->outputs()[0]) {};
 
-    vector<float> infer(const MelGenData mel);
+    std::vector<float> infer(const MelGenData mel);
 
 private:
 
@@ -21,4 +19,4 @@ private:
     const int32_t outputIndex;
 };
 
-#endif
+#endif // VOCODERTF_H
