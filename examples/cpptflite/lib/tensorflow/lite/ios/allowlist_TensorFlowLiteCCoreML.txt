@@ -1,2 +1,0 @@
-_TfLiteCoreMlDelegateCreate
-_TfLiteCoreMlDelegateDelete

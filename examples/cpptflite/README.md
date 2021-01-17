@@ -27,15 +27,37 @@ For example, fastspeech2 models:
 
 ## About Code
 - TfliteBase.cpp: A base class for loading tflite-model and creating tflite interpreter. By inheriting from this class, you can implement specific behavior, like Mel-spectrogram and Vocoder.
-- TTSFrontend.cpp: Text preprocessor converts string to ID base on desiged phoneme2ID dict, which needs a text to pronunciation module, like g2p for English and pinyin for Chinese.
-- TTSBackend.cpp: It contains two-step process - first generating a MEL spectrogram from phoneme ID sequence and then generating the audio waveform by Vocoder.
+- TTSFrontend.cpp: Text preprocessor converts string to ID based on your desiged phoneme2ID dict, which needs a text to pronunciation module, like g2p for English and pinyin for Chinese.
+- TTSBackend.cpp: It contains two-step process - first generating a Mel-spectrogram from phoneme-ID sequence and then generating the audio waveform by Vocoder.
 
 
 ## Using the demo
-A demo of Mandarin TTS and its [tflite-models](https://github.com/lr2582858/TTS_tflite_cpp/releases/tag/0.1.0) are available for linux platform,. 
+A demo of Mandarin TTS and its [tflite-models](https://github.com/lr2582858/TTS_tflite_cpp/releases/tag/0.1.0) are available for linux platform.
 
-A TensorFlow Lite static library (**libtensorflow-lite.a**) builded for linux is also available in the directory of ./lib. The method building static libraries for other platforms see the [reference](https://www.tensorflow.org/lite/guide/build_rpi).
+**Firstly**, it should compile a Tensorflow Lite static library. The method see the [reference](https://www.tensorflow.org/lite/guide/build_rpi) from the official guidance of Tensorflow.
 
+Execute the following command to compile a static library for linux:
+```shell
+./tensorflow/lite/tools/make/download_dependencies.sh
+./tensorflow/lite/tools/make/build_lib.sh (for linux)
+```
+(The official also provides different complie methods for other platforms (such as rpi, aarch64, and riscv), see /tensorflow/lite/tools/make/)
+
+Because this process takes much time, so a static library builded for linux is also available ([libtensorflow-lite.a](https://github.com/lr2582858/TTS_tflite_cpp/releases/tag/0.1.0)).
+
+The structure of the demo folder should be:
+```
+|- [cpptflite]/
+|      |- demo/
+|      |- src/
+|      |- lib/
+|          |- flatbuffers/
+|          |- tensorflow/lite/
+|          |- libtensorflow-lite.a
+```
+The two folders of flatbuffers/ and tensorflow/lite/ provide the required header files.
+
+**Then**,
 ```shell
 cd examples/cpptflite
 mkdir build
@@ -68,6 +90,7 @@ TTSBackend ttsbackend(melgenfile, vocoderfile);
 - #### Comparison before and after conversion
   - Before conversion (Python)
 ![ori_mel](./results/ori_mel.png)
+
   - After conversion (C++)
 ![tflite_mel](./results/tflite_mel.png)
 
