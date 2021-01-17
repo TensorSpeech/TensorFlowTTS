@@ -1,5 +1,5 @@
 #include "FastSpeech2.h"
-
+#include <stdexcept>
 
 
 FastSpeech2::FastSpeech2()
@@ -26,10 +26,10 @@ bool FastSpeech2::Initialize(const std::string & SavedModelFolder)
 	return true;
 }
 
-TFTensor<float> FastSpeech2::DoInference(const std::vector<int32_t>& InputIDs, int32_t SpeakerID, float Speed, float Energy, float F0)
+TFTensor<float> FastSpeech2::DoInference(const std::vector<int32_t>& InputIDs, int32_t SpeakerID, float Speed, float Energy, float F0, int32_t EmotionID)
 {
-    VX_IF_EXCEPT(!FastSpeech,"Tried to do inference on unloaded or invalid model!")
-
+	if (!FastSpeech)
+        throw std::invalid_argument("Tried to do inference on unloaded or invalid model!");
 
 	// Convenience reference so that we don't have to constantly derefer pointers.
 	Model& Mdl = *FastSpeech;
@@ -40,6 +40,16 @@ TFTensor<float> FastSpeech2::DoInference(const std::vector<int32_t>& InputIDs, i
 	Tensor f0_ratios{ Mdl,"serving_default_f0_ratios" };
 	Tensor speaker_ids{ Mdl,"serving_default_speaker_ids" };
 	Tensor speed_ratios{ Mdl,"serving_default_speed_ratios" };
+    Tensor* emotion_ids = nullptr;
+
+    // This is a multi-emotion model
+    if (EmotionID != -1)
+    {
+        emotion_ids = new Tensor{Mdl,"serving_default_emotion_ids"};
+        emotion_ids->set_data(std::vector<int32_t>{EmotionID});
+
+    }
+
 
 	// This is the shape of the input IDs, our equivalent to tf.expand_dims.
 	std::vector<int64_t> InputIDShape = { 1, (int64_t)InputIDs.size() };
@@ -57,6 +67,9 @@ TFTensor<float> FastSpeech2::DoInference(const std::vector<int32_t>& InputIDs, i
 	// Vector of input tensors
 	std::vector<Tensor*> inputs = { &input_ids,&speaker_ids,&speed_ratios,&f0_ratios,&energy_ratios };
 
+    if (EmotionID != -1)
+        inputs.push_back(emotion_ids);
+
 
 	// Do inference
 	FastSpeech->run(inputs, output);
@@ -64,7 +77,12 @@ TFTensor<float> FastSpeech2::DoInference(const std::vector<int32_t>& InputIDs, i
 	// Define output and return it
 	TFTensor<float> Output = VoxUtil::CopyTensor<float>(output);
 
-	// We could just straight out define it in the return statement, but I like it more this way
+    // We allocated the emotion_ids tensor dynamically, delete it
+    if (emotion_ids)
+        delete emotion_ids;
+
+    // We could just straight out define it in the return statement, but I like it more this way
+
 	return Output;
 }
 

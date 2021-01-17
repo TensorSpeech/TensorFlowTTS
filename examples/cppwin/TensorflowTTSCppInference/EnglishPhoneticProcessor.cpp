@@ -1,49 +1,65 @@
 #include "EnglishPhoneticProcessor.h"
+#include "VoxCommon.hpp"
 
 using namespace std;
 
-bool EnglishPhoneticProcessor::Initialize(const std::string & PhoneticModelFn)
+bool EnglishPhoneticProcessor::Initialize(Phonemizer* InPhn)
 {
-	if (!FileExists(PhoneticModelFn))
-		return false;
 
-	Phonemizer = new PhonetisaurusScript(PhoneticModelFn);
+
+    Phoner = InPhn;
+    Tokenizer.SetAllowedChars(Phoner->GetGraphemeChars());
 
 
 
 	return true;
 }
 
-std::string EnglishPhoneticProcessor::ProcessTextPhonetic(const std::string & InText)
+std::string EnglishPhoneticProcessor::ProcessTextPhonetic(const std::string& InText, const std::vector<string> &InPhonemes,ETTSLanguage::Enum InLanguage)
 {
-	if (!Phonemizer)
+    if (!Phoner)
 		return "ERROR";
 
-	vector<string> Words = Tokenizer.Tokenize(InText);
+
+
+    vector<string> Words = Tokenizer.Tokenize(InText,InLanguage);
 
 	string Assemble = "";
+    // Make a copy of the dict passed.
+
 	for (size_t w = 0; w < Words.size();w++) 
 	{
 		const string& Word = Words[w];
 
-		if (Word == "SIL") {
-			Assemble.append(Word);
-			Assemble.append(" ");
+        if (Word.find("@") != std::string::npos){
+            std::string AddPh = Word.substr(1); // Remove the @
+            size_t OutId = 0;
+            if (VoxUtil::FindInVec(AddPh,InPhonemes,OutId))
+            {
+                Assemble.append(InPhonemes[OutId]);
+                Assemble.append(" ");
 
 
-			continue;
+            }
 
-		}
+            continue;
 
-		vector<PathData> PhResults = Phonemizer->Phoneticize(Word, 1, 10000, 99.f, false, false, 0.99);
-		for (const auto& padat : PhResults) {
-			for (const auto& uni : padat.Uniques) {
-				Assemble.append(Phonemizer->osyms_->Find(uni));
-				Assemble.append(" ");
-			}
+        }
 
 
-		}
+
+
+        size_t OverrideIdx = 0;
+
+
+
+        std::string Res = Phoner->ProcessWord(Word,0.001f);
+
+        // Cache the word in the override dict so next time we don't have to research it
+
+        Assemble.append(Res);
+        Assemble.append(" ");
+
 
 
 
@@ -63,18 +79,19 @@ std::string EnglishPhoneticProcessor::ProcessTextPhonetic(const std::string & In
 
 EnglishPhoneticProcessor::EnglishPhoneticProcessor()
 {
-	Phonemizer = nullptr;
+    Phoner = nullptr;
 }
 
-EnglishPhoneticProcessor::EnglishPhoneticProcessor(const std::string & PhModelFn)
+EnglishPhoneticProcessor::EnglishPhoneticProcessor(Phonemizer *InPhn)
 {
-	Phonemizer = nullptr;
-	Initialize(PhModelFn);
+    Initialize(InPhn);
+
 }
+
 
 
 EnglishPhoneticProcessor::~EnglishPhoneticProcessor()
 {
-	if (Phonemizer)
-		delete Phonemizer;
+    if (Phoner)
+        delete Phoner;
 }

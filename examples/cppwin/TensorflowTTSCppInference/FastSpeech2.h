@@ -28,7 +28,7 @@ public:
 
 	<- Returns: TFTensor<float> with shape {1,<len of mel in frames>,80} containing contents of mel spectrogram. 
 	*/
-	TFTensor<float> DoInference(const std::vector<int32_t>& InputIDs, int32_t SpeakerID = 0, float Speed = 1.f, float Energy = 1.f, float F0 = 1.f);
+    TFTensor<float> DoInference(const std::vector<int32_t>& InputIDs, int32_t SpeakerID = 0, float Speed = 1.f, float Energy = 1.f, float F0 = 1.f,int32_t EmotionID = -1);
 
 
 

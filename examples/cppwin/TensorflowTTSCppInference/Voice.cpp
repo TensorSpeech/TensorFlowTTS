@@ -1,15 +1,6 @@
 #include "Voice.h"
 #include "ext/ZCharScanner.h"
-const std::vector<std::string> Phonemes = { "AA","AA0","AA1","AA2","AE","AE0","AE1","AE2","AH","AH0","AH1","AH2","AO","AO0","AO1",
-"AO2","AW","AW0","AW1","AW2","AY","AY0","AY1","AY2","B","CH","D","DH","EH","EH0","EH1","EH2","ER","ER0","ER1","ER2","EY","EY0","EY1",
-"EY2","F","G","HH","IH","IH0","IH1","IH2","IY","IY0","IY1","IY2","JH","K","L","M","N","NG","OW","OW0","OW1","OW2","OY","OY0","OY1","OY2",
-"P","R","S","SH","T","TH","UH","UH0","UH1","UH2","UW","UW0","UW1","UW2","V","W","Y","Z","ZH","SIL","END" };
 
-const std::vector<int32_t> PhonemeIDs = { 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76,
-77, 78, 79, 80, 81, 82, 83, 84, 85,  86, 87, 88, 89, 90, 91, 92,93, 94, 95, 96, 97,
-98,99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136,
-137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149 };
 
 
 std::vector<int32_t> Voice::PhonemesToID(const std::string & InTxt)
@@ -24,23 +15,12 @@ std::vector<int32_t> Voice::PhonemesToID(const std::string & InTxt)
 	{
 		size_t ArrID = 0;
 
-		if (VoxUtil::FindInVec<std::string>(Pho, Phonemes, ArrID))
-			VecPhones.push_back(PhonemeIDs[ArrID]);
+        if (VoxUtil::FindInVec<std::string>(Pho, Phonemes, ArrID))
+            VecPhones.push_back(PhonemeIDs[ArrID]);
 		else
-			cout << "Voice::PhonemesToID() WARNING: Unknown phoneme " << Pho << endl;
+            std::cout << "Voice::PhonemesToID() WARNING: Unknown phoneme " << Pho << std::endl;
 
 
-
-	}
-	// Prevent out of range error in single word input
-	if (VecPhones.size() > 1)
-	{
-		if (VecPhones[VecPhones.size() - 1] != 148)
-			VecPhones.push_back(148);
-	}
-	else 
-	{
-		VecPhones.push_back(148);
 
 	}
 
@@ -49,22 +29,115 @@ std::vector<int32_t> Voice::PhonemesToID(const std::string & InTxt)
 
 }
 
-Voice::Voice(const std::string & VoxPath)
+void Voice::ReadPhonemes(const std::string &PhonemePath)
 {
-	MelPredictor.Initialize(VoxPath + "/melgen");
-	Vocoder.Initialize(VoxPath + "/vocoder");
-	Processor.Initialize(VoxPath + "/g2p.fst");
+    std::ifstream Phone(PhonemePath);
+
+    std::string Line;
+    while (std::getline(Phone, Line))
+    {
+        if (Line.find("\t") == std::string::npos)
+            continue;
+
+
+        ZStringDelimiter Deline(Line);
+        Deline.AddDelimiter("\t");
+
+        Phonemes.push_back(Deline[0]);
+        PhonemeIDs.push_back(stoi(Deline[1]));
+
+
+
+
+    }
 
 }
 
-std::vector<float> Voice::Vocalize(const std::string & Prompt, float Speed, int32_t SpeakerID, float Energy, float F0)
+void Voice::ReadSpeakers(const std::string &SpeakerPath)
 {
-	cout << Prompt << endl;
+    Speakers = GetLinedFile(SpeakerPath);
 
-	std::string PhoneticTxt = Processor.ProcessTextPhonetic(Prompt);
-	cout << PhoneticTxt << endl;
+}
 
-	TFTensor<float> Mel = MelPredictor.DoInference(PhonemesToID(PhoneticTxt), SpeakerID, Speed, Energy, F0);
+void Voice::ReadEmotions(const std::string &EmotionPath)
+{
+    Emotions = GetLinedFile(EmotionPath);
+
+}
+
+void Voice::ReadModelInfo(const std::string &ModelInfoPath)
+{
+
+    ModelInfo = "";
+    std::vector<std::string> MiLines = GetLinedFile(ModelInfoPath);
+
+    for (const std::string& ss : MiLines)
+        ModelInfo += ss + "\n";
+
+
+}
+
+std::vector<std::string> Voice::GetLinedFile(const std::string &Path)
+{
+    std::vector<std::string> RetLines;
+    std::ifstream Fi(Path);
+
+    if (!Fi.good()) // File not exists, ret empty vec
+        return RetLines;
+
+    std::string Line;
+    while (std::getline(Fi, Line))
+    {
+        if (Line.size() > 1)
+            RetLines.push_back(Line);
+
+
+    }
+
+    return RetLines;
+
+}
+
+Voice::Voice(const std::string & VoxPath, const std::string &inName, Phonemizer *InPhn)
+{
+	MelPredictor.Initialize(VoxPath + "/melgen");
+	Vocoder.Initialize(VoxPath + "/vocoder");
+
+    if (InPhn)
+        Processor.Initialize(InPhn);
+
+
+    VoxInfo = VoxUtil::ReadModelJSON(VoxPath + "/info.json");
+    Name = inName;
+    ReadPhonemes(VoxPath + "/phonemes.txt");
+    ReadSpeakers(VoxPath + "/speakers.txt");
+    ReadEmotions(VoxPath + "/emotions.txt");
+
+
+    ReadModelInfo(VoxPath + "/info.txt");
+
+
+
+
+
+
+
+}
+
+void Voice::AddPhonemizer(Phonemizer *InPhn)
+{
+    Processor.Initialize(InPhn);
+
+
+}
+
+
+std::vector<float> Voice::Vocalize(const std::string & Prompt, float Speed, int32_t SpeakerID, float Energy, float F0, int32_t EmotionID)
+{
+
+    std::string PhoneticTxt = Processor.ProcessTextPhonetic(Prompt,Phonemes,(ETTSLanguage::Enum)VoxInfo.Language);
+
+    TFTensor<float> Mel = MelPredictor.DoInference(PhonemesToID(PhoneticTxt), SpeakerID, Speed, Energy, F0,EmotionID);
 
 	TFTensor<float> AuData = Vocoder.DoInference(Mel);
 
@@ -92,8 +165,9 @@ std::vector<float> Voice::Vocalize(const std::string & Prompt, float Speed, int3
 	}
 
 
-	return AudioData;
+    return AudioData;
 }
+
 
 Voice::~Voice()
 {
