@@ -3,27 +3,26 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
-#include <stdexcept>
+#include <iostream>
 const std::vector<std::string> first14 = { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen" };
 const std::vector<std::string> prefixes = { "twen", "thir", "for", "fif", "six", "seven", "eigh", "nine" };
 
 // Punctuation, this gets auto-converted to SIL
 const std::string punctuation = ",.-;";
 
-// Capitals and lowercases, both having equal indexes
-const std::string capitals = "QWERTYUIOPASDFGHJKLZXCVBNM";
-const std::string lowercase = "qwertyuiopasdfghjklzxcvbnm";
-
-// Characters that are allowed but don't fit in any other category
-const std::string misc = "'";
 
 using namespace std;
 
+void TextTokenizer::SetAllowedChars(const std::string &value)
+{
+    AllowedChars = value;
+}
+
 string TextTokenizer::IntToStr(int number)
 {
-	if (number < 0)
-	{
-		return "minus " + IntToStr(-number);
+    if (number < 0)
+    {
+        return "minus " + IntToStr(-number);
 	}
 	if (number <= 14)
 		return first14.at(number);
@@ -95,9 +94,10 @@ TextTokenizer::~TextTokenizer()
 {
 }
 
-vector<string> TextTokenizer::Tokenize(const std::string & InTxt)
+vector<string> TextTokenizer::Tokenize(const std::string & InTxt,ETTSLanguage::Enum Language)
 {
 	vector<string> ProcessedTokens;
+
 
 	ZStringDelimiter Delim(InTxt);
 	Delim.AddDelimiter(" ");
@@ -108,7 +108,10 @@ vector<string> TextTokenizer::Tokenize(const std::string & InTxt)
 	if (!Delim.szTokens())
 		DelimitedTokens.push_back(InTxt);
 
-	DelimitedTokens = ExpandNumbers(DelimitedTokens);
+    if (Language == ETTSLanguage::English)
+        DelimitedTokens = ExpandNumbers(DelimitedTokens);
+
+
 
 
 	// We know that the new vector is going to be at least this size so we reserve
@@ -117,35 +120,43 @@ vector<string> TextTokenizer::Tokenize(const std::string & InTxt)
 	/*
 	In this step we go through the string and only allow qualified character to pass through.
 	*/
-	for (const auto& tok : DelimitedTokens)
+    for (size_t TokCtr = 0; TokCtr < DelimitedTokens.size();TokCtr++)
 	{
+        const auto& tok = DelimitedTokens[TokCtr];
 		string AppTok = "";
+
+
+        if (tok.find("@") != string::npos)
+        {
+
+            ProcessedTokens.push_back(tok);
+            continue;
+
+        }
+
 		for (size_t s = 0;s < tok.size();s++)
 		{
 
-			if (lowercase.find(tok[s]) != string::npos) {
-				AppTok += tok[s];
-			}
-			size_t IdxInUpper = capitals.find(tok[s]);
-			if (IdxInUpper != string::npos) {
-				// Add its lowercase version
-				AppTok += lowercase[IdxInUpper];
-			}
 
+            if (AllowedChars.find(tok[s]) != std::string::npos)
+                AppTok += tok[s];
+
+
+            // Prevent an ending period from adding another SIL
+            bool LastElem = TokCtr == DelimitedTokens.size() - 1 && s == tok.size() - 1;
 			// Punctuation handler
-			// This time we explicitly add a token to the vector
-			if (punctuation.find(tok[s]) != string::npos) {
+            // This time we explicitly add a token to the vector
+            if (punctuation.find(tok[s]) != string::npos && !LastElem) {
 				// First, if the assembled string isn't empty, we add it in its current state
 				// Otherwise, the SIL could end up appearing before the word.
 				if (!AppTok.empty()) {
 					ProcessedTokens.push_back(AppTok);
 					AppTok = "";
 				}
-				ProcessedTokens.push_back("SIL");
+                ProcessedTokens.push_back("@SIL");
 			}
 
-			if (misc.find(tok[s]) != string::npos)
-				AppTok += tok[s];
+
 
 
 

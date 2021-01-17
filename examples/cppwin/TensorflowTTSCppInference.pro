@@ -14,7 +14,9 @@ HEADERS += \
     TensorflowTTSCppInference/ext/AudioFile.hpp \
     TensorflowTTSCppInference/ext/CppFlow/include/Model.h \
     TensorflowTTSCppInference/ext/CppFlow/include/Tensor.h \
-    TensorflowTTSCppInference/ext/ZCharScanner.h
+    TensorflowTTSCppInference/ext/ZCharScanner.h \
+    TensorflowTTSCppInference/phonemizer.h \
+    TensorflowTTSCppInference/tfg2p.h \
 
 SOURCES += \
     TensorflowTTSCppInference/EnglishPhoneticProcessor.cpp \
@@ -26,10 +28,12 @@ SOURCES += \
     TensorflowTTSCppInference/VoxCommon.cpp \
     TensorflowTTSCppInference/ext/CppFlow/src/Model.cpp \
     TensorflowTTSCppInference/ext/CppFlow/src/Tensor.cpp \
-    TensorflowTTSCppInference/ext/ZCharScanner.cpp
+    TensorflowTTSCppInference/phonemizer.cpp \
+    TensorflowTTSCppInference/tfg2p.cpp \
+    TensorflowTTSCppInference/ext/ZCharScanner.cpp \
 
 INCLUDEPATH += $$PWD/deps/include
-LIBS += -L$$PWD/deps/lib -lfst -ltensorflow -lphonetisaurus
+LIBS += -L$$PWD/deps/lib -ltensorflow
 
 # GCC shits itself on memcp in AudioFile.hpp (l-1186) unless we add this
 QMAKE_CXXFLAGS += -fpermissive
