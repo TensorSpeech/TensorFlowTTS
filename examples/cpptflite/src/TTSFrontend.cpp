@@ -10,7 +10,7 @@ std::string TTSFrontend::getCmdResult(const std::string &text)
     char buf[1000] = {0};
     FILE *pf = NULL;
 
-    if( (pf = popen((_strCmd + " " + _mapperJson + " " + text).c_str(), "r")) == NULL )
+    if( (pf = popen((_strCmd + " " + _mapperJson + " \"" + text + "\"").c_str(), "r")) == NULL )
     {
         return "";
     }
