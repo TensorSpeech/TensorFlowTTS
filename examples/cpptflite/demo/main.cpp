@@ -5,22 +5,36 @@
 #include "TTSFrontend.h"
 #include "TTSBackend.h"
 
+typedef struct 
+{
+    const char* mapperJson;
+    unsigned int sampleRate;
+} Processor;
+
 int main(int argc, char* argv[])
 {
     if (argc != 3) 
     {
-        fprintf(stderr, "demo text(chinese) wavfile\n");
+        fprintf(stderr, "demo text wavfile\n");
         return 1;
     }
 
     const char* cmd        = "python3 ../demo/text2ids.py";
-    const char* mapperJson = "../../../tensorflow_tts/processor/pretrained/baker_mapper.json";
+
+    Processor proc;
+#if LJSPEECH
+    proc.mapperJson = "../../../tensorflow_tts/processor/pretrained/ljspeech_mapper.json";
+    proc.sampleRate = 22050;
+#elif BAKER
+    proc.mapperJson = "../../../tensorflow_tts/processor/pretrained/baker_mapper.json";
+    proc.sampleRate = 24000;
+#endif
 
     const char* melgenfile  = "../models/fastspeech2_quan.tflite";
     const char* vocoderfile = "../models/mb_melgan.tflite";
 
     // Init
-    TTSFrontend ttsfrontend(mapperJson, cmd);
+    TTSFrontend ttsfrontend(proc.mapperJson, cmd);
     TTSBackend ttsbackend(melgenfile, vocoderfile);
 
     // Process
@@ -49,7 +63,7 @@ int main(int argc, char* argv[])
     std::cout << "********* AUDIO LEN **********" << std::endl;
     std::cout << audio.size() << std::endl;
 
-    VoxUtil::ExportWAV(argv[2], audio, 24000);
+    VoxUtil::ExportWAV(argv[2], audio, proc.sampleRate);
     std::cout << "Wavfile: " << argv[2] << " creats." << std::endl;
 
     return 0;

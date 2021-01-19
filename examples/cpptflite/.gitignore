@@ -1,4 +1,7 @@
 .vscode
 /build
 /models
+/lib
+lib.zip
 models.zip
+models_ljspeech.zip
