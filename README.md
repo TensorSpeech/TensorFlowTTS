@@ -106,7 +106,7 @@ Prepare a dataset in the following format:
 ```
 |- [NAME_DATASET]/
 |   |- metadata.csv
-|   |- wav/
+|   |- wavs/
 |       |- file1.wav
 |       |- ...
 ```
