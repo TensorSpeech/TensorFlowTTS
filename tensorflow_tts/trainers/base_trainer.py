@@ -22,6 +22,7 @@ import tensorflow as tf
 from tqdm import tqdm
 
 from tensorflow_tts.optimizers import GradientAccumulator
+from tensorflow_tts.utils import utils
 
 
 class BasedTrainer(metaclass=abc.ABCMeta):
@@ -593,10 +594,12 @@ class GanBasedTrainer(BasedTrainer):
         self.ckpt.steps.assign(self.steps)
         self.ckpt.epochs.assign(self.epochs)
         self.ckp_manager.save(checkpoint_number=self.steps)
-        self._generator.save_weights(
+        utils.save_weights(
+            self._generator,
             self.saved_path + "generator-{}.h5".format(self.steps)
         )
-        self._discriminator.save_weights(
+        utils.save_weights(
+            self._discriminator,
             self.saved_path + "discriminator-{}.h5".format(self.steps)
         )
 
@@ -624,10 +627,12 @@ class GanBasedTrainer(BasedTrainer):
         )
 
         # load weights.
-        self._generator.load_weights(
+        utils.load_weights(
+            self._generator,
             self.saved_path + "generator-{}.h5".format(self.steps)
         )
-        self._discriminator.load_weights(
+        utils.load_weights(
+            self._discriminator,
             self.saved_path + "discriminator-{}.h5".format(self.steps)
         )
 
@@ -951,7 +956,10 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
         self.ckpt.steps.assign(self.steps)
         self.ckpt.epochs.assign(self.epochs)
         self.ckp_manager.save(checkpoint_number=self.steps)
-        self._model.save_weights(self.saved_path + "model-{}.h5".format(self.steps))
+        utils.save_weights(
+            self._model,
+            self.saved_path + "model-{}.h5".format(self.steps)
+        )
 
     def load_checkpoint(self, pretrained_path):
         """Load checkpoint."""
@@ -963,7 +971,10 @@ class Seq2SeqBasedTrainer(BasedTrainer, metaclass=abc.ABCMeta):
         self._optimizer.iterations.assign(tf.cast(self.steps, tf.int64))
 
         # load weights.
-        self._model.load_weights(self.saved_path + "model-{}.h5".format(self.steps))
+        utils.load_weights(
+            self._model,
+            self.saved_path + "model-{}.h5".format(self.steps)
+        )
 
     def _check_train_finish(self):
         """Check training finished."""

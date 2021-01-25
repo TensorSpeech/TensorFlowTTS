@@ -6,6 +6,10 @@
 
 import fnmatch
 import os
+import re
+import tempfile
+
+import tensorflow as tf
 
 
 def find_files(root_dir, query="*.wav", include_root_dir=True):
@@ -25,3 +29,62 @@ def find_files(root_dir, query="*.wav", include_root_dir=True):
         files = [file_.replace(root_dir + "/", "") for file_ in files]
 
     return files
+
+
+def _path_requires_gfile(filepath):
+    """Checks if the given path requires use of GFile API.
+
+    Args:
+        filepath (str): Path to check.
+    Returns:
+        bool: True if the given path needs GFile API to access, such as
+            "s3://some/path" and "gs://some/path".
+    """
+    # If the filepath contains a protocol (e.g. "gs://"), it should be handled
+    # using TensorFlow GFile API.
+    return bool(re.match(r"^[a-z]+://", filepath))
+
+
+def save_weights(model, filepath):
+    """Save model weights.
+
+    Same as model.save_weights(filepath), but supports saving to S3 or GCS
+    buckets using TensorFlow GFile API.
+
+    Args:
+        model (tf.keras.Model): Model to save.
+        filepath (str): Path to save the model weights to.
+    """
+    if not _path_requires_gfile(filepath):
+        model.save_weights(filepath)
+        return
+
+    # Save to a local temp file and copy to the desired path using GFile API.
+    _, ext = os.path.splitext(filepath)
+    with tempfile.NamedTemporaryFile(suffix=ext) as temp_file:
+        model.save_weights(temp_file.name)
+        # To preserve the original semantics, we need to overwrite the target
+        # file.
+        tf.io.gfile.copy(temp_file.name, filepath, overwrite=True)
+
+
+def load_weights(model, filepath):
+    """Load model weights.
+
+    Same as model.load_weights(filepath), but supports loading from S3 or GCS
+    buckets using TensorFlow GFile API.
+
+    Args:
+        model (tf.keras.Model): Model to load weights to.
+        filepath (str): Path to the weights file.
+    """
+    if not _path_requires_gfile(filepath):
+        model.load_weights(filepath)
+        return
+
+    # Make a local copy and load it.
+    _, ext = os.path.splitext(filepath)
+    with tempfile.NamedTemporaryFile(suffix=ext) as temp_file:
+        # The target temp_file should be created above, so we need to overwrite.
+        tf.io.gfile.copy(filepath, temp_file.name, overwrite=True)
+        model.load_weights(temp_file.name)
