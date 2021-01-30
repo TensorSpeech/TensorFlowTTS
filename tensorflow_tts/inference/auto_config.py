@@ -51,7 +51,7 @@ class AutoConfig:
     @classmethod
     def from_pretrained(cls, pretrained_path, **kwargs):
         with open(pretrained_path) as f:
-            config = yaml.load(f, Loader=yaml.Loader)
+            config = yaml.load(f, Loader=yaml.SafeLoader)
 
         try:
             model_type = config["model_type"]
