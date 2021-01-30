@@ -106,7 +106,7 @@ def parse_and_config():
     logging.basicConfig(level=log_level[args.verbose], format=FORMAT)
 
     # load config
-    config = yaml.load(open(args.config), Loader=yaml.Loader)
+    config = yaml.load(open(args.config), Loader=yaml.SafeLoader)
     config.update(vars(args))
     # config checks
     assert config["format"] == "npy", "'npy' is the only supported format."
