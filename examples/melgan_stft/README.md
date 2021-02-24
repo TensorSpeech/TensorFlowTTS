@@ -13,7 +13,7 @@ After you re-define your dataloader, pls modify an input arguments, train_datase
 First, you need training generator with only stft loss: 
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python examples/melgan_stft/train_melgan.py \
+CUDA_VISIBLE_DEVICES=0 python examples/melgan_stft/train_melgan_stft.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
   --outdir ./examples/melgan_stft/exp/train.melgan_stft.v1/ \
@@ -26,7 +26,7 @@ CUDA_VISIBLE_DEVICES=0 python examples/melgan_stft/train_melgan.py \
 Then resume and start training generator + discriminator:
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 python examples/melgan_stft/train_melgan.py \
+CUDA_VISIBLE_DEVICES=0 python examples/melgan_stft/train_melgan_stft.py \
   --train-dir ./dump/train/ \
   --dev-dir ./dump/valid/ \
   --outdir ./examples/melgan_stft/exp/train.melgan_stft.v1/ \
