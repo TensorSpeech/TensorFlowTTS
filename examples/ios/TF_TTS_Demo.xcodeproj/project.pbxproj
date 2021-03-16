@@ -1,0 +1,459 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4C85B38B26002B7D003EF7CF /* TF_TTS_DemoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C85B38A26002B7D003EF7CF /* TF_TTS_DemoApp.swift */; };
+		4C85B38D26002B7D003EF7CF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C85B38C26002B7D003EF7CF /* ContentView.swift */; };
+		4C85B38F26002B7E003EF7CF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4C85B38E26002B7E003EF7CF /* Assets.xcassets */; };
+		4C85B39226002B7E003EF7CF /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4C85B39126002B7E003EF7CF /* Preview Assets.xcassets */; };
+		4C85B3A026002E34003EF7CF /* TTS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C85B39F26002E34003EF7CF /* TTS.swift */; };
+		4C85B3AB26002FAE003EF7CF /* ljspeech_mapper.json in Resources */ = {isa = PBXBuildFile; fileRef = 4C85B3AA26002FAE003EF7CF /* ljspeech_mapper.json */; };
+		4C85B3AF26003109003EF7CF /* MBMelGAN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C85B3AD26003108003EF7CF /* MBMelGAN.swift */; };
+		4C85B3B026003109003EF7CF /* FastSpeech2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C85B3AE26003109003EF7CF /* FastSpeech2.swift */; };
+		4C85B3B726004180003EF7CF /* fastspeech2_quan.tflite in Resources */ = {isa = PBXBuildFile; fileRef = 4C85B3B52600417F003EF7CF /* fastspeech2_quan.tflite */; };
+		4C85B3B826004180003EF7CF /* mb_melgan.tflite in Resources */ = {isa = PBXBuildFile; fileRef = 4C85B3B626004180003EF7CF /* mb_melgan.tflite */; };
+		7962621A2FBFE4F4350BE4CE /* libPods-TF_TTS_Demo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C1863705175E1518089A8CA /* libPods-TF_TTS_Demo.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		4C85B38726002B7D003EF7CF /* TF_TTS_Demo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TF_TTS_Demo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C85B38A26002B7D003EF7CF /* TF_TTS_DemoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TF_TTS_DemoApp.swift; sourceTree = "<group>"; };
+		4C85B38C26002B7D003EF7CF /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		4C85B38E26002B7E003EF7CF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4C85B39126002B7E003EF7CF /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		4C85B39326002B7E003EF7CF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4C85B39F26002E34003EF7CF /* TTS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TTS.swift; sourceTree = "<group>"; };
+		4C85B3AA26002FAE003EF7CF /* ljspeech_mapper.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = ljspeech_mapper.json; path = ../../../tensorflow_tts/processor/pretrained/ljspeech_mapper.json; sourceTree = "<group>"; };
+		4C85B3AD26003108003EF7CF /* MBMelGAN.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MBMelGAN.swift; sourceTree = "<group>"; };
+		4C85B3AE26003109003EF7CF /* FastSpeech2.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastSpeech2.swift; sourceTree = "<group>"; };
+		4C85B3B52600417F003EF7CF /* fastspeech2_quan.tflite */ = {isa = PBXFileReference; lastKnownFileType = file; path = fastspeech2_quan.tflite; sourceTree = "<group>"; };
+		4C85B3B626004180003EF7CF /* mb_melgan.tflite */ = {isa = PBXFileReference; lastKnownFileType = file; path = mb_melgan.tflite; sourceTree = "<group>"; };
+		4C85B3BB26004876003EF7CF /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		7D7970556264AB38256CF749 /* Pods-TF TTS Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TF TTS Demo.release.xcconfig"; path = "Target Support Files/Pods-TF TTS Demo/Pods-TF TTS Demo.release.xcconfig"; sourceTree = "<group>"; };
+		99A43F21F9647E3677352A5B /* Pods-TF TTS Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TF TTS Demo.debug.xcconfig"; path = "Target Support Files/Pods-TF TTS Demo/Pods-TF TTS Demo.debug.xcconfig"; sourceTree = "<group>"; };
+		9C1863705175E1518089A8CA /* libPods-TF_TTS_Demo.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TF_TTS_Demo.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B3A5C735C30B2D5FC8C19020 /* Pods-TF_TTS_Demo.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TF_TTS_Demo.debug.xcconfig"; path = "Target Support Files/Pods-TF_TTS_Demo/Pods-TF_TTS_Demo.debug.xcconfig"; sourceTree = "<group>"; };
+		D5A15A5967523BB8A50C844F /* Pods-TF_TTS_Demo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TF_TTS_Demo.release.xcconfig"; path = "Target Support Files/Pods-TF_TTS_Demo/Pods-TF_TTS_Demo.release.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4C85B38426002B7D003EF7CF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7962621A2FBFE4F4350BE4CE /* libPods-TF_TTS_Demo.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4C85B37E26002B7D003EF7CF = {
+			isa = PBXGroup;
+			children = (
+				4C85B3BB26004876003EF7CF /* README.md */,
+				4C85B38926002B7D003EF7CF /* TF_TTS_Demo */,
+				4C85B38826002B7D003EF7CF /* Products */,
+				F10AFF36A4BAA04D30FB3F20 /* Pods */,
+				98E5496B57C69E944B3260B8 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		4C85B38826002B7D003EF7CF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4C85B38726002B7D003EF7CF /* TF_TTS_Demo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4C85B38926002B7D003EF7CF /* TF_TTS_Demo */ = {
+			isa = PBXGroup;
+			children = (
+				4C85B3A326002E8B003EF7CF /* TTS */,
+				4C85B38A26002B7D003EF7CF /* TF_TTS_DemoApp.swift */,
+				4C85B38C26002B7D003EF7CF /* ContentView.swift */,
+				4C85B38E26002B7E003EF7CF /* Assets.xcassets */,
+				4C85B39326002B7E003EF7CF /* Info.plist */,
+				4C85B39026002B7E003EF7CF /* Preview Content */,
+			);
+			path = TF_TTS_Demo;
+			sourceTree = "<group>";
+		};
+		4C85B39026002B7E003EF7CF /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				4C85B39126002B7E003EF7CF /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		4C85B3A326002E8B003EF7CF /* TTS */ = {
+			isa = PBXGroup;
+			children = (
+				4C85B3AA26002FAE003EF7CF /* ljspeech_mapper.json */,
+				4C85B3A426002EDB003EF7CF /* Models */,
+				4C85B39F26002E34003EF7CF /* TTS.swift */,
+				4C85B3AE26003109003EF7CF /* FastSpeech2.swift */,
+				4C85B3AD26003108003EF7CF /* MBMelGAN.swift */,
+			);
+			name = TTS;
+			sourceTree = "<group>";
+		};
+		4C85B3A426002EDB003EF7CF /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				4C85B3B52600417F003EF7CF /* fastspeech2_quan.tflite */,
+				4C85B3B626004180003EF7CF /* mb_melgan.tflite */,
+			);
+			name = Models;
+			sourceTree = "<group>";
+		};
+		98E5496B57C69E944B3260B8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9C1863705175E1518089A8CA /* libPods-TF_TTS_Demo.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F10AFF36A4BAA04D30FB3F20 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				99A43F21F9647E3677352A5B /* Pods-TF TTS Demo.debug.xcconfig */,
+				7D7970556264AB38256CF749 /* Pods-TF TTS Demo.release.xcconfig */,
+				B3A5C735C30B2D5FC8C19020 /* Pods-TF_TTS_Demo.debug.xcconfig */,
+				D5A15A5967523BB8A50C844F /* Pods-TF_TTS_Demo.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4C85B38626002B7D003EF7CF /* TF_TTS_Demo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4C85B39626002B7E003EF7CF /* Build configuration list for PBXNativeTarget "TF_TTS_Demo" */;
+			buildPhases = (
+				79059AB8757019D2EFF2A6BA /* [CP] Check Pods Manifest.lock */,
+				4C85B38326002B7D003EF7CF /* Sources */,
+				4C85B38426002B7D003EF7CF /* Frameworks */,
+				4C85B38526002B7D003EF7CF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TF_TTS_Demo;
+			productName = "TF TTS Demo";
+			productReference = 4C85B38726002B7D003EF7CF /* TF_TTS_Demo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4C85B37F26002B7D003EF7CF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1240;
+				LastUpgradeCheck = 1240;
+				TargetAttributes = {
+					4C85B38626002B7D003EF7CF = {
+						CreatedOnToolsVersion = 12.4;
+					};
+				};
+			};
+			buildConfigurationList = 4C85B38226002B7D003EF7CF /* Build configuration list for PBXProject "TF_TTS_Demo" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4C85B37E26002B7D003EF7CF;
+			productRefGroup = 4C85B38826002B7D003EF7CF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4C85B38626002B7D003EF7CF /* TF_TTS_Demo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4C85B38526002B7D003EF7CF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C85B3AB26002FAE003EF7CF /* ljspeech_mapper.json in Resources */,
+				4C85B39226002B7E003EF7CF /* Preview Assets.xcassets in Resources */,
+				4C85B3B826004180003EF7CF /* mb_melgan.tflite in Resources */,
+				4C85B38F26002B7E003EF7CF /* Assets.xcassets in Resources */,
+				4C85B3B726004180003EF7CF /* fastspeech2_quan.tflite in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		79059AB8757019D2EFF2A6BA /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-TF_TTS_Demo-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4C85B38326002B7D003EF7CF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4C85B3B026003109003EF7CF /* FastSpeech2.swift in Sources */,
+				4C85B3AF26003109003EF7CF /* MBMelGAN.swift in Sources */,
+				4C85B38D26002B7D003EF7CF /* ContentView.swift in Sources */,
+				4C85B3A026002E34003EF7CF /* TTS.swift in Sources */,
+				4C85B38B26002B7D003EF7CF /* TF_TTS_DemoApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4C85B39426002B7E003EF7CF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4C85B39526002B7E003EF7CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		4C85B39726002B7E003EF7CF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B3A5C735C30B2D5FC8C19020 /* Pods-TF_TTS_Demo.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "\"TF_TTS_Demo/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = TF_TTS_Demo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-l\"TensorFlowLiteSwift\"",
+					"-l\"c++\"",
+					"-framework",
+					"\"TensorFlowLiteC\"",
+					"-framework",
+					"\"TensorFlowLiteSelectTfOps\"",
+					"-weak_framework",
+					"\"CoreML\"",
+					"-force_load",
+					"$(SRCROOT)/Pods/TensorFlowLiteSelectTfOps/Frameworks/TensorFlowLiteSelectTfOps.framework/TensorFlowLiteSelectTfOps",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.tensorspeech.TF-TTS-Demo";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4C85B39826002B7E003EF7CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D5A15A5967523BB8A50C844F /* Pods-TF_TTS_Demo.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "\"TF_TTS_Demo/Preview Content\"";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = TF_TTS_Demo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-l\"TensorFlowLiteSwift\"",
+					"-l\"c++\"",
+					"-framework",
+					"\"TensorFlowLiteC\"",
+					"-framework",
+					"\"TensorFlowLiteSelectTfOps\"",
+					"-weak_framework",
+					"\"CoreML\"",
+					"-force_load",
+					"$(SRCROOT)/Pods/TensorFlowLiteSelectTfOps/Frameworks/TensorFlowLiteSelectTfOps.framework/TensorFlowLiteSelectTfOps",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.tensorspeech.TF-TTS-Demo";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4C85B38226002B7D003EF7CF /* Build configuration list for PBXProject "TF_TTS_Demo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C85B39426002B7E003EF7CF /* Debug */,
+				4C85B39526002B7E003EF7CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4C85B39626002B7E003EF7CF /* Build configuration list for PBXNativeTarget "TF_TTS_Demo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C85B39726002B7E003EF7CF /* Debug */,
+				4C85B39826002B7E003EF7CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4C85B37F26002B7D003EF7CF /* Project object */;
+}
