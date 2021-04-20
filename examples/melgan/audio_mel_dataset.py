@@ -38,7 +38,6 @@ class AudioMelDataset(AbstractDataset):
         mel_length_threshold=0,
     ):
         """Initialize dataset.
-
         Args:
             root_dir (str): Root directory including dumped files.
             audio_query (str): Query to find audio files in root_dir.
@@ -48,7 +47,6 @@ class AudioMelDataset(AbstractDataset):
             audio_length_threshold (int): Threshold to remove short audio files.
             mel_length_threshold (int): Threshold to remove short feature files.
             return_utt_id (bool): Whether to return the utterance id with arrays.
-
         """
         # find all of audio and mel files.
         audio_files = sorted(find_files(root_dir, audio_query))
@@ -117,7 +115,9 @@ class AudioMelDataset(AbstractDataset):
         datasets = tf.data.Dataset.from_generator(
             self.generator, output_types=output_types, args=(self.get_args())
         )
-
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+        datasets = datasets.with_options(options)
         # load dataset
         datasets = datasets.map(
             lambda items: self._load_data(items), tf.data.experimental.AUTOTUNE
