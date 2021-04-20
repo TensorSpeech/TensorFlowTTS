@@ -28,14 +28,14 @@ class AudioMelDataset(AbstractDataset):
     """Tensorflow Audio Mel dataset."""
 
     def __init__(
-        self,
-        root_dir,
-        audio_query="*-wave.npy",
-        mel_query="*-raw-feats.npy",
-        audio_load_fn=np.load,
-        mel_load_fn=np.load,
-        audio_length_threshold=0,
-        mel_length_threshold=0,
+            self,
+            root_dir,
+            audio_query="*-wave.npy",
+            mel_query="*-raw-feats.npy",
+            audio_load_fn=np.load,
+            mel_load_fn=np.load,
+            audio_length_threshold=0,
+            mel_length_threshold=0,
     ):
         """Initialize dataset.
 
@@ -105,19 +105,21 @@ class AudioMelDataset(AbstractDataset):
         return items
 
     def create(
-        self,
-        allow_cache=False,
-        batch_size=1,
-        is_shuffle=False,
-        map_fn=None,
-        reshuffle_each_iteration=True,
+            self,
+            allow_cache=False,
+            batch_size=1,
+            is_shuffle=False,
+            map_fn=None,
+            reshuffle_each_iteration=True,
     ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
         datasets = tf.data.Dataset.from_generator(
             self.generator, output_types=output_types, args=(self.get_args())
         )
-
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+        datasets = datasets.with_options(options)
         # load dataset
         datasets = datasets.map(
             lambda items: self._load_data(items), tf.data.experimental.AUTOTUNE
