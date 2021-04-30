@@ -56,8 +56,6 @@ class AutoConfig:
     @classmethod
     def from_pretrained(cls, pretrained_path, **kwargs):
         # load weights from hf hub
-
-        import ipdb; ipdb.set_trace()
         if not os.path.isfile(pretrained_path):
             # retrieve correct hub url
             download_url = hf_hub_url(repo_id=pretrained_path, filename=CONFIG_FILE_NAME)
