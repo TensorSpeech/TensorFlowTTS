@@ -8,8 +8,15 @@ import fnmatch
 import os
 import re
 import tempfile
+from pathlib import Path
 
 import tensorflow as tf
+
+MODEL_FILE_NAME = "model.h5"
+CONFIG_FILE_NAME = "config.yml"
+PROCESSOR_FILE_NAME = "processor.json"
+LIBRARY_NAME = "tensorflow_tts"
+CACHE_DIRECTORY = os.path.join(Path.home(), ".cache", LIBRARY_NAME)
 
 
 def find_files(root_dir, query="*.wav", include_root_dir=True):

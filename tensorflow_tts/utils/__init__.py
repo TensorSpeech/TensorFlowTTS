@@ -18,5 +18,5 @@ from tensorflow_tts.utils.strategy import (
     calculate_3d_loss,
     return_strategy,
 )
-from tensorflow_tts.utils.utils import find_files
+from tensorflow_tts.utils.utils import find_files, MODEL_FILE_NAME, CONFIG_FILE_NAME, PROCESSOR_FILE_NAME, CACHE_DIRECTORY, LIBRARY_NAME
 from tensorflow_tts.utils.weight_norm import WeightNormalization
