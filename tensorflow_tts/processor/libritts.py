@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from g2p_en import g2p as grapheme_to_phonem
 
 from tensorflow_tts.processor.base_processor import BaseProcessor
+from tensorflow_tts.utils.utils import PROCESSOR_FILE_NAME
 
 g2p = grapheme_to_phonem.G2p()
 
@@ -84,7 +85,11 @@ class LibriTTSProcessor(BaseProcessor):
         return sample
 
     def setup_eos_token(self):
-        return None # because we do not use this 
+        return None # because we do not use this
+
+    def save_pretrained(self, saved_path):
+        os.makedirs(saved_path, exist_ok=True)
+        self._save_mapper(os.path.join(saved_path, PROCESSOR_FILE_NAME), {})
 
     def text_to_sequence(self, text):
         if (

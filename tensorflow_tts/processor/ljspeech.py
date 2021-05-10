@@ -22,6 +22,7 @@ import soundfile as sf
 from dataclasses import dataclass
 from tensorflow_tts.processor import BaseProcessor
 from tensorflow_tts.utils import cleaners
+from tensorflow_tts.utils.utils import PROCESSOR_FILE_NAME
 
 valid_symbols = [
     "AA",
@@ -157,6 +158,10 @@ class LJSpeechProcessor(BaseProcessor):
 
     def setup_eos_token(self):
         return _eos
+
+    def save_pretrained(self, saved_path):
+        os.makedirs(saved_path, exist_ok=True)
+        self._save_mapper(os.path.join(saved_path, PROCESSOR_FILE_NAME), {})
 
     def get_one_sample(self, item):
         text, wav_path, speaker_name = item

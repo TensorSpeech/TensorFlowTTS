@@ -224,3 +224,8 @@ class BaseProcessor(abc.ABC):
             if extra_attrs_to_save:
                 full_mapper = {**full_mapper, **extra_attrs_to_save}
             json.dump(full_mapper, f)
+
+    @abc.abstractmethod
+    def save_pretrained(self, saved_path):
+        """Save mappers to file"""
+        pass

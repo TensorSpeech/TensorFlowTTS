@@ -71,26 +71,27 @@ class TFAutoModel(object):
         is_build = kwargs.pop("is_build", True)
 
         # load weights from hf hub
-        if not os.path.isfile(pretrained_path):
-            # retrieve correct hub url
-            download_url = hf_hub_url(repo_id=pretrained_path, filename=MODEL_FILE_NAME)
+        if pretrained_path is not None:
+            if not os.path.isfile(pretrained_path):
+                # retrieve correct hub url
+                download_url = hf_hub_url(repo_id=pretrained_path, filename=MODEL_FILE_NAME)
 
-            downloaded_file = str(
-                cached_download(
-                    url=download_url,
-                    library_name=LIBRARY_NAME,
-                    library_version=VERSION,
-                    cache_dir=CACHE_DIRECTORY,
+                downloaded_file = str(
+                    cached_download(
+                        url=download_url,
+                        library_name=LIBRARY_NAME,
+                        library_version=VERSION,
+                        cache_dir=CACHE_DIRECTORY,
+                    )
                 )
-            )
 
-            # load config from repo as well
-            if config is None:
-                from tensorflow_tts.inference import AutoConfig
+                # load config from repo as well
+                if config is None:
+                    from tensorflow_tts.inference import AutoConfig
 
-                config = AutoConfig.from_pretrained(pretrained_path)
+                    config = AutoConfig.from_pretrained(pretrained_path)
 
-            pretraine_path = downloaded_file
+                pretraine_path = downloaded_file
 
 
         assert config is not None, "Please make sure to pass a config along to load a model from a local file"
