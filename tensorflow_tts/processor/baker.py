@@ -27,6 +27,7 @@ from pypinyin.contrib.neutral_tone import NeutralToneWith5Mixin
 from pypinyin.converter import DefaultConverter
 from pypinyin.core import Pinyin
 from tensorflow_tts.processor import BaseProcessor
+from tensorflow_tts.utils.utils import PROCESSOR_FILE_NAME
 
 _pad = ["pad"]
 _eos = ["eos"]
@@ -551,6 +552,13 @@ class BakerProcessor(BaseProcessor):
 
     def setup_eos_token(self):
         return _eos[0]
+
+    def save_pretrained(self, saved_path):
+        os.makedirs(saved_path, exist_ok=True)
+        self._save_mapper(
+            os.path.join(saved_path, PROCESSOR_FILE_NAME),
+            {"pinyin_dict": self.pinyin_dict},
+        )
 
     def create_items(self):
         items = []
