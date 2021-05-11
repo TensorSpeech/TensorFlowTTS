@@ -24,6 +24,9 @@ class LJ(BaseProcessor):
     def setup_eos_token(self):
         return None
 
+    def save_pretrained(self, saved_path):
+        return super().save_pretrained(saved_path)
+
 
 @pytest.fixture
 def processor(tmpdir):
