@@ -14,6 +14,7 @@
 # limitations under the License.
 """FastSpeech2 Config object."""
 
+
 from tensorflow_tts.configs import FastSpeechConfig
 
 

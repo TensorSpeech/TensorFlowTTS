@@ -15,7 +15,10 @@
 """ParallelWaveGAN Config object."""
 
 
-class ParallelWaveGANGeneratorConfig(object):
+from tensorflow_tts.configs import BaseConfig
+
+
+class ParallelWaveGANGeneratorConfig(BaseConfig):
     """Initialize ParallelWaveGAN Generator Config."""
 
     def __init__(

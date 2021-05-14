@@ -15,7 +15,10 @@
 """MelGAN Config object."""
 
 
-class MelGANGeneratorConfig(object):
+from tensorflow_tts.configs import BaseConfig
+
+
+class MelGANGeneratorConfig(BaseConfig):
     """Initialize MelGAN Generator Config."""
 
     def __init__(

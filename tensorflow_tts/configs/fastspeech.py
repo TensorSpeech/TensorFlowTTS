@@ -16,6 +16,7 @@
 
 import collections
 
+from tensorflow_tts.configs import BaseConfig
 from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS as lj_symbols
 from tensorflow_tts.processor.kss import KSS_SYMBOLS as kss_symbols
 from tensorflow_tts.processor.baker import BAKER_SYMBOLS as bk_symbols
@@ -44,12 +45,12 @@ SelfAttentionParams = collections.namedtuple(
 )
 
 
-class FastSpeechConfig(object):
+class FastSpeechConfig(BaseConfig):
     """Initialize FastSpeech Config."""
 
     def __init__(
         self,
-        dataset='ljspeech',
+        dataset="ljspeech",
         vocab_size=len(lj_symbols),
         n_speakers=1,
         encoder_hidden_size=384,

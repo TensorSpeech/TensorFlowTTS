@@ -41,7 +41,7 @@ CONFIG_MAPPING = OrderedDict(
         ("melgan_generator", MelGANGeneratorConfig),
         ("hifigan_generator", HifiGANGeneratorConfig),
         ("tacotron2", Tacotron2Config),
-        ("parallel_wavegan_generator", ParallelWaveGANGeneratorConfig)
+        ("parallel_wavegan_generator", ParallelWaveGANGeneratorConfig),
     ]
 )
 
@@ -58,7 +58,9 @@ class AutoConfig:
         # load weights from hf hub
         if not os.path.isfile(pretrained_path):
             # retrieve correct hub url
-            download_url = hf_hub_url(repo_id=pretrained_path, filename=CONFIG_FILE_NAME)
+            download_url = hf_hub_url(
+                repo_id=pretrained_path, filename=CONFIG_FILE_NAME
+            )
 
             pretrained_path = str(
                 cached_download(
@@ -76,6 +78,7 @@ class AutoConfig:
             model_type = config["model_type"]
             config_class = CONFIG_MAPPING[model_type]
             config_class = config_class(**config[model_type + "_params"], **kwargs)
+            config_class.set_pretrained_config(config)
             return config_class
         except Exception:
             raise ValueError(

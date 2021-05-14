@@ -14,18 +14,20 @@
 # limitations under the License.
 """Tacotron-2 Config object."""
 
+
+from tensorflow_tts.configs import BaseConfig
 from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS as lj_symbols
 from tensorflow_tts.processor.kss import KSS_SYMBOLS as kss_symbols
 from tensorflow_tts.processor.baker import BAKER_SYMBOLS as bk_symbols
 from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS as lbri_symbols
 
 
-class Tacotron2Config(object):
+class Tacotron2Config(BaseConfig):
     """Initialize Tacotron-2 Config."""
 
     def __init__(
         self,
-        dataset='ljspeech',
+        dataset="ljspeech",
         vocab_size=len(lj_symbols),
         embedding_hidden_size=512,
         initializer_range=0.02,
@@ -60,7 +62,7 @@ class Tacotron2Config(object):
             self.vocab_size = vocab_size
         elif dataset == "kss":
             self.vocab_size = len(kss_symbols)
-        elif dataset == 'baker':
+        elif dataset == "baker":
             self.vocab_size = len(bk_symbols)
         elif dataset == "libritts":
             self.vocab_size = len(lbri_symbols)

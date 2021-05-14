@@ -15,7 +15,10 @@
 """HifiGAN Config object."""
 
 
-class HifiGANGeneratorConfig(object):
+from tensorflow_tts.configs import BaseConfig
+
+
+class HifiGANGeneratorConfig(BaseConfig):
     """Initialize HifiGAN Generator Config."""
 
     def __init__(
