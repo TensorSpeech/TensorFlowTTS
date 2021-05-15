@@ -66,3 +66,6 @@ def test_auto_processor(mapper_path):
 def test_auto_model(config_path):
     config = AutoConfig.from_pretrained(pretrained_path=config_path)
     model = TFAutoModel.from_pretrained(config=config, pretrained_path=None)
+
+    # test save_pretrained
+    config.save_pretrained("./")
