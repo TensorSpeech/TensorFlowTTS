@@ -27,5 +27,6 @@ class BaseConfig(abc.ABC):
 
     def save_pretrained(self, saved_path):
         """Save config to file"""
+        os.makedirs(saved_path, exist_ok=True)
         with open(os.path.join(saved_path, CONFIG_FILE_NAME), "w") as file:
             yaml.dump(self.config, file)
