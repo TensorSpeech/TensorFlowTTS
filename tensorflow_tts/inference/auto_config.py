@@ -72,13 +72,13 @@ class AutoConfig:
             )
 
         with open(pretrained_path) as f:
-            config = yaml.load(f, Loader=yaml.SafeLoader)
+            config = yaml.load(f, Loader=yaml.Loader)
 
         try:
             model_type = config["model_type"]
             config_class = CONFIG_MAPPING[model_type]
             config_class = config_class(**config[model_type + "_params"], **kwargs)
-            config_class.set_pretrained_config(config)
+            config_class.set_config_params(config)
             return config_class
         except Exception:
             raise ValueError(

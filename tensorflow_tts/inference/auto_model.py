@@ -17,6 +17,7 @@
 import logging
 import warnings
 import os
+import copy
 
 from collections import OrderedDict
 
@@ -67,9 +68,7 @@ class TFAutoModel(object):
         raise EnvironmentError("Cannot be instantiated using `__init__()`")
 
     @classmethod
-    def from_pretrained(cls, config=None, pretrained_path=None, **kwargs):
-        is_build = kwargs.pop("is_build", True)
-
+    def from_pretrained(cls, pretrained_path=None, config=None, **kwargs):
         # load weights from hf hub
         if pretrained_path is not None:
             if not os.path.isfile(pretrained_path):
@@ -101,8 +100,8 @@ class TFAutoModel(object):
                 config
             ):
                 model = model_class(config=config, **kwargs)
-                if is_build:
-                    model._build()
+                model.set_config(config)
+                model._build()
                 if pretrained_path is not None and ".h5" in pretrained_path:
                     try:
                         model.load_weights(pretrained_path)

@@ -17,6 +17,8 @@
 import numpy as np
 import tensorflow as tf
 
+from tensorflow_tts.models import BaseModel
+
 
 def get_initializer(initializer_range=0.02):
     """Creates a `tf.initializers.truncated_normal` with the given range.
@@ -746,7 +748,7 @@ class TFFastSpeechLengthRegulator(tf.keras.layers.Layer):
         return outputs, encoder_masks
 
 
-class TFFastSpeech(tf.keras.Model):
+class TFFastSpeech(BaseModel):
     """TF Fastspeech module."""
 
     def __init__(self, config, **kwargs):

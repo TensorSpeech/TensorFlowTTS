@@ -17,6 +17,7 @@
 import numpy as np
 import tensorflow as tf
 
+from tensorflow_tts.models import BaseModel
 from tensorflow_tts.utils import GroupConv1D, WeightNormalization
 
 
@@ -186,7 +187,7 @@ class TFResidualStack(tf.keras.layers.Layer):
                 pass
 
 
-class TFMelGANGenerator(tf.keras.Model):
+class TFMelGANGenerator(BaseModel):
     """Tensorflow MelGAN generator module."""
 
     def __init__(self, config, **kwargs):
@@ -450,7 +451,7 @@ class TFMelGANDiscriminator(tf.keras.layers.Layer):
                 pass
 
 
-class TFMelGANMultiScaleDiscriminator(tf.keras.Model):
+class TFMelGANMultiScaleDiscriminator(BaseModel):
     """MelGAN multi-scale discriminator module."""
 
     def __init__(self, config, **kwargs):

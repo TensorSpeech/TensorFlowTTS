@@ -1,3 +1,4 @@
+from tensorflow_tts.models.base_model import BaseModel
 from tensorflow_tts.models.fastspeech import TFFastSpeech
 from tensorflow_tts.models.fastspeech2 import TFFastSpeech2
 from tensorflow_tts.models.melgan import (

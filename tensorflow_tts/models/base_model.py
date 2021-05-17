@@ -12,21 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base Config for all config."""
+"""Base Model for all model."""
 
-import abc
+import tensorflow as tf
 import yaml
 import os
+import numpy as np
 
-from tensorflow_tts.utils.utils import CONFIG_FILE_NAME
+from tensorflow_tts.utils.utils import MODEL_FILE_NAME, CONFIG_FILE_NAME
 
 
-class BaseConfig(abc.ABC):
-    def set_config_params(self, config_params):
-        self.config_params = config_params
+class BaseModel(tf.keras.Model):
+    def set_config(self, config):
+        self.config = config
 
     def save_pretrained(self, saved_path):
-        """Save config to file"""
+        """Save config and weights to file"""
         os.makedirs(saved_path, exist_ok=True)
-        with open(os.path.join(saved_path, CONFIG_FILE_NAME), "w") as file:
-            yaml.dump(self.config_params, file, Dumper=yaml.Dumper)
+        self.config.save_pretrained(saved_path)
+        self.save_weights(os.path.join(saved_path, MODEL_FILE_NAME))

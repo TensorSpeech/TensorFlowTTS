@@ -27,6 +27,8 @@ from tensorflow_addons.seq2seq import BahdanauAttention, Decoder, Sampler
 
 from tensorflow_tts.utils import dynamic_decode
 
+from tensorflow_tts.models import BaseModel
+
 
 def get_initializer(initializer_range=0.02):
     """Creates a `tf.initializers.truncated_normal` with the given range.
@@ -737,7 +739,7 @@ class TFTacotronDecoder(Decoder):
         return (outputs, next_state, next_inputs, finished)
 
 
-class TFTacotron2(tf.keras.Model):
+class TFTacotron2(BaseModel):
     """Tensorflow tacotron-2 model."""
 
     def __init__(self, config, **kwargs):
@@ -760,10 +762,10 @@ class TFTacotron2(tf.keras.Model):
             units=config.n_mels, name="residual_projection"
         )
 
-        self.config = config
         self.use_window_mask = False
         self.maximum_iterations = 4000
         self.enable_tflite_convertible = enable_tflite_convertible
+        self.config = config
 
     def setup_window(self, win_front, win_back):
         """Call only for inference."""

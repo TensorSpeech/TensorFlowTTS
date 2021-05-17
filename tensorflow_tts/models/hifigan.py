@@ -23,6 +23,7 @@ from tensorflow_tts.models.melgan import TFConvTranspose1d
 from tensorflow_tts.utils import GroupConv1D
 from tensorflow_tts.utils import WeightNormalization
 
+from tensorflow_tts.models import BaseModel
 from tensorflow_tts.models import TFMelGANGenerator
 
 
@@ -133,7 +134,7 @@ class TFMultiHifiResBlock(tf.keras.layers.Layer):
         return xs / len(self.list_resblock)
 
 
-class TFHifiGANGenerator(tf.keras.Model):
+class TFHifiGANGenerator(BaseModel):
     def __init__(self, config, **kwargs):
         super().__init__(**kwargs)
         # check hyper parameter is valid or not
@@ -338,7 +339,7 @@ class TFHifiGANPeriodDiscriminator(tf.keras.layers.Layer):
                 pass
 
 
-class TFHifiGANMultiPeriodDiscriminator(tf.keras.Model):
+class TFHifiGANMultiPeriodDiscriminator(BaseModel):
     """Tensorflow Hifigan Multi Period discriminator module."""
 
     def __init__(self, config, **kwargs):

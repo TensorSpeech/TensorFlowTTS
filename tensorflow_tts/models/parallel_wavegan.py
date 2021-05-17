@@ -17,6 +17,8 @@
 
 import tensorflow as tf
 
+from tensorflow_tts.models import BaseModel
+
 
 def get_initializer(initializer_seed=42):
     """Creates a `tf.initializers.he_normal` with the given seed.
@@ -345,7 +347,7 @@ class TFConvInUpsampleNetWork(tf.keras.layers.Layer):
         return self.upsample(c_)
 
 
-class TFParallelWaveGANGenerator(tf.keras.Model):
+class TFParallelWaveGANGenerator(BaseModel):
     """Parallel WaveGAN Generator module."""
 
     def __init__(self, config, **kwargs):
@@ -491,7 +493,7 @@ class TFParallelWaveGANGenerator(tf.keras.Model):
         return x
 
 
-class TFParallelWaveGANDiscriminator(tf.keras.Model):
+class TFParallelWaveGANDiscriminator(BaseModel):
     """Parallel WaveGAN Discriminator module."""
 
     def __init__(self, config, **kwargs):

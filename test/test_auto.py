@@ -42,6 +42,8 @@ logging.basicConfig(
 )
 def test_auto_processor(mapper_path):
     processor = AutoProcessor.from_pretrained(pretrained_path=mapper_path)
+    processor.save_pretrained("./test_saved")
+    processor = AutoProcessor.from_pretrained("./test_saved/processor.json")
 
 
 @pytest.mark.parametrize(
@@ -65,7 +67,12 @@ def test_auto_processor(mapper_path):
 )
 def test_auto_model(config_path):
     config = AutoConfig.from_pretrained(pretrained_path=config_path)
-    model = TFAutoModel.from_pretrained(config=config, pretrained_path=None)
+    model = TFAutoModel.from_pretrained(pretrained_path=None, config=config)
 
     # test save_pretrained
-    config.save_pretrained("./")
+    config.save_pretrained("./test_saved")
+    model.save_pretrained("./test_saved")
+
+    # test from_pretrained
+    config = AutoConfig.from_pretrained("./test_saved/config.yml")
+    model = TFAutoModel.from_pretrained("./test_saved/model.h5", config=config)
