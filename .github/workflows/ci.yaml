@@ -35,6 +35,7 @@ jobs:
           # install python modules
           python -m pip install --upgrade pip
           pip install -q -U numpy
+          pip install git+https://github.com/repodiac/german_transliterate.git#egg=german_transliterate
           pip install -q tensorflow-gpu==${{ matrix.tensorflow-version }}
           pip install -q -e .
           pip install -q -e .[test]
