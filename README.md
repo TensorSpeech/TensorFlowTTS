@@ -255,7 +255,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py), [train_multiband_melgan.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/multiband_melgan/train_multiband_melgan.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/fastspeech/train_fastspeech.py)).
 
 # End-to-End Examples
-You can know how to inference each model at [notebooks](https://github.com/tensorspeech/TensorFlowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing) (for English), [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing) (for Korean). Here is an example code for end2end inference with fastspeech and melgan.
+You can know how to inference each model at [notebooks](https://github.com/tensorspeech/TensorFlowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing) (for English), [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing) (for Korean). Here is an example code for end2end inference with fastspeech2 and multi-band melgan. We uploaded all our pretrained in [HuggingFace Hub](https://huggingface.co/tensorspeech).
 
 ```python
 import numpy as np
@@ -299,7 +299,14 @@ sf.write('./audio_after.wav', audio_after, 22050, "PCM_16")
 ```
 
 # Contact
-[Minh Nguyen Quan Anh](https://github.com/tensorspeech): nguyenquananhminh@gmail.com, [erogol](https://github.com/erogol): erengolge@gmail.com, [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com, [Dawid Kobus](https://github.com/machineko): machineko@protonmail.com, [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com, [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com, [Yunchao He](https://github.com/candlewill): yunchaohe@gmail.com, [Alejandro Miguel Velasquez](https://github.com/ZDisket): xml506ok@gmail.com
+- [Minh Nguyen Quan Anh](https://github.com/tensorspeech): nguyenquananhminh@gmail.com
+- [erogol](https://github.com/erogol): erengolge@gmail.com
+- [Kuan Chen](https://github.com/azraelkuan): azraelkuan@gmail.com
+- [Dawid Kobus](https://github.com/machineko): machineko@protonmail.com
+- [Takuya Ebata](https://github.com/MokkeMeguru): meguru.mokke@gmail.com
+- [Trinh Le Quang](https://github.com/l4zyf9x): trinhle.cse@gmail.com
+- [Yunchao He](https://github.com/candlewill): yunchaohe@gmail.com
+- [Alejandro Miguel Velasquez](https://github.com/ZDisket): xml506ok@gmail.com
 
 # License
 Overall, Almost models here are licensed under the [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0) for all countries in the world, except in **Viet Nam** this framework cannot be used for production in any way without permission from TensorFlowTTS's Authors. There is an exception, Tacotron-2 can be used with any purpose. If you are Vietnamese and want to use this framework for production, you **Must** contact us in advance.
