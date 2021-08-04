@@ -25,6 +25,7 @@ from tensorflow_tts.processor import (
     BakerProcessor,
     LibriTTSProcessor,
     ThorstenProcessor,
+    SynpaflexProcessor,
 )
 
 from tensorflow_tts.utils import CACHE_DIRECTORY, PROCESSOR_FILE_NAME, LIBRARY_NAME
@@ -37,7 +38,8 @@ CONFIG_MAPPING = OrderedDict(
         ("KSSProcessor", KSSProcessor),
         ("BakerProcessor", BakerProcessor),
         ("LibriTTSProcessor", LibriTTSProcessor),
-        ("ThorstenProcessor", ThorstenProcessor)
+        ("ThorstenProcessor", ThorstenProcessor),
+        ("SynpaflexProcessor", SynpaflexProcessor),
     ]
 )
 
