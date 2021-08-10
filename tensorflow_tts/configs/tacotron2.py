@@ -20,6 +20,7 @@ from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS as lj_symbols
 from tensorflow_tts.processor.kss import KSS_SYMBOLS as kss_symbols
 from tensorflow_tts.processor.baker import BAKER_SYMBOLS as bk_symbols
 from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS as lbri_symbols
+from tensorflow_tts.processor.synpaflex import SYNPAFLEX_SYMBOLS as synpaflex_symbols
 
 
 class Tacotron2Config(BaseConfig):
@@ -66,6 +67,8 @@ class Tacotron2Config(BaseConfig):
             self.vocab_size = len(bk_symbols)
         elif dataset == "libritts":
             self.vocab_size = len(lbri_symbols)
+        elif dataset == "synpaflex":
+            self.vocab_size = len(synpaflex_symbols)
         else:
             raise ValueError("No such dataset: {}".format(dataset))
         self.embedding_hidden_size = embedding_hidden_size

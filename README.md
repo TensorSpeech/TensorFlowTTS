@@ -116,7 +116,7 @@ Prepare a dataset in the following format:
 
 Where `metadata.csv` has the following format: `id|transcription`. This is a ljspeech-like format; you can ignore preprocessing steps if you have other format datasets.
 
-Note that `NAME_DATASET` should be `[ljspeech/kss/baker/libritts]` for example.
+Note that `NAME_DATASET` should be `[ljspeech/kss/baker/libritts/synpaflex]` for example.
 
 ## Preprocessing
 
@@ -132,13 +132,16 @@ The preprocessing has two steps:
 
 To reproduce the steps above:
 ```
-tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts/thorsten] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --config preprocess/[ljspeech/kss/baker/thorsten]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten]
-tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --config preprocess/[ljspeech/kss/baker/libritts/thorsten]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten]
+tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts/thorsten/synpaflex] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten/synpaflex] --config preprocess/[ljspeech/kss/baker/thorsten/synpaflex]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten/synpaflex]
+tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts/thorsten/synpaflex] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten/synpaflex] --config preprocess/[ljspeech/kss/baker/libritts/thorsten/synpaflex]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten/synpaflex]
 ```
 
-Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), [`libritts`](http://www.openslr.org/60/) and [`thorsten`](https://github.com/thorstenMueller/deep-learning-german-tts) for dataset argument. In the future, we intend to support more datasets.
+Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), [`libritts`](http://www.openslr.org/60/), [`thorsten`](https://github.com/thorstenMueller/deep-learning-german-tts) and
+[`synpaflex`](https://www.ortolang.fr/market/corpora/synpaflex-corpus/) for dataset argument. In the future, we intend to support more datasets.
 
 **Note**: To run `libritts` preprocessing, please first read the instruction in [examples/fastspeech2_libritts](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/fastspeech2_libritts). We need to reformat it first before run preprocessing.
+
+**Note**: To run `synpaflex` preprocessing, please first run the notebook [notebooks/prepare_synpaflex.ipynb](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/notebooks/prepare_synpaflex.ipynb). We need to reformat it first before run preprocessing.
 
 After preprocessing, the structure of the project folder should be:
 ```

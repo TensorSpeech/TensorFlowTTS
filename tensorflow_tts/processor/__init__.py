@@ -6,3 +6,4 @@ from tensorflow_tts.processor.kss import KSSProcessor
 from tensorflow_tts.processor.libritts import LibriTTSProcessor
 
 from tensorflow_tts.processor.thorsten import ThorstenProcessor
+from tensorflow_tts.processor.synpaflex import SynpaflexProcessor
