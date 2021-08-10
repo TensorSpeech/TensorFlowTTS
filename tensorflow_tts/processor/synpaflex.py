@@ -28,9 +28,6 @@ _eos = "eos"
 _punctuation = "!/\'(),-.:;? "
 _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzéèàùâêîôûçäëïöüÿœæ"
 
-# Prepend "@" to ARPAbet symbols to ensure uniqueness (some are the same as uppercase letters):
-_arpabet = ["@" + s for s in valid_symbols]
-
 # Export all symbols:
 SYNPAFLEX_SYMBOLS = (
     [_pad] + list(_punctuation) + list(_letters) + [_eos]
