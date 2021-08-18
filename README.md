@@ -19,9 +19,10 @@
 :zany_face: TensorFlowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems.
 
 ## What's new
-- 2021/06/01 (**NEW!**) Integrated with [Huggingface Hub](https://huggingface.co/tensorspeech). See the [PR](https://github.com/TensorSpeech/TensorFlowTTS/pull/555). Thanks [patrickvonplaten](https://github.com/patrickvonplaten) and [osanseviero](https://github.com/osanseviero)
-- 2021/03/18 (**NEW!**) Support IOS for FastSpeech2 and MB MelGAN. Thanks [kewlbear](https://github.com/kewlbear). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/ios)
-- 2021/01/18 (**NEW!**) Support TFLite C++ inference. Thanks [luan78zaoha](https://github.com/luan78zaoha). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/cpptflite)
+- 2021/08/12 (**NEW!**) Support French TTS (Tacotron2, Multiband MelGAN). Pls see the [colab](https://colab.research.google.com/drive/1jd3u46g-fGQw0rre8fIwWM9heJvrV1c0?usp=sharing). Many Thanks [Samuel Delalez](https://github.com/samuel-lunii)
+- 2021/06/01 Integrated with [Huggingface Hub](https://huggingface.co/tensorspeech). See the [PR](https://github.com/TensorSpeech/TensorFlowTTS/pull/555). Thanks [patrickvonplaten](https://github.com/patrickvonplaten) and [osanseviero](https://github.com/osanseviero)
+- 2021/03/18  Support IOS for FastSpeech2 and MB MelGAN. Thanks [kewlbear](https://github.com/kewlbear). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/ios)
+- 2021/01/18 Support TFLite C++ inference. Thanks [luan78zaoha](https://github.com/luan78zaoha). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/cpptflite)
 - 2020/12/02 Support German TTS with [Thorsten dataset](https://github.com/thorstenMueller/deep-learning-german-tts). See the [Colab](https://colab.research.google.com/drive/1W0nSFpsz32M0OcIkY9uMOiGrLTPKVhTy?usp=sharing). Thanks [thorstenMueller](https://github.com/thorstenMueller) and [monatis](https://github.com/monatis)
 - 2020/11/24 Add HiFi-GAN vocoder. See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/hifigan)
 - 2020/11/19 Add Multi-GPU gradient accumulator. See [here](https://github.com/TensorSpeech/TensorFlowTTS/pull/377)
@@ -47,7 +48,7 @@
 - Support both Single/Multi GPU in base trainer class.
 - TFlite conversion for all supported models.
 - Android example.
-- Support many languages (currently, we support Chinese, Korean, English.)
+- Support many languages (currently, we support Chinese, Korean, English, French and German)
 - Support C++ inference.
 - Support Convert weight for some models from PyTorch to TensorFlow to accelerate speed.
 
@@ -115,7 +116,7 @@ Prepare a dataset in the following format:
 
 Where `metadata.csv` has the following format: `id|transcription`. This is a ljspeech-like format; you can ignore preprocessing steps if you have other format datasets.
 
-Note that `NAME_DATASET` should be `[ljspeech/kss/baker/libritts]` for example.
+Note that `NAME_DATASET` should be `[ljspeech/kss/baker/libritts/synpaflex]` for example.
 
 ## Preprocessing
 
@@ -131,13 +132,16 @@ The preprocessing has two steps:
 
 To reproduce the steps above:
 ```
-tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts/thorsten] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --config preprocess/[ljspeech/kss/baker/thorsten]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten]
-tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten] --config preprocess/[ljspeech/kss/baker/libritts/thorsten]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten]
+tensorflow-tts-preprocess --rootdir ./[ljspeech/kss/baker/libritts/thorsten/synpaflex] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten/synpaflex] --config preprocess/[ljspeech/kss/baker/thorsten/synpaflex]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten/synpaflex]
+tensorflow-tts-normalize --rootdir ./dump_[ljspeech/kss/baker/libritts/thorsten/synpaflex] --outdir ./dump_[ljspeech/kss/baker/libritts/thorsten/synpaflex] --config preprocess/[ljspeech/kss/baker/libritts/thorsten/synpaflex]_preprocess.yaml --dataset [ljspeech/kss/baker/libritts/thorsten/synpaflex]
 ```
 
-Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), [`libritts`](http://www.openslr.org/60/) and [`thorsten`](https://github.com/thorstenMueller/deep-learning-german-tts) for dataset argument. In the future, we intend to support more datasets.
+Right now we only support [`ljspeech`](https://keithito.com/LJ-Speech-Dataset/), [`kss`](https://www.kaggle.com/bryanpark/korean-single-speaker-speech-dataset), [`baker`](https://weixinxcxdb.oss-cn-beijing.aliyuncs.com/gwYinPinKu/BZNSYP.rar), [`libritts`](http://www.openslr.org/60/), [`thorsten`](https://github.com/thorstenMueller/deep-learning-german-tts) and
+[`synpaflex`](https://www.ortolang.fr/market/corpora/synpaflex-corpus/) for dataset argument. In the future, we intend to support more datasets.
 
 **Note**: To run `libritts` preprocessing, please first read the instruction in [examples/fastspeech2_libritts](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/fastspeech2_libritts). We need to reformat it first before run preprocessing.
+
+**Note**: To run `synpaflex` preprocessing, please first run the notebook [notebooks/prepare_synpaflex.ipynb](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/notebooks/prepare_synpaflex.ipynb). We need to reformat it first before run preprocessing.
 
 After preprocessing, the structure of the project folder should be:
 ```
@@ -254,7 +258,7 @@ A detail implementation of base_trainer from [tensorflow_tts/trainer/base_traine
 All models on this repo are trained based-on **GanBasedTrainer** (see [train_melgan.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/melgan/train_melgan.py), [train_melgan_stft.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/melgan.stft/train_melgan_stft.py), [train_multiband_melgan.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/multiband_melgan/train_multiband_melgan.py)) and **Seq2SeqBasedTrainer** (see [train_tacotron2.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/tacotron2/train_tacotron2.py), [train_fastspeech.py](https://github.com/tensorspeech/TensorFlowTTS/blob/master/examples/fastspeech/train_fastspeech.py)).
 
 # End-to-End Examples
-You can know how to inference each model at [notebooks](https://github.com/tensorspeech/TensorFlowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing) (for English), [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing) (for Korean). Here is an example code for end2end inference with fastspeech2 and multi-band melgan. We uploaded all our pretrained in [HuggingFace Hub](https://huggingface.co/tensorspeech).
+You can know how to inference each model at [notebooks](https://github.com/tensorspeech/TensorFlowTTS/tree/master/notebooks) or see a [colab](https://colab.research.google.com/drive/1akxtrLZHKuMiQup00tzO2olCaN-y3KiD?usp=sharing) (for English), [colab](https://colab.research.google.com/drive/1ybWwOS5tipgPFttNulp77P6DAB5MtiuN?usp=sharing) (for Korean), [colab](https://colab.research.google.com/drive/1YpSHRBRPBI7cnTkQn1UcVTWEQVbsUm1S?usp=sharing) (for Chinese), [colab](https://colab.research.google.com/drive/1jd3u46g-fGQw0rre8fIwWM9heJvrV1c0?usp=sharing) (for French), [colab](https://colab.research.google.com/drive/1W0nSFpsz32M0OcIkY9uMOiGrLTPKVhTy?usp=sharing) (for German). Here is an example code for end2end inference with fastspeech2 and multi-band melgan. We uploaded all our pretrained in [HuggingFace Hub](https://huggingface.co/tensorspeech).
 
 ```python
 import numpy as np
