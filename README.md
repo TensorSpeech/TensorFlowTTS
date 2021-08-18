@@ -19,7 +19,7 @@
 :zany_face: TensorFlowTTS provides real-time state-of-the-art speech synthesis architectures such as Tacotron-2, Melgan, Multiband-Melgan, FastSpeech, FastSpeech2 based-on TensorFlow 2. With Tensorflow 2, we can speed-up training/inference progress, optimizer further by using [fake-quantize aware](https://www.tensorflow.org/model_optimization/guide/quantization/training_comprehensive_guide) and [pruning](https://www.tensorflow.org/model_optimization/guide/pruning/pruning_with_keras), make TTS models can be run faster than real-time and be able to deploy on mobile devices or embedded systems.
 
 ## What's new
-- 2021/08/18 (**NEW!**) Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio) [Gradio Demo] (https://huggingface.co/spaces/akhaliq/TensorFlowTTS)
+- 2021/08/18 (**NEW!**) Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). See [Gradio Demo](https://huggingface.co/spaces/akhaliq/TensorFlowTTS).
 - 2021/08/12 (**NEW!**) Support French TTS (Tacotron2, Multiband MelGAN). Pls see the [colab](https://colab.research.google.com/drive/1jd3u46g-fGQw0rre8fIwWM9heJvrV1c0?usp=sharing). Many Thanks [Samuel Delalez](https://github.com/samuel-lunii)
 - 2021/06/01 Integrated with [Huggingface Hub](https://huggingface.co/tensorspeech). See the [PR](https://github.com/TensorSpeech/TensorFlowTTS/pull/555). Thanks [patrickvonplaten](https://github.com/patrickvonplaten) and [osanseviero](https://github.com/osanseviero)
 - 2021/03/18  Support IOS for FastSpeech2 and MB MelGAN. Thanks [kewlbear](https://github.com/kewlbear). See [here](https://github.com/TensorSpeech/TensorFlowTTS/tree/master/examples/ios)
