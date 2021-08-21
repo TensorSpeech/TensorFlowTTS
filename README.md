@@ -60,10 +60,10 @@ This repository is tested on Ubuntu 18.04 with:
 - Python 3.7+
 - Cuda 10.1
 - CuDNN 7.6.5
-- Tensorflow 2.2/2.3
+- Tensorflow 2.2/2.3/2.4/2.5/2.6
 - [Tensorflow Addons](https://github.com/tensorflow/addons) >= 0.10.0
 
-Different Tensorflow version should be working but not tested yet. This repo will try to work with the latest stable TensorFlow version. **We recommend you install TensorFlow 2.3.0 to training in case you want to use MultiGPU.**
+Different Tensorflow version should be working but not tested yet. This repo will try to work with the latest stable TensorFlow version. **We recommend you install TensorFlow 2.6.0 to training in case you want to use MultiGPU.**
 
 ## Installation
 ### With pip
