@@ -75,6 +75,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
   --win-back 3
 ```
 
+To extract postnets for training vocoder, follow above steps but with `extract_postnets.py`
+
 You also can download my extracted durations at 40k steps at [link](https://drive.google.com/drive/u/1/folders/1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_?usp=drive_open).
 
 ## Finetune Tacotron-2 with ljspeech pretrained on other languages
@@ -116,6 +118,7 @@ Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https:/
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |  :-----: |
 | [tacotron2.v1](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 65K    | 1
 | [tacotron2.v1](https://drive.google.com/drive/folders/1WMBe01BBnYf3sOxMhbvnF2CUHaRTpBXJ?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.kss.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 100K    | 1
+| [tacotron2.lju.v1](https://drive.google.com/drive/folders/1tOMzik_Nr4eY63gooKYSmNTJyXC6Pp55?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.lju.v1.yaml)          | EN    | 44.1k  | 20-11025        | 2048 / 512 / None    | 126K    | 1
 
 ## Reference
 

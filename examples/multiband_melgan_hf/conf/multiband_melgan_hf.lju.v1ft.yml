@@ -1,6 +1,6 @@
 
 #This is the hyperparameter configuration file for finetuning MB-MelGAN + MPD. It is intended to be used for finetuning generator and discriminator
-#Trains fast, it is mostly done at 30k steps, although one can still see small improvements beyond that
+#Trains fast, adapts to new voice within 30k steps, although it is beneficial to keep training beyond that for about 200k, depending on dataset size.
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
@@ -98,7 +98,7 @@ discriminator_optimizer_params:
     lr_fn: "PiecewiseConstantDecay"
     lr_params: 
         boundaries: [100000, 200000]
-        values: [0.00003125, 0.00003125, 0.00003125]
+        values: [0.000015625, 0.000015625, 0.000015625]
     amsgrad: false
 
 ###########################################################
