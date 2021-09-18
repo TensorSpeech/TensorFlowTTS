@@ -93,6 +93,17 @@ tacotron2.load_weights("./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/
 ```
 You can also define `var_train_expr` in config file to let model training only on some layers in case you want to fine-tune on your dataset with the same pretrained language and processor. For example, `var_train_expr: "embeddings|encoder|decoder"` means we just training all variables that `embeddings`, `encoder`, `decoder` exist in its name.
 
+## Using Forced Alignment Guided Attention Loss
+
+Instead of regular guided attention loss you can opt for [Forced Alignment Guided Attention Loss](https://docs.google.com/document/d/1TMH0klOWzlH4Up_GFT2cR4zB0JehAu1pe9zOemZPk7Y/edit#) (FAL), which uses prealignment information from Montreal Forced Aligner to more accurately guide each utterance. This especially helps on harder datasets, like those with long silences.
+First see `examples/mfa_extraction`, and once you have extracted durations, run `export_align.py`, like this.
+
+    python examples/tacotron2/export_align.py --dump-dir dump --looseness 3.5
+
+You can experiment with different `looseness` values for stricter (lower) or more tolerant masks. **Note that this script assumes you are using r = 1**
+After that, simply pass the argument `--fal 1` to the train_tacotron2.py script afterwards.
+
+
 ## Results
 Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml) but with reduction_factor = 7, we will update learning curves for reduction_factor = 1.
 
