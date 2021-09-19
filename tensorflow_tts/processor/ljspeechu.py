@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from tensorflow_tts.processor import BaseProcessor
 from tensorflow_tts.utils import cleaners
 from tensorflow_tts.utils.utils import PROCESSOR_FILE_NAME
+from g2p_en import G2p as grapheme_to_phn
 
 valid_symbols = [
     "AA",
@@ -128,6 +129,11 @@ LJSPEECH_U_SYMBOLS = (
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 
 
+
+_arpa_exempt = _punctuation + _special
+
+arpa_g2p = grapheme_to_phn()
+
 @dataclass
 class LJSpeechUltimateProcessor(BaseProcessor):
     """LJSpeech Ultimate processor."""
@@ -137,7 +143,8 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         "wave_file": 0,
         "text_norm": 1,
     }
-    train_f_name: str = "filelist_p.txt"
+    train_f_name: str = "filelist.txt"
+    
 
     def create_items(self):
         if self.data_dir:
@@ -161,8 +168,39 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         os.makedirs(saved_path, exist_ok=True)
         self._save_mapper(os.path.join(saved_path, PROCESSOR_FILE_NAME), {})
 
+
+    def to_arpa(self,in_str):
+        phn_arr = arpa_g2p(in_str)
+        phn_arr = [x for x in phn_arr if x != " "]
+        
+        arpa_str = "{"
+        in_chain = True
+
+        # Iterative array-traverse approach to build ARPA string. Phonemes must be in curly braces, but not punctuation
+        for token in phn_arr:
+            if token in _arpa_exempt and in_chain:
+                arpa_str += " }"
+                in_chain = False
+            
+            if token not in _arpa_exempt and not in_chain:
+                arpa_str += " {"
+                in_chain = True
+
+            arpa_str += " " + token
+          
+        if in_chain:
+            arpa_str += " }"
+
+        return arpa_str
+
+
+
     def get_one_sample(self, item):
         text, wav_path, speaker_name = item
+        
+        # Check if this line is already an ARPA string by searching for the trademark curly brace. If not, we apply
+        if not "{" in text:
+            text = self.to_arpa(text)
 
         # normalize audio signal to be [-1, 1], soundfile already norm.
         audio, rate = sf.read(wav_path)
