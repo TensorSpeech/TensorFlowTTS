@@ -70,7 +70,6 @@ class CharactorMelDataset(AbstractDataset):
         charactor_files = sorted(find_files(root_dir, charactor_query))
         mel_files = sorted(find_files(root_dir, mel_query))
 
-
         mel_lengths = [mel_load_fn(f).shape[0] for f in mel_files]
         char_lengths = [charactor_load_fn(f).shape[0] for f in charactor_files]
 
@@ -80,16 +79,18 @@ class CharactorMelDataset(AbstractDataset):
             len(mel_files) == len(charactor_files) == len(mel_lengths)
         ), f"Number of charactor, mel and duration files are different \
                 ({len(mel_files)} vs {len(charactor_files)} vs {len(mel_lengths)})."
-        
+
         self.align_files = []
 
         if len(align_query) > 1:
-          align_files = sorted(find_files(root_dir, align_query))
-          assert len(align_files) == len(mel_files),f"Number of align files ({len(align_files)}) and mel files ({len(mel_files)}) are different"
-          logging.info("Using FAL loss")
-          self.align_files = align_files
+            align_files = sorted(find_files(root_dir, align_query))
+            assert len(align_files) == len(
+                mel_files
+            ), f"Number of align files ({len(align_files)}) and mel files ({len(mel_files)}) are different"
+            logging.info("Using FAL loss")
+            self.align_files = align_files
         else:
-          logging.info("Using guided attention loss")
+            logging.info("Using guided attention loss")
 
         if ".npy" in charactor_query:
             suffix = charactor_query[1:]
@@ -128,7 +129,7 @@ class CharactorMelDataset(AbstractDataset):
         for i, utt_id in enumerate(utt_ids):
             mel_file = self.mel_files[i]
             charactor_file = self.charactor_files[i]
-            align_file = self.align_files[i] if len(self.align_files) > 1 else "" 
+            align_file = self.align_files[i] if len(self.align_files) > 1 else ""
 
             items = {
                 "utt_ids": utt_id,
@@ -138,13 +139,17 @@ class CharactorMelDataset(AbstractDataset):
             }
 
             yield items
-    
+
     @tf.function
     def _load_data(self, items):
         mel = tf.numpy_function(np.load, [items["mel_files"]], tf.float32)
         charactor = tf.numpy_function(np.load, [items["charactor_files"]], tf.int32)
-        g_att = tf.numpy_function(np.load, [items["align_files"]], tf.float32) if len(self.align_files) > 1 else None 
-        
+        g_att = (
+            tf.numpy_function(np.load, [items["align_files"]], tf.float32)
+            if len(self.align_files) > 1
+            else None
+        )
+
         mel_length = len(mel)
         char_length = len(charactor)
         # padding mel to make its length is multiple of reduction factor.
@@ -191,7 +196,7 @@ class CharactorMelDataset(AbstractDataset):
         is_shuffle=False,
         map_fn=None,
         reshuffle_each_iteration=True,
-        drop_remainder=True
+        drop_remainder=True,
     ):
         """Create tf.dataset function."""
         output_types = self.get_output_dtypes()
@@ -201,19 +206,15 @@ class CharactorMelDataset(AbstractDataset):
 
         # load data
         datasets = datasets.map(
-            lambda items: self._load_data(items),
-            tf.data.experimental.AUTOTUNE
+            lambda items: self._load_data(items), tf.data.experimental.AUTOTUNE
         )
 
         # calculate guided attention
         if len(self.align_files) < 1:
             datasets = datasets.map(
                 lambda items: self._guided_attention(items),
-                tf.data.experimental.AUTOTUNE
+                tf.data.experimental.AUTOTUNE,
             )
-        
-            
-          
 
         datasets = datasets.filter(
             lambda x: x["mel_lengths"] > self.mel_length_threshold

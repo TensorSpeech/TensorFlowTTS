@@ -135,7 +135,9 @@ def main():
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
         use_fixed_shapes=True,
     )
-    dataset = dataset.create(allow_cache=True, batch_size=args.batch_size, drop_remainder=False)
+    dataset = dataset.create(
+        allow_cache=True, batch_size=args.batch_size, drop_remainder=False
+    )
 
     # define model and load checkpoint
     tacotron2 = TFTacotron2(
@@ -170,11 +172,11 @@ def main():
         alignment_historys = alignment_historys.numpy()
         post_mel_outputs = post_mel_outputs.numpy()
         mel_gt = mel_gt.numpy()
-        
-        outdpost = os.path.join(args.outdir,"postnets")
-            
+
+        outdpost = os.path.join(args.outdir, "postnets")
+
         if not os.path.exists(outdpost):
-          os.makedirs(outdpost)
+            os.makedirs(outdpost)
 
         for i, alignment in enumerate(alignment_historys):
             real_char_length = input_lengths[i].numpy()

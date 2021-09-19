@@ -96,12 +96,12 @@ def main():
         os.makedirs(args.outdir)
 
     # load config
-    
-    outdpost = os.path.join(args.outdir,"postnets")
-    
+
+    outdpost = os.path.join(args.outdir, "postnets")
+
     if not os.path.exists(outdpost):
         os.makedirs(outdpost)
-    
+
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.Loader)
     config.update(vars(args))
@@ -118,7 +118,9 @@ def main():
         charactor_query=char_query,
         charactor_load_fn=char_load_fn,
     )
-    dataset = dataset.create(batch_size=1) # force batch size to 1 otherwise it may miss certain files
+    dataset = dataset.create(
+        batch_size=1
+    )  # force batch size to 1 otherwise it may miss certain files
 
     # define model and load checkpoint
     fastspeech2 = TFFastSpeech2(
@@ -134,8 +136,9 @@ def main():
         mel_lens = data["mel_lengths"]
 
         # fastspeech inference.
-        masked_mel_before, masked_mel_after , duration_outputs, _, _ = fastspeech2(**data,training=True)
-        
+        masked_mel_before, masked_mel_after, duration_outputs, _, _ = fastspeech2(
+            **data, training=True
+        )
 
         # convert to numpy
         masked_mel_befores = masked_mel_before.numpy()

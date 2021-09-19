@@ -114,25 +114,23 @@ valid_symbols = [
 
 _pad = "pad"
 _eos = "eos"
-_punctuation = "!'(),.:;?" # Unlike LJSpeech, we do not use spaces since we are phoneme only and spaces lead to very bad attention performance with phonetic input.
+_punctuation = "!'(),.:;?"  # Unlike LJSpeech, we do not use spaces since we are phoneme only and spaces lead to very bad attention performance with phonetic input.
 _special = "-"
 
 # Prepend "@" to ARPAbet symbols to ensure uniqueness (some are the same as uppercase letters):
 _arpabet = ["@" + s for s in valid_symbols]
 
 # Export all symbols:
-LJSPEECH_U_SYMBOLS = (
-    [_pad] + list(_special) + list(_punctuation) + _arpabet + [_eos]
-)
+LJSPEECH_U_SYMBOLS = [_pad] + list(_special) + list(_punctuation) + _arpabet + [_eos]
 
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r"(.*?)\{(.+?)\}(.*)")
 
 
-
 _arpa_exempt = _punctuation + _special
 
 arpa_g2p = grapheme_to_phn()
+
 
 @dataclass
 class LJSpeechUltimateProcessor(BaseProcessor):
@@ -144,7 +142,6 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         "text_norm": 1,
     }
     train_f_name: str = "filelist.txt"
-    
 
     def create_items(self):
         if self.data_dir:
@@ -168,11 +165,10 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         os.makedirs(saved_path, exist_ok=True)
         self._save_mapper(os.path.join(saved_path, PROCESSOR_FILE_NAME), {})
 
-
-    def to_arpa(self,in_str):
+    def to_arpa(self, in_str):
         phn_arr = arpa_g2p(in_str)
         phn_arr = [x for x in phn_arr if x != " "]
-        
+
         arpa_str = "{"
         in_chain = True
 
@@ -181,23 +177,21 @@ class LJSpeechUltimateProcessor(BaseProcessor):
             if token in _arpa_exempt and in_chain:
                 arpa_str += " }"
                 in_chain = False
-            
+
             if token not in _arpa_exempt and not in_chain:
                 arpa_str += " {"
                 in_chain = True
 
             arpa_str += " " + token
-          
+
         if in_chain:
             arpa_str += " }"
 
         return arpa_str
 
-
-
     def get_one_sample(self, item):
         text, wav_path, speaker_name = item
-        
+
         # Check if this line is already an ARPA string by searching for the trademark curly brace. If not, we apply
         if not "{" in text:
             text = self.to_arpa(text)

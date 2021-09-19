@@ -115,13 +115,13 @@ class MultiBandMelganTrainer(MelganTrainer):
 
     def compute_per_example_generator_losses(self, batch, outputs):
         """Compute per example generator losses and return dict_metrics_losses
-        Note that all element of the loss MUST has a shape [batch_size] and 
+        Note that all element of the loss MUST has a shape [batch_size] and
         the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
         Args:
             batch: dictionary batch input return from dataloader
             outputs: outputs of the model
-        
+
         Returns:
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
@@ -172,7 +172,9 @@ class MultiBandMelganTrainer(MelganTrainer):
             adv_loss /= i + 1
             gen_loss += self.config["lambda_adv"] * adv_loss
 
-            dict_metrics_losses.update({"adversarial_loss": adv_loss},)
+            dict_metrics_losses.update(
+                {"adversarial_loss": adv_loss},
+            )
 
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"subband_spectral_convergence_loss": sub_sc_loss})
@@ -185,13 +187,13 @@ class MultiBandMelganTrainer(MelganTrainer):
 
     def compute_per_example_discriminator_losses(self, batch, gen_outputs):
         """Compute per example discriminator losses and return dict_metrics_losses
-        Note that all element of the loss MUST has a shape [batch_size] and 
+        Note that all element of the loss MUST has a shape [batch_size] and
         the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
         Args:
             batch: dictionary batch input return from dataloader
             outputs: outputs of the model
-        
+
         Returns:
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
@@ -400,7 +402,6 @@ def main():
     else:
         raise ValueError("Only npy are supported.")
 
-
     if args.postnets is True:
         mel_query = "*-postnet.npy"
         logging.info("Using postnets")
@@ -553,4 +554,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
