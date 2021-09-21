@@ -44,7 +44,12 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
     """Tacotron2 Trainer class based on Seq2SeqBasedTrainer."""
 
     def __init__(
-        self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
+        self,
+        config,
+        strategy,
+        steps=0,
+        epochs=0,
+        is_mixed_precision=False,
     ):
         """Initialize trainer.
 
@@ -117,7 +122,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
 
         Tacotron-2 used teacher-forcing when training and evaluation.
         So we need pass `training=True` for inference step.
-        
+
         """
         outputs = self._model(**batch, training=True)
         _, dict_metrics_losses = self.compute_per_example_losses(batch, outputs)
@@ -129,20 +134,20 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
 
         Tacotron-2 used teacher-forcing when training and evaluation.
         So we need pass `training=True` for inference step.
-        
+
         """
         outputs = self._model(**batch, training=True)
         return outputs
 
     def compute_per_example_losses(self, batch, outputs):
         """Compute per example losses and return dict_metrics_losses
-        Note that all element of the loss MUST has a shape [batch_size] and 
+        Note that all element of the loss MUST has a shape [batch_size] and
         the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
         Args:
             batch: dictionary batch input return from dataloader
             outputs: outputs of the model
-        
+
         Returns:
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
@@ -336,6 +341,12 @@ def main():
         nargs="?",
         help="pretrained weights .h5 file to load weights from. Auto-skips non-matching layers",
     )
+    parser.add_argument(
+        "--use-fal",
+        default=0,
+        type=int,
+        help="Use forced alignment guided attention loss or regular",
+    )
     args = parser.parse_args()
 
     # return strategy
@@ -347,6 +358,7 @@ def main():
 
     args.mixed_precision = bool(args.mixed_precision)
     args.use_norm = bool(args.use_norm)
+    args.use_fal = bool(args.use_fal)
 
     # set logger
     if args.verbose > 1:
@@ -394,6 +406,7 @@ def main():
     if config["format"] == "npy":
         charactor_query = "*-ids.npy"
         mel_query = "*-raw-feats.npy" if args.use_norm is False else "*-norm-feats.npy"
+        align_query = "*-alignment.npy" if args.use_fal is True else ""
         charactor_load_fn = np.load
         mel_load_fn = np.load
     else:
@@ -409,6 +422,7 @@ def main():
         mel_length_threshold=mel_length_threshold,
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
         use_fixed_shapes=config["use_fixed_shapes"],
+        align_query=align_query,
     )
 
     # update max_mel_length and max_char_length to config
@@ -438,6 +452,7 @@ def main():
         mel_length_threshold=mel_length_threshold,
         reduction_factor=config["tacotron2_params"]["reduction_factor"],
         use_fixed_shapes=False,  # don't need apply fixed shape for evaluation.
+        align_query=align_query,
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],

@@ -75,6 +75,8 @@ CUDA_VISIBLE_DEVICES=0 python examples/tacotron2/extract_duration.py \
   --win-back 3
 ```
 
+To extract postnets for training vocoder, follow above steps but with `extract_postnets.py`
+
 You also can download my extracted durations at 40k steps at [link](https://drive.google.com/drive/u/1/folders/1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_?usp=drive_open).
 
 ## Finetune Tacotron-2 with ljspeech pretrained on other languages
@@ -90,6 +92,17 @@ tacotron2.load_weights("./examples/tacotron2/exp/train.tacotron2.v1/checkpoints/
 ... # training as normal.
 ```
 You can also define `var_train_expr` in config file to let model training only on some layers in case you want to fine-tune on your dataset with the same pretrained language and processor. For example, `var_train_expr: "embeddings|encoder|decoder"` means we just training all variables that `embeddings`, `encoder`, `decoder` exist in its name.
+
+## Using Forced Alignment Guided Attention Loss
+
+Instead of regular guided attention loss you can opt for [Forced Alignment Guided Attention Loss](https://docs.google.com/document/d/1TMH0klOWzlH4Up_GFT2cR4zB0JehAu1pe9zOemZPk7Y/edit#) (FAL), which uses prealignment information from Montreal Forced Aligner to more accurately guide each utterance. This especially helps on harder datasets, like those with long silences.
+First see `examples/mfa_extraction`, and once you have extracted durations, run `export_align.py`, like this.
+
+    python examples/tacotron2/export_align.py --dump-dir dump --looseness 3.5
+
+You can experiment with different `looseness` values for stricter (lower) or more tolerant masks. **Note that this script assumes you are using r = 1**
+After that, simply pass the argument `--fal 1` to the train_tacotron2.py script afterwards.
+
 
 ## Results
 Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https://github.com/dathudeptrai/TensorflowTTS/blob/tacotron-2-example/examples/tacotron-2/conf/tacotron2.v1.yaml) but with reduction_factor = 7, we will update learning curves for reduction_factor = 1.
@@ -116,6 +129,7 @@ Here is a result of tacotron2 based on this config [`tacotron2.v1.yaml`](https:/
 | :------                                                                                                        | :---:                                                                                                                       | :---: | :----:  | :--------:     | :---------------:    | :-----: |  :-----: |
 | [tacotron2.v1](https://drive.google.com/open?id=1kaPXRdLg9gZrll9KtvH3-feOBMM8sn3_)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.v1.yaml)          | EN    | 22.05k  | 80-7600        | 1024 / 256 / None    | 65K    | 1
 | [tacotron2.v1](https://drive.google.com/drive/folders/1WMBe01BBnYf3sOxMhbvnF2CUHaRTpBXJ?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.kss.v1.yaml)          | KO    | 22.05k  | 80-7600        | 1024 / 256 / None    | 100K    | 1
+| [tacotron2.lju.v1](https://drive.google.com/drive/folders/1tOMzik_Nr4eY63gooKYSmNTJyXC6Pp55?usp=sharing)             | [link](https://github.com/tensorspeech/TensorFlowTTS/tree/master/examples/tacotron2/conf/tacotron2.lju.v1.yaml)          | EN    | 44.1k  | 20-11025        | 2048 / 512 / None    | 126K    | 1
 
 ## Reference
 
