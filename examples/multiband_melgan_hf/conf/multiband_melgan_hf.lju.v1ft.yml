@@ -1,14 +1,12 @@
 
-# This is the hyperparameter configuration file for Multi-Band MelGAN with PWGAN discriminator.
-# Please make sure this is adjusted for the LJSpeech dataset. If you want to
-# apply to the other dataset, you might need to carefully change some parameters.
-# This configuration performs 1000k iters.
+#This is the hyperparameter configuration file for finetuning MB-MelGAN + MPD. It is intended to be used for finetuning generator and discriminator
+#Trains fast, adapts to new voice within 30k steps, although it is beneficial to keep training beyond that for about 200k, depending on dataset size.
 
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
 ###########################################################
-sampling_rate: 22050
-hop_size: 256            # Hop size.
+sampling_rate: 44100
+hop_size: 512            # Hop size.
 format: "npy"
 
 
@@ -21,7 +19,7 @@ multiband_melgan_generator_params:
     out_channels: 4               # Number of output channels (number of subbands).
     kernel_size: 7                # Kernel size of initial and final conv layers.
     filters: 384                  # Initial number of channels for conv layers.
-    upsample_scales: [8, 4, 2]    # List of Upsampling scales.
+    upsample_scales: [4, 4, 8]    # List of Upsampling scales.
     stack_kernel_size: 3          # Kernel size of dilated conv layers in residual stack.
     stacks: 4                     # Number of stacks in a single residual stack module.
     is_weight_norm: false         # Use weight-norm or not.
@@ -29,15 +27,33 @@ multiband_melgan_generator_params:
 ###########################################################
 #       DISCRIMINATOR NETWORK ARCHITECTURE SETTING        #
 ###########################################################
-parallel_wavegan_discriminator_params:
-    out_channels: 1       # Number of output channels.
-    kernel_size: 3        # Number of output channels.
-    n_layers: 10            # Number of conv layers.
-    conv_channels: 64     # Number of chnn layers.
-    use_bias: true            # Whether to use bias parameter in conv.
-    nonlinear_activation: "LeakyReLU" # Nonlinear function after each conv.
-    nonlinear_activation_params:      # Nonlinear function parameters
-        alpha: 0.2           # Alpha in LeakyReLU.
+multiband_melgan_discriminator_params:
+    out_channels: 1                   # Number of output channels.
+    scales: 3                         # Number of multi-scales.
+    downsample_pooling: "AveragePooling1D"   # Pooling type for the input downsampling.
+    downsample_pooling_params:        # Parameters of the above pooling function.
+        pool_size: 4
+        strides: 2
+    kernel_sizes: [5, 3]              # List of kernel size.
+    filters: 16                       # Number of channels of the initial conv layer.
+    max_downsample_filters: 512       # Maximum number of channels of downsampling layers.
+    downsample_scales: [4, 4, 4]      # List of downsampling scales.
+    nonlinear_activation: "LeakyReLU" # Nonlinear activation function.
+    nonlinear_activation_params:      # Parameters of nonlinear activation function.
+        alpha: 0.2
+    is_weight_norm: false             # Use weight-norm or not.
+
+hifigan_discriminator_params:
+    out_channels: 1                     # Number of output channels (number of subbands).
+    period_scales: [3, 5, 7, 11, 17, 23, 37]     # List of period scales.
+    n_layers: 5                         # Number of layer of each period discriminator.
+    kernel_size: 5                      # Kernel size.
+    strides: 3                          # Strides
+    filters: 8                          # In Conv filters of each period discriminator
+    filter_scales: 4                    # Filter scales.
+    max_filters: 512                   # maximum filters of period discriminator's conv.
+    is_weight_norm: false               # Use weight-norm or not.
+
 
 ###########################################################
 #                   STFT LOSS SETTING                     #
@@ -61,7 +77,7 @@ lambda_adv: 2.5              # Loss balancing coefficient for adversarial loss.
 ###########################################################
 #                  DATA LOADER SETTING                    #
 ###########################################################
-batch_size: 64                 # Batch size for each GPU with assuming that gradient_accumulation_steps == 1.
+batch_size: 64                 # Batch size.
 batch_max_steps: 8192          # Length of each audio in batch for training. Make sure dividable by hop_size.
 batch_max_steps_valid: 81920   # Length of each audio for validation. Make sure dividable by hope_size.
 remove_short_samples: true     # Whether to remove samples the length of which are less than batch_max_steps.
@@ -74,27 +90,28 @@ is_shuffle: true               # shuffle dataset after each epoch.
 generator_optimizer_params:
     lr_fn: "PiecewiseConstantDecay"
     lr_params: 
-        boundaries: [100000, 200000, 300000, 400000, 500000, 600000, 700000]
-        values: [0.0005, 0.0005, 0.00025, 0.000125, 0.0000625, 0.00003125, 0.000015625, 0.000001]
+        boundaries: [100000, 200000]
+        values: [0.00003125, 0.00003125, 0.00003125]
     amsgrad: false
 
 discriminator_optimizer_params:
-    lr_fn: "ExponentialDecay"
+    lr_fn: "PiecewiseConstantDecay"
     lr_params: 
-        initial_learning_rate: 0.0005
-        decay_steps: 200000
-        decay_rate: 0.5
+        boundaries: [100000, 200000]
+        values: [0.000015625, 0.000015625, 0.000015625]
+    amsgrad: false
 
-gradient_accumulation_steps: 1
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
-discriminator_train_start_steps: 200000  # steps begin training discriminator
-train_max_steps: 4000000                 # Number of training steps.
-save_interval_steps: 20000               # Interval steps to save checkpoint.
-eval_interval_steps: 5000                # Interval steps to evaluate the network.
+discriminator_train_start_steps: 0  # steps begin training discriminator
+train_max_steps: 300000                 # Number of training steps.
+save_interval_steps: 3500               # Interval steps to save checkpoint.
+eval_interval_steps: 2000                # Interval steps to evaluate the network.
 log_interval_steps: 200                  # Interval steps to record the training log.
 
+
+gradient_accumulation_steps: 1
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################

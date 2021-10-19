@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Train Multi-Band MelGAN."""
+"""Train Multi-Band MelGAN + MPD."""
 
 import tensorflow as tf
 
@@ -35,23 +35,21 @@ from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 import tensorflow_tts
 from examples.melgan.audio_mel_dataset import AudioMelDataset
+from examples.hifigan.train_hifigan import TFHifiGANDiscriminator
 from examples.melgan.train_melgan import MelganTrainer, collater
 from tensorflow_tts.configs import (
     MultiBandMelGANDiscriminatorConfig,
     MultiBandMelGANGeneratorConfig,
+    HifiGANDiscriminatorConfig,
 )
 from tensorflow_tts.losses import TFMultiResolutionSTFT
 from tensorflow_tts.models import (
     TFPQMF,
     TFMelGANGenerator,
     TFMelGANMultiScaleDiscriminator,
+    TFHifiGANMultiPeriodDiscriminator,
 )
 from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
-
-from tensorflow_tts.configs import ParallelWaveGANDiscriminatorConfig
-
-from tensorflow_tts.models import TFParallelWaveGANDiscriminator
-from tensorflow_addons.optimizers import RectifiedAdam
 
 
 class MultiBandMelganTrainer(MelganTrainer):
@@ -117,13 +115,13 @@ class MultiBandMelganTrainer(MelganTrainer):
 
     def compute_per_example_generator_losses(self, batch, outputs):
         """Compute per example generator losses and return dict_metrics_losses
-        Note that all element of the loss MUST has a shape [batch_size] and 
+        Note that all element of the loss MUST has a shape [batch_size] and
         the keys of dict_metrics_losses MUST be in self.list_metrics_name.
 
         Args:
             batch: dictionary batch input return from dataloader
             outputs: outputs of the model
-        
+
         Returns:
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
@@ -167,13 +165,16 @@ class MultiBandMelganTrainer(MelganTrainer):
             p_hat = self._discriminator(y_hat)
             p = self._discriminator(tf.expand_dims(audios, 2))
             adv_loss = 0.0
-            adv_loss += calculate_3d_loss(
-                tf.ones_like(p_hat), p_hat, loss_fn=self.mse_loss
-            )
+            for i in range(len(p_hat)):
+                adv_loss += calculate_3d_loss(
+                    tf.ones_like(p_hat[i][-1]), p_hat[i][-1], loss_fn=self.mse_loss
+                )
+            adv_loss /= i + 1
             gen_loss += self.config["lambda_adv"] * adv_loss
 
-            # update dict_metrics_losses
-            dict_metrics_losses.update({"adversarial_loss": adv_loss})
+            dict_metrics_losses.update(
+                {"adversarial_loss": adv_loss},
+            )
 
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"subband_spectral_convergence_loss": sub_sc_loss})
@@ -185,34 +186,24 @@ class MultiBandMelganTrainer(MelganTrainer):
         return per_example_losses, dict_metrics_losses
 
     def compute_per_example_discriminator_losses(self, batch, gen_outputs):
-        audios = batch["audios"]
+        """Compute per example discriminator losses and return dict_metrics_losses
+        Note that all element of the loss MUST has a shape [batch_size] and
+        the keys of dict_metrics_losses MUST be in self.list_metrics_name.
+
+        Args:
+            batch: dictionary batch input return from dataloader
+            outputs: outputs of the model
+
+        Returns:
+            per_example_losses: per example losses for each GPU, shape [B]
+            dict_metrics_losses: dictionary loss.
+        """
         y_mb_hat = gen_outputs
-
         y_hat = self.pqmf.synthesis(y_mb_hat)
-
-        y = tf.expand_dims(audios, 2)
-        p = self._discriminator(y)
-        p_hat = self._discriminator(y_hat)
-
-        real_loss = 0.0
-        fake_loss = 0.0
-
-        real_loss += calculate_3d_loss(tf.ones_like(p), p, loss_fn=self.mse_loss)
-        fake_loss += calculate_3d_loss(
-            tf.zeros_like(p_hat), p_hat, loss_fn=self.mse_loss
-        )
-
-        dis_loss = real_loss + fake_loss
-
-        # calculate per_example_losses and dict_metrics_losses
-        per_example_losses = dis_loss
-
-        dict_metrics_losses = {
-            "real_loss": real_loss,
-            "fake_loss": fake_loss,
-            "dis_loss": dis_loss,
-        }
-
+        (
+            per_example_losses,
+            dict_metrics_losses,
+        ) = super().compute_per_example_discriminator_losses(batch, y_hat)
         return per_example_losses, dict_metrics_losses
 
     def generate_and_save_intermediate_result(self, batch):
@@ -327,11 +318,17 @@ def main():
         help="using mixed precision for discriminator or not.",
     )
     parser.add_argument(
+        "--postnets",
+        default=0,
+        type=int,
+        help="using postnets instead of gt mels or not.",
+    )
+    parser.add_argument(
         "--pretrained",
         default="",
         type=str,
         nargs="?",
-        help="path of .h5 mb-melgan generator to load weights from",
+        help="path of .h5 mb-melgan generator and discriminator to load weights from. must be comma delineated, like ptgen.h5,ptdisc.h5",
     )
     args = parser.parse_args()
 
@@ -346,6 +343,7 @@ def main():
     args.discriminator_mixed_precision = bool(args.discriminator_mixed_precision)
 
     args.use_norm = bool(args.use_norm)
+    args.postnets = bool(args.postnets)
 
     # set logger
     if args.verbose > 1:
@@ -404,7 +402,14 @@ def main():
     else:
         raise ValueError("Only npy are supported.")
 
+    if args.postnets is True:
+        mel_query = "*-postnet.npy"
+        logging.info("Using postnets")
+    else:
+        logging.info("Using GT Mels")
+
     # define train/valid dataset
+
     train_dataset = AudioMelDataset(
         root_dir=args.train_dir,
         audio_query=audio_query,
@@ -464,11 +469,15 @@ def main():
             name="multi_band_melgan_generator",
         )
 
-        discriminator = TFParallelWaveGANDiscriminator(
-            ParallelWaveGANDiscriminatorConfig(
-                **config["parallel_wavegan_discriminator_params"]
+        multiscale_discriminator = TFMelGANMultiScaleDiscriminator(
+            MultiBandMelGANDiscriminatorConfig(
+                **config["multiband_melgan_discriminator_params"]
             ),
-            name="parallel_wavegan_discriminator",
+            name="multi_band_melgan_discriminator",
+        )
+        multiperiod_discriminator = TFHifiGANMultiPeriodDiscriminator(
+            HifiGANDiscriminatorConfig(**config["hifigan_discriminator_params"]),
+            name="hifigan_multiperiod_discriminator",
         )
 
         pqmf = TFPQMF(
@@ -478,6 +487,11 @@ def main():
             dtype=tf.float32,
             name="pqmf",
         )
+        discriminator = TFHifiGANDiscriminator(
+            multiperiod_discriminator,
+            multiscale_discriminator,
+            name="hifigan_discriminator",
+        )
 
         # dummy input to build model.
         fake_mels = tf.random.uniform(shape=[1, 100, 80], dtype=tf.float32)
@@ -486,7 +500,9 @@ def main():
         discriminator(y_hat)
 
         if len(args.pretrained) > 1:
-            generator.load_weights(args.pretrained)
+            pt_splits = args.pretrained.split(",")
+            generator.load_weights(pt_splits[0])
+            discriminator.load_weights(pt_splits[1])
             logging.info(
                 f"Successfully loaded pretrained weight from {args.pretrained}."
             )
@@ -507,7 +523,13 @@ def main():
             learning_rate=generator_lr_fn,
             amsgrad=config["generator_optimizer_params"]["amsgrad"],
         )
-        dis_optimizer = RectifiedAdam(learning_rate=discriminator_lr_fn, amsgrad=False)
+        dis_optimizer = tf.keras.optimizers.Adam(
+            learning_rate=discriminator_lr_fn,
+            amsgrad=config["discriminator_optimizer_params"]["amsgrad"],
+        )
+
+        _ = gen_optimizer.iterations
+        _ = dis_optimizer.iterations
 
     trainer.compile(
         gen_model=generator,
