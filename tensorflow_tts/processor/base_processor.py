@@ -116,7 +116,7 @@ class BaseProcessor(abc.ABC):
                 wav_path = os.path.join(self.data_dir, parts[self.positions["file"]])
                 wav_path = (
                     wav_path + self.f_extension
-                    if wav_path[-len(self.f_extension) :] != self.f_extension
+                    if wav_path[-len(self.f_extension):] != self.f_extension
                     else wav_path
                 )
                 text = parts[self.positions["text"]]
@@ -223,7 +223,7 @@ class BaseProcessor(abc.ABC):
             }
             if extra_attrs_to_save:
                 full_mapper = {**full_mapper, **extra_attrs_to_save}
-            json.dump(full_mapper, f)
+            json.dump(full_mapper, f, ensure_ascii=False)
 
     @abc.abstractmethod
     def save_pretrained(self, saved_path):

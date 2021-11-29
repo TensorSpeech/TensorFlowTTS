@@ -28,7 +28,7 @@ _pad = "pad"
 _eos = "eos"
 _punctuation = "!'(),.? "
 _special = "-"
-_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜabcdefghijklmnopqrstuvwxyzäöüß"
 
 # Export all symbols:
 THORSTEN_SYMBOLS = (
