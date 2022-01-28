@@ -91,7 +91,6 @@ class JSUTProcessor(BaseProcessor):
     """JSUT processor."""
     cleaner_names: str = None
     speaker_name: str = "jsut"
-    target_rate: int = 24000
     train_f_name: str = "text_kana/basic5000.yaml"
 
     def create_items(self):
@@ -105,8 +104,6 @@ class JSUTProcessor(BaseProcessor):
                 for k, v in data_json.items():
                     utt_id = k
                     phones = v['phone_level3']
-                    # phones = phones.replace("I", "i")
-                    # phones = phones.replace("U", "u")
                     phones = phones.split("-")
                     phones = [_sil] + phones + [_sil]
                     wav_path = os.path.join(self.data_dir, "wav", f"{utt_id}.wav")
@@ -129,9 +126,9 @@ class JSUTProcessor(BaseProcessor):
         audio, rate = sf.read(wav_path)
         audio = audio.astype(np.float32)
 
-        if rate != self.target_rate:
-            assert rate > self.target_rate
-            audio = librosa.resample(audio, rate, self.target_rate)
+        # if rate != self.target_rate:
+        #     assert rate > self.target_rate
+        #     audio = librosa.resample(audio, rate, self.target_rate)
 
         # convert text to ids
         text_ids = np.asarray(self.text_to_sequence(text), np.int32)
