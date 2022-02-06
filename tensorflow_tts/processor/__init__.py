@@ -7,3 +7,4 @@ from tensorflow_tts.processor.libritts import LibriTTSProcessor
 from tensorflow_tts.processor.thorsten import ThorstenProcessor
 from tensorflow_tts.processor.ljspeechu import LJSpeechUltimateProcessor
 from tensorflow_tts.processor.synpaflex import SynpaflexProcessor
+from tensorflow_tts.processor.jsut import JSUTProcessor
