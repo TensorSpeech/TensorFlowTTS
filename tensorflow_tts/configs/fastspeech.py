@@ -96,7 +96,7 @@ class FastSpeechConfig(BaseConfig):
             self.vocab_size = len(bk_symbols)
         elif dataset == "libritts":
             self.vocab_size = len(lbri_symbols)
-        elif dataset == "jsut_symbols":
+        elif dataset == "jsut":
             self.vocab_size = len(jsut_symbols)
         else:
             raise ValueError("No such dataset: {}".format(dataset))
