@@ -56,6 +56,7 @@ def run_mfa(
             output_directory,
             f"-j {jobs}",
             "--verbose",
+            "--debug",
         ]
     )
 
