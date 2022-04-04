@@ -1,11 +1,11 @@
-CUDA_VISIBLE_DEVICES=0 python examples/fastspeech2_libritts/train_fastspeech2.py \
-  --train-dir ./dump/train/ \
-  --dev-dir ./dump/valid/ \
-  --outdir ./examples/fastspeech2_libritts/outdir_libri/ \
-  --config ./examples/fastspeech2_libritts/conf/fastspeech2libritts.yaml \
+CUDA_VISIBLE_DEVICES=0 python TensorFlowTTS/examples/fastspeech2_libritts/train_fastspeech2.py \
+  --train-dir ./dump_bookbot_en/train/ \
+  --dev-dir ./dump_bookbot_en/valid/ \
+  --outdir ./fastspeech2-bookbot \
+  --config ./TensorFlowTTS/examples/fastspeech2_libritts/conf/fastspeech2libritts.yaml \
   --use-norm 1 \
-  --f0-stat ./dump/stats_f0.npy \
-  --energy-stat ./dump/stats_energy.npy \
+  --f0-stat ./dump_bookbot_en/stats_f0.npy \
+  --energy-stat ./dump_bookbot_en/stats_energy.npy \
   --mixed_precision 1 \
-  --dataset_config preprocess/libritts_preprocess.yaml \
-  --dataset_stats dump/stats.npy
+  --dataset_config TensorFlowTTS/preprocess/libritts_preprocess.yaml \
+  --dataset_stats dump_bookbot_en/stats.npy
