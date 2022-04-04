@@ -9,4 +9,4 @@ CUDA_VISIBLE_DEVICES=0 python TensorFlowTTS/examples/fastspeech2_libritts/train_
   --mixed_precision 1 \
   --dataset_config TensorFlowTTS/preprocess/libritts_preprocess.yaml \
   --dataset_stats dump_bookbot_en/stats.npy \
-  --dataset_mapping dump_bookbot_en/libritts_mapper.npy
+  --dataset_mapping dump_bookbot_en/libritts_mapper.json
