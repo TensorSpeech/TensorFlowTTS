@@ -23,11 +23,11 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 requirements = {
     "install": [
         # "tensorflow-gpu==2.7.0",
-        "tensorflow-addons>=0.10.0",
+        "tensorflow-addons==0.10.0",
         "setuptools>=38.5.1",
         "huggingface_hub==0.0.8",
         "librosa>=0.7.0",
-        "soundfile>=0.10.2",
+        "soundfile==0.10.2",
         "matplotlib>=3.1.0",
         "PyYAML>=3.12",
         "tqdm>=4.26.1",
