@@ -22,7 +22,7 @@ if LooseVersion(pip.__version__) < LooseVersion("19"):
 # TODO(@dathudeptrai) update requirement if needed.
 requirements = {
     "install": [
-        "tensorflow-gpu==2.7.0",
+        # "tensorflow-gpu==2.7.0",
         "tensorflow-addons>=0.10.0",
         "setuptools>=38.5.1",
         "huggingface_hub==0.0.8",
@@ -44,13 +44,10 @@ requirements = {
         "click",
         "g2p_en",
         "dataclasses",
-        "pyopenjtalk",
+        "pyopenjtalk==0.1.3",
     ],
     "setup": ["numpy", "pytest-runner",],
-    "test": [
-        "pytest>=3.3.0",
-        "hacking>=1.1.0",
-    ],
+    "test": ["pytest>=3.3.0", "hacking>=1.1.0",],
 }
 
 # TODO(@dathudeptrai) update console_scripts.
