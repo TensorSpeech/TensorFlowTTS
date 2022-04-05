@@ -91,7 +91,7 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
                 mfa_shorter.append(abs(l_mel - dur_s))
 
             np.save(
-                os.path.join(pre_path, "fix_dur", f"{i.split('-')[0]}-durations.npy"),
+                os.path.join(pre_path, "fix_dur", f"{id_}-durations.npy"),
                 cloned.astype(np.int32),
                 allow_pickle=False,
             )
