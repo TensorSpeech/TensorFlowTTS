@@ -85,7 +85,7 @@ class LibriTTSProcessor(BaseProcessor):
         return sample
 
     def setup_eos_token(self):
-        return None # because we do not use this
+        return None  # because we do not use this
 
     def save_pretrained(self, saved_path):
         os.makedirs(saved_path, exist_ok=True)
@@ -120,5 +120,5 @@ class LibriTTSProcessor(BaseProcessor):
                     )  # TODO try learning without end token and compare results
                 break
             if txt != " ":
-                data.append("@" + txt) 
+                data.append("@" + txt)
         return data

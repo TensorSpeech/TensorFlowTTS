@@ -34,9 +34,9 @@ import yaml
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 import tensorflow_tts
-from examples.melgan.audio_mel_dataset import AudioMelDataset
-from examples.hifigan.train_hifigan import TFHifiGANDiscriminator
-from examples.melgan.train_melgan import MelganTrainer, collater
+from TensorFlowTTS.examples.melgan.audio_mel_dataset import AudioMelDataset
+from TensorFlowTTS.examples.hifigan.train_hifigan import TFHifiGANDiscriminator
+from TensorFlowTTS.examples.melgan.train_melgan import MelganTrainer, collater
 from tensorflow_tts.configs import (
     MultiBandMelGANDiscriminatorConfig,
     MultiBandMelGANGeneratorConfig,
@@ -172,9 +172,7 @@ class MultiBandMelganTrainer(MelganTrainer):
             adv_loss /= i + 1
             gen_loss += self.config["lambda_adv"] * adv_loss
 
-            dict_metrics_losses.update(
-                {"adversarial_loss": adv_loss},
-            )
+            dict_metrics_losses.update({"adversarial_loss": adv_loss},)
 
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"subband_spectral_convergence_loss": sub_sc_loss})
