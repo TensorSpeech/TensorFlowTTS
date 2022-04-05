@@ -35,7 +35,7 @@ from tqdm import tqdm
 
 import tensorflow_tts
 import tensorflow_tts.configs.melgan as MELGAN_CONFIG
-from examples.melgan.audio_mel_dataset import AudioMelDataset
+from TensorFlowTTS.examples.melgan.audio_mel_dataset import AudioMelDataset
 from tensorflow_tts.losses import TFMelSpectrogram
 from tensorflow_tts.models import TFMelGANGenerator, TFMelGANMultiScaleDiscriminator
 from tensorflow_tts.trainers import GanBasedTrainer
