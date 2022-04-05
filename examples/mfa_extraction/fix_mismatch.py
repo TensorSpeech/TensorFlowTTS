@@ -45,27 +45,20 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
 
         logging.info(f"FIXING {t} set ...\n")
         for i in tqdm(os.listdir(os.path.join(pre_path, "ids"))):
+            id_ = i.replace("-ids.npy", "")
             if use_norm == "t":
                 mel = np.load(
-                    os.path.join(
-                        pre_path, "norm-feats", f"{i.split('-')[0]}-norm-feats.npy"
-                    )
+                    os.path.join(pre_path, "norm-feats", f"{id_}-norm-feats.npy")
                 )
             else:
                 mel = np.load(
-                    os.path.join(
-                        pre_path, "raw-feats", f"{i.split('-')[0]}-raw-feats.npy"
-                    )
+                    os.path.join(pre_path, "raw-feats", f"{id_}-raw-feats.npy")
                 )
 
             try:
-                dur = np.load(
-                    os.path.join(trimmed_dur_path, f"{i.split('-')[0]}-durations.npy")
-                )
+                dur = np.load(os.path.join(trimmed_dur_path, f"{id_}-durations.npy"))
             except:
-                dur = np.load(
-                    os.path.join(dur_path, f"{i.split('-')[0]}-durations.npy")
-                )
+                dur = np.load(os.path.join(dur_path, f"{id_}-durations.npy"))
 
             l_mel = len(mel)
             dur_s = np.sum(dur)
