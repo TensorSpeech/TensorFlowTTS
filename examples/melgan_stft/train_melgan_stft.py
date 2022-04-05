@@ -33,8 +33,8 @@ import yaml
 
 import tensorflow_tts
 import tensorflow_tts.configs.melgan as MELGAN_CONFIG
-from examples.melgan.audio_mel_dataset import AudioMelDataset
-from examples.melgan.train_melgan import MelganTrainer, collater
+from TensorFlowTTS.examples.melgan.audio_mel_dataset import AudioMelDataset
+from TensorFlowTTS.examples.melgan.train_melgan import MelganTrainer, collater
 from tensorflow_tts.losses import TFMultiResolutionSTFT
 from tensorflow_tts.models import TFMelGANGenerator, TFMelGANMultiScaleDiscriminator
 from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
