@@ -31,6 +31,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 from tensorflow_tts.processor import LJSpeechProcessor
+from tensorflow_tts.processor import LJSpeechMultiProcessor
 from tensorflow_tts.processor import BakerProcessor
 from tensorflow_tts.processor import KSSProcessor
 from tensorflow_tts.processor import LibriTTSProcessor
@@ -76,7 +77,17 @@ def parse_and_config():
         "--dataset",
         type=str,
         default="ljspeech",
-        choices=["ljspeech", "kss", "libritts", "baker", "thorsten", "ljspeechu", "synpaflex", "jsut"],
+        choices=[
+            "ljspeech",
+            "ljspeech_multi",
+            "kss",
+            "libritts",
+            "baker",
+            "thorsten",
+            "ljspeechu",
+            "synpaflex",
+            "jsut",
+        ],
         help="Dataset to preprocess.",
     )
     parser.add_argument(
@@ -196,11 +207,13 @@ def gen_audio_features(item, config):
     # check audio properties
     assert len(audio.shape) == 1, f"{utt_id} seems to be multi-channel signal."
     assert np.abs(audio).max() <= 1.0, f"{utt_id} is different from 16 bit PCM."
-    
+
     # check sample rate
     if rate != config["sampling_rate"]:
         audio = librosa.resample(audio, rate, config["sampling_rate"])
-        logging.info(f"{utt_id} sampling rate is {rate}, not {config['sampling_rate']}, we resample it.")
+        logging.info(
+            f"{utt_id} sampling rate is {rate}, not {config['sampling_rate']}, we resample it."
+        )
 
     # trim silence
     if config["trim_silence"]:
@@ -353,6 +366,7 @@ def preprocess():
 
     dataset_processor = {
         "ljspeech": LJSpeechProcessor,
+        "ljspeech_multi": LJSpeechMultiProcessor,
         "kss": KSSProcessor,
         "libritts": LibriTTSProcessor,
         "baker": BakerProcessor,
@@ -364,6 +378,7 @@ def preprocess():
 
     dataset_symbol = {
         "ljspeech": LJSPEECH_SYMBOLS,
+        "ljspeech_multi": LJSPEECH_SYMBOLS,
         "kss": KSS_SYMBOLS,
         "libritts": LIBRITTS_SYMBOLS,
         "baker": BAKER_SYMBOLS,
@@ -375,6 +390,7 @@ def preprocess():
 
     dataset_cleaner = {
         "ljspeech": "english_cleaners",
+        "ljspeech_multi": "english_cleaners",
         "kss": "korean_cleaners",
         "libritts": None,
         "baker": None,
