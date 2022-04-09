@@ -34,8 +34,8 @@ import yaml
 from tensorflow.keras.mixed_precision import experimental as mixed_precision
 
 import tensorflow_tts
-from examples.melgan.audio_mel_dataset import AudioMelDataset
-from examples.melgan.train_melgan import MelganTrainer, collater
+from TensorFlowTTS.examples.melgan.audio_mel_dataset import AudioMelDataset
+from TensorFlowTTS.examples.melgan.train_melgan import MelganTrainer, collater
 from tensorflow_tts.configs import (
     MultiBandMelGANDiscriminatorConfig,
     MultiBandMelGANGeneratorConfig,
