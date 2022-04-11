@@ -6,7 +6,7 @@
 ###########################################################
 #                FEATURE EXTRACTION SETTING               #
 ###########################################################
-hop_size: 300 # Hop size.
+hop_size: 256 # Hop size.
 format: "npy"
 
 ###########################################################
@@ -76,5 +76,5 @@ log_interval_steps: 200 # Interval steps to record the training log.
 ###########################################################
 #                     OTHER SETTING                       #
 ###########################################################
-use_griffin: true # Use GL on evaluation or not.
+use_griffin: false # Use GL on evaluation or not.
 num_save_intermediate_results: 1 # Number of batch to be saved as intermediate results.
