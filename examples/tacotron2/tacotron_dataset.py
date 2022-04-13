@@ -220,6 +220,8 @@ class CharactorMelDataset(AbstractDataset):
             lambda x: x["mel_lengths"] > self.mel_length_threshold
         )
 
+        datasets = datasets.filter(lambda x: x["mel_lengths"] <= 850)
+
         if allow_cache:
             datasets = datasets.cache()
 
