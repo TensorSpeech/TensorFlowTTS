@@ -52,7 +52,7 @@ allow_cache: true # Whether to allow cache in dataset. If true, it requires cpu 
 mel_length_threshold: 32 # remove all targets has mel_length <= 32
 is_shuffle: true # shuffle dataset after each epoch.
 use_fixed_shapes:
-  true # use_fixed_shapes for training (2x speed-up)
+  false # use_fixed_shapes for training (2x speed-up)
   # refer (https://github.com/dathudeptrai/TensorflowTTS/issues/34#issuecomment-642309118)
 
 ###########################################################
