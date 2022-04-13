@@ -32,7 +32,7 @@ import yaml
 from tqdm import tqdm
 
 import tensorflow_tts
-from examples.tacotron2.tacotron_dataset import CharactorMelDataset
+from TensorFlowTTS.examples.tacotron2.tacotron_dataset import CharactorMelDataset
 from tensorflow_tts.configs.tacotron2 import Tacotron2Config
 from tensorflow_tts.models import TFTacotron2
 from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
@@ -44,12 +44,7 @@ class Tacotron2Trainer(Seq2SeqBasedTrainer):
     """Tacotron2 Trainer class based on Seq2SeqBasedTrainer."""
 
     def __init__(
-        self,
-        config,
-        strategy,
-        steps=0,
-        epochs=0,
-        is_mixed_precision=False,
+        self, config, strategy, steps=0, epochs=0, is_mixed_precision=False,
     ):
         """Initialize trainer.
 
