@@ -166,17 +166,17 @@ def ph_based_trim(
     if text[-1] in sil_ph:
         trim_end = True
 
-    if trim_end and text[-2] in sil_ph:
-        trim_pre_end = True
+    # if trim_end and text[-2] in sil_ph:
+    #     trim_pre_end = True
 
     if not trim_start and not trim_end:
         return False, text_ids, audio
 
-    last_idx = -2 if trim_pre_end else -1
+    # last_idx = -2 if trim_pre_end else -1
 
     idx_start, idx_end = (
         0 if not trim_start else 1,
-        text_ids.__len__() if not trim_end else last_idx,
+        text_ids.__len__() if not trim_end else -1,
     )
     text_ids = text_ids[idx_start:idx_end]
     durations = np.load(os.path.join(duration_path, f"{utt_id}-durations.npy"))
@@ -186,9 +186,9 @@ def ph_based_trim(
     if trim_end:
         e_trim = int(durations[-1] * hop_size)
         audio = audio[:-e_trim]
-        if trim_pre_end:
-            e_trim = int(durations[-2] * hop_size)
-            audio = audio[:-e_trim]
+        # if trim_pre_end:
+        #     e_trim = int(durations[-2] * hop_size)
+        #     audio = audio[:-e_trim]
 
     durations = durations[idx_start:idx_end]
     np.save(os.path.join(duration_fixed_path, f"{utt_id}-durations.npy"), durations)
