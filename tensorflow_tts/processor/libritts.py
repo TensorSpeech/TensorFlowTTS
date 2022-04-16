@@ -16,6 +16,7 @@
 
 import os
 import re
+from string import punctuation
 
 import numpy as np
 import soundfile as sf
@@ -111,14 +112,8 @@ class LibriTTSProcessor(BaseProcessor):
     def clean_g2p(self, g2p_text: list):
         data = []
         for i, txt in enumerate(g2p_text):
-            if i == len(g2p_text) - 1:
-                if txt != " " and txt != "SIL":
-                    data.append("@" + txt)
-                else:
-                    data.append(
-                        "@END"
-                    )  # TODO try learning without end token and compare results
-                break
-            if txt != " ":
+            if txt in punctuation:
+                data.append(txt)
+            elif txt != " " and txt != "SIL":
                 data.append("@" + txt)
         return data

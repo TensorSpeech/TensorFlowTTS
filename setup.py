@@ -29,7 +29,7 @@ requirements = {
         "librosa>=0.7.0",
         "soundfile==0.10.2",
         "matplotlib>=3.1.0",
-        "PyYAML==3.12",
+        "PyYAML>=3.12",
         "tqdm>=4.26.1",
         "h5py>=2.10.0",
         "unidecode>=1.1.1",
