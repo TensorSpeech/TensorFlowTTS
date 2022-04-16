@@ -41,7 +41,7 @@ from tensorflow_tts.models import (
 from tensorflow_tts.inference.savable_models import (
     SavableTFFastSpeech,
     SavableTFFastSpeech2,
-    SavableTFTacotron2
+    SavableTFTacotron2,
 )
 from tensorflow_tts.utils import CACHE_DIRECTORY, MODEL_FILE_NAME, LIBRARY_NAME
 from tensorflow_tts import __version__ as VERSION
@@ -73,7 +73,10 @@ class TFAutoModel(object):
         if pretrained_path is not None:
             if not os.path.isfile(pretrained_path):
                 # retrieve correct hub url
-                download_url = hf_hub_url(repo_id=pretrained_path, filename=MODEL_FILE_NAME)
+                download_url = hf_hub_url(
+                    repo_id=pretrained_path, filename=MODEL_FILE_NAME
+                )
+                use_auth_token = kwargs.pop("use_auth_token", None)
 
                 downloaded_file = str(
                     cached_download(
@@ -81,6 +84,7 @@ class TFAutoModel(object):
                         library_name=LIBRARY_NAME,
                         library_version=VERSION,
                         cache_dir=CACHE_DIRECTORY,
+                        use_auth_token=use_auth_token,
                     )
                 )
 
@@ -88,12 +92,15 @@ class TFAutoModel(object):
                 if config is None:
                     from tensorflow_tts.inference import AutoConfig
 
-                    config = AutoConfig.from_pretrained(pretrained_path)
+                    config = AutoConfig.from_pretrained(
+                        pretrained_path, use_auth_token=use_auth_token
+                    )
 
                 pretrained_path = downloaded_file
 
-
-        assert config is not None, "Please make sure to pass a config along to load a model from a local file"
+        assert (
+            config is not None
+        ), "Please make sure to pass a config along to load a model from a local file"
 
         for config_class, model_class in TF_MODEL_MAPPING.items():
             if isinstance(config, config_class) and str(config_class.__name__) in str(

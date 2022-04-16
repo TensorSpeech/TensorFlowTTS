@@ -68,6 +68,7 @@ class AutoConfig:
                     library_name=LIBRARY_NAME,
                     library_version=VERSION,
                     cache_dir=CACHE_DIRECTORY,
+                    use_auth_token=kwargs.get("use_auth_token", None),
                 )
             )
 

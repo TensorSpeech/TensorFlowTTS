@@ -28,6 +28,7 @@ from tensorflow_tts.processor import (
     LJSpeechUltimateProcessor,
     SynpaflexProcessor,
     JSUTProcessor,
+    LJSpeechMultiProcessor,
 )
 
 from tensorflow_tts.utils import CACHE_DIRECTORY, PROCESSOR_FILE_NAME, LIBRARY_NAME
@@ -37,6 +38,7 @@ from huggingface_hub import hf_hub_url, cached_download
 CONFIG_MAPPING = OrderedDict(
     [
         ("LJSpeechProcessor", LJSpeechProcessor),
+        ("LJSpeechMultiProcessor", LJSpeechMultiProcessor),
         ("KSSProcessor", KSSProcessor),
         ("BakerProcessor", BakerProcessor),
         ("LibriTTSProcessor", LibriTTSProcessor),
@@ -60,7 +62,9 @@ class AutoProcessor:
         # load weights from hf hub
         if not os.path.isfile(pretrained_path):
             # retrieve correct hub url
-            download_url = hf_hub_url(repo_id=pretrained_path, filename=PROCESSOR_FILE_NAME)
+            download_url = hf_hub_url(
+                repo_id=pretrained_path, filename=PROCESSOR_FILE_NAME
+            )
 
             pretrained_path = str(
                 cached_download(
@@ -68,6 +72,7 @@ class AutoProcessor:
                     library_name=LIBRARY_NAME,
                     library_version=VERSION,
                     cache_dir=CACHE_DIRECTORY,
+                    use_auth_token=kwargs.get("use_auth_token", None),
                 )
             )
         with open(pretrained_path, "r") as f:
