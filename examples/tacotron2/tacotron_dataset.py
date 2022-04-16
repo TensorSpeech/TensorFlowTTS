@@ -114,15 +114,15 @@ class CharactorMelDataset(AbstractDataset):
         self.max_char_length = np.max(char_lengths)
 
         if np.max(mel_lengths) % self.reduction_factor == 0:
-            # self.max_mel_length = np.max(mel_lengths)
-            self.max_mel_length = 850
+            self.max_mel_length = np.max(mel_lengths)
+            # self.max_mel_length = 850
         else:
-            # self.max_mel_length = (
-            #     np.max(mel_lengths)
-            #     + self.reduction_factor
-            #     - np.max(mel_lengths) % self.reduction_factor
-            # )
-            self.max_mel_length = 850
+            self.max_mel_length = (
+                np.max(mel_lengths)
+                + self.reduction_factor
+                - np.max(mel_lengths) % self.reduction_factor
+            )
+            # self.max_mel_length = 850
 
     def get_args(self):
         return [self.utt_ids]
@@ -222,7 +222,7 @@ class CharactorMelDataset(AbstractDataset):
             lambda x: x["mel_lengths"] > self.mel_length_threshold
         )
 
-        datasets = datasets.filter(lambda x: x["mel_lengths"] <= 850)
+        # datasets = datasets.filter(lambda x: x["mel_lengths"] <= 850)
 
         if allow_cache:
             datasets = datasets.cache()
