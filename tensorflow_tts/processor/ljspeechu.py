@@ -140,8 +140,9 @@ class LJSpeechUltimateProcessor(BaseProcessor):
     positions = {
         "wave_file": 0,
         "text_norm": 1,
+        "speaker_name": 2,
     }
-    train_f_name: str = "filelist.txt"
+    train_f_name: str = "metadata.csv"
 
     def create_items(self):
         if self.data_dir:
@@ -155,7 +156,7 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         wave_file = parts[self.positions["wave_file"]]
         text_norm = parts[self.positions["text_norm"]]
         wav_path = os.path.join(data_dir, wave_file)
-        speaker_name = "ljspeech"
+        speaker_name = parts[self.positions["speaker_name"]]
         return text_norm, wav_path, speaker_name
 
     def setup_eos_token(self):

@@ -26,7 +26,9 @@ import tensorflow as tf
 import yaml
 from tqdm import tqdm
 
-from examples.fastspeech2.fastspeech2_dataset import CharactorDurationF0EnergyMelDataset
+from TensorFlowTTS.examples.fastspeech2.fastspeech2_dataset import (
+    CharactorDurationF0EnergyMelDataset,
+)
 from tensorflow_tts.configs import FastSpeech2Config
 from tensorflow_tts.models import TFFastSpeech2
 
@@ -117,6 +119,8 @@ def main():
         root_dir=args.rootdir,
         charactor_query=char_query,
         charactor_load_fn=char_load_fn,
+        f0_stat=f"./{args.rootdir.split('/')[-2]}/stats_f0.npy",
+        energy_stat=f"./{args.rootdir.split('/')[-2]}/stats_energy.npy",
     )
     dataset = dataset.create(
         batch_size=1

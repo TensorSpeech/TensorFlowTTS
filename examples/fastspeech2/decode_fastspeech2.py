@@ -26,7 +26,7 @@ import tensorflow as tf
 import yaml
 from tqdm import tqdm
 
-from examples.fastspeech.fastspeech_dataset import CharactorDataset
+from TensorFlowTTS.examples.fastspeech.fastspeech_dataset import CharactorDataset
 from tensorflow_tts.configs import FastSpeech2Config
 from tensorflow_tts.models import TFFastSpeech2
 
