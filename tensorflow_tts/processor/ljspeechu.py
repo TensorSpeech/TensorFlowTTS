@@ -155,7 +155,7 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         parts = line.strip().split(split)
         wave_file = parts[self.positions["wave_file"]]
         text_norm = parts[self.positions["text_norm"]]
-        wav_path = os.path.join(data_dir, wave_file)
+        wav_path = os.path.join(data_dir, f"{wave_file}.wav")
         speaker_name = parts[self.positions["speaker_name"]]
         return text_norm, wav_path, speaker_name
 

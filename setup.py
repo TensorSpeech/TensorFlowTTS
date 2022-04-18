@@ -25,7 +25,7 @@ requirements = {
         # "tensorflow-gpu==2.7.0",
         "tensorflow-addons==0.10.0",
         "setuptools>=38.5.1",
-        "huggingface_hub==0.0.8",
+        "huggingface_hub",
         "librosa>=0.7.0",
         "soundfile==0.10.2",
         "matplotlib>=3.1.0",
