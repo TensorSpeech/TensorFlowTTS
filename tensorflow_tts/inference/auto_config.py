@@ -61,6 +61,7 @@ class AutoConfig:
             download_url = hf_hub_url(
                 repo_id=pretrained_path, filename=CONFIG_FILE_NAME
             )
+            use_auth_token = kwargs.pop("use_auth_token", None)
 
             pretrained_path = str(
                 cached_download(
@@ -68,7 +69,7 @@ class AutoConfig:
                     library_name=LIBRARY_NAME,
                     library_version=VERSION,
                     cache_dir=CACHE_DIRECTORY,
-                    use_auth_token=kwargs.get("use_auth_token", None),
+                    use_auth_token=use_auth_token,
                 )
             )
 
