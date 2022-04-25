@@ -216,6 +216,9 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         return sample
 
     def text_to_sequence(self, text):
+        # if not "{" in text:
+        #     text = self.to_arpa(text)
+
         sequence = []
         # Check for curly braces and treat their contents as ARPAbet:
         while len(text):

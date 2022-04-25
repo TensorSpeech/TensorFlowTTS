@@ -22,6 +22,7 @@ from tensorflow_tts.processor.kss import KSS_SYMBOLS as kss_symbols
 from tensorflow_tts.processor.baker import BAKER_SYMBOLS as bk_symbols
 from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS as lbri_symbols
 from tensorflow_tts.processor.jsut import JSUT_SYMBOLS as jsut_symbols
+from tensorflow_tts.processor.ljspeechu import LJSPEECH_U_SYMBOLS as lju_symbols
 
 
 SelfAttentionParams = collections.namedtuple(
@@ -98,6 +99,8 @@ class FastSpeechConfig(BaseConfig):
             self.vocab_size = len(lbri_symbols)
         elif dataset == "jsut":
             self.vocab_size = len(jsut_symbols)
+        elif dataset == "ljspeechu":
+            self.vocab_size = len(lju_symbols)
         else:
             raise ValueError("No such dataset: {}".format(dataset))
         self.initializer_range = initializer_range

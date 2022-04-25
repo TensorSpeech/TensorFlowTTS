@@ -15,7 +15,7 @@ format: "npy"
 model_type: fastspeech2
 
 fastspeech2_params:
-  dataset: "libritts"
+  dataset: "ljspeechu"
   n_speakers: 3
   encoder_hidden_size: 384
   encoder_num_hidden_layers: 4
