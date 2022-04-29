@@ -143,6 +143,7 @@ class LJSpeechUltimateProcessor(BaseProcessor):
         "speaker_name": 2,
     }
     train_f_name: str = "metadata.csv"
+    mode = "train"
 
     def create_items(self):
         if self.data_dir:
