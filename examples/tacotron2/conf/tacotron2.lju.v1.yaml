@@ -75,7 +75,7 @@ var_train_expr:
 ###########################################################
 #                    INTERVAL SETTING                     #
 ###########################################################
-train_max_steps: 200000 # Number of training steps.
+train_max_steps: 150000 # Number of training steps.
 save_interval_steps: 2000 # Interval steps to save checkpoint.
 eval_interval_steps: 500 # Interval steps to evaluate the network.
 log_interval_steps: 200 # Interval steps to record the training log.
