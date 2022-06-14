@@ -114,12 +114,12 @@ class IndonesianIPAProcessor(BaseProcessor):
 
         return sample
 
+    def setup_eos_token(self):
+        return None
+
     def save_pretrained(self, saved_path):
         os.makedirs(saved_path, exist_ok=True)
         self._save_mapper(os.path.join(saved_path, PROCESSOR_FILE_NAME), {})
-
-    def setup_eos_token(self):
-        return _eos
 
     def text_to_sequence(self, text):
         if (
