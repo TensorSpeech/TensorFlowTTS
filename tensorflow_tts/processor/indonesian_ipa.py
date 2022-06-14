@@ -60,7 +60,7 @@ valid_symbols = [
     "ʔ",
 ]
 
-_punctuation = "!,.?;"
+_punctuation = "!,.?;:"
 _sil = "SIL"
 _eos = "EOS"
 _ipa = ["@" + s for s in valid_symbols]
