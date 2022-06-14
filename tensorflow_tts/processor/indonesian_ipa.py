@@ -149,5 +149,4 @@ class IndonesianIPAProcessor(BaseProcessor):
                 data.append(txt)
             elif txt != " ":
                 data.append("@" + txt)
-        data.append(_eos)
         return data
