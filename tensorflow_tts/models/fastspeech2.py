@@ -97,7 +97,9 @@ class TFFastSpeech2(TFFastSpeech):
             config, dtype=tf.float32, name="f0_predictor"
         )
         self.energy_predictor = TFFastSpeechVariantPredictor(
-            config, dtype=tf.float32, name="energy_predictor",
+            config,
+            dtype=tf.float32,
+            name="energy_predictor",
         )
         self.duration_predictor = TFFastSpeechVariantPredictor(
             config, dtype=tf.float32, name="duration_predictor"
@@ -182,6 +184,9 @@ class TFFastSpeech2(TFFastSpeech):
         energy_embedding = self.energy_dropout(energy_embedding, training=True)
 
         # sum features
+        print("f0", f0_embedding.shape)
+        print("energy", energy_embedding.shape)
+        print("last_encoder_hidden_states", last_encoder_hidden_states.shape)
         last_encoder_hidden_states += f0_embedding + energy_embedding
 
         length_regulator_outputs, encoder_masks = self.length_regulator(
@@ -216,7 +221,13 @@ class TFFastSpeech2(TFFastSpeech):
         return outputs
 
     def _inference(
-        self, input_ids, speaker_ids, speed_ratios, f0_ratios, energy_ratios, **kwargs,
+        self,
+        input_ids,
+        speaker_ids,
+        speed_ratios,
+        f0_ratios,
+        energy_ratios,
+        **kwargs,
     ):
         """Call logic."""
         attention_mask = tf.math.not_equal(input_ids, 0)
@@ -292,10 +303,34 @@ class TFFastSpeech2(TFFastSpeech):
             experimental_relax_shapes=True,
             input_signature=[
                 tf.TensorSpec(shape=[None, None], dtype=tf.int32, name="input_ids"),
-                tf.TensorSpec(shape=[None,], dtype=tf.int32, name="speaker_ids"),
-                tf.TensorSpec(shape=[None,], dtype=tf.float32, name="speed_ratios"),
-                tf.TensorSpec(shape=[None,], dtype=tf.float32, name="f0_ratios"),
-                tf.TensorSpec(shape=[None,], dtype=tf.float32, name="energy_ratios"),
+                tf.TensorSpec(
+                    shape=[
+                        None,
+                    ],
+                    dtype=tf.int32,
+                    name="speaker_ids",
+                ),
+                tf.TensorSpec(
+                    shape=[
+                        None,
+                    ],
+                    dtype=tf.float32,
+                    name="speed_ratios",
+                ),
+                tf.TensorSpec(
+                    shape=[
+                        None,
+                    ],
+                    dtype=tf.float32,
+                    name="f0_ratios",
+                ),
+                tf.TensorSpec(
+                    shape=[
+                        None,
+                    ],
+                    dtype=tf.float32,
+                    name="energy_ratios",
+                ),
             ],
         )
 
@@ -304,9 +339,33 @@ class TFFastSpeech2(TFFastSpeech):
             experimental_relax_shapes=True,
             input_signature=[
                 tf.TensorSpec(shape=[1, None], dtype=tf.int32, name="input_ids"),
-                tf.TensorSpec(shape=[1,], dtype=tf.int32, name="speaker_ids"),
-                tf.TensorSpec(shape=[1,], dtype=tf.float32, name="speed_ratios"),
-                tf.TensorSpec(shape=[1,], dtype=tf.float32, name="f0_ratios"),
-                tf.TensorSpec(shape=[1,], dtype=tf.float32, name="energy_ratios"),
+                tf.TensorSpec(
+                    shape=[
+                        1,
+                    ],
+                    dtype=tf.int32,
+                    name="speaker_ids",
+                ),
+                tf.TensorSpec(
+                    shape=[
+                        1,
+                    ],
+                    dtype=tf.float32,
+                    name="speed_ratios",
+                ),
+                tf.TensorSpec(
+                    shape=[
+                        1,
+                    ],
+                    dtype=tf.float32,
+                    name="f0_ratios",
+                ),
+                tf.TensorSpec(
+                    shape=[
+                        1,
+                    ],
+                    dtype=tf.float32,
+                    name="energy_ratios",
+                ),
             ],
         )
