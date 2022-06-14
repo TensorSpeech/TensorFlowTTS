@@ -61,11 +61,12 @@ valid_symbols = [
 ]
 
 _punctuation = "!,.?;:"
-_sil = "SIL"
-_eos = "EOS"
+_sil = "@SIL"
+_eos = "@EOS"
+_pad = "@PAD"
 _ipa = ["@" + s for s in valid_symbols]
 
-INDONESIAN_IPA_SYMBOLS = _ipa + list(_punctuation) + [_sil] + [_eos]
+INDONESIAN_IPA_SYMBOLS = [_pad] + _ipa + list(_punctuation) + [_sil] + [_eos]
 
 
 @dataclass
@@ -144,7 +145,7 @@ class IndonesianIPAProcessor(BaseProcessor):
     def clean_g2p(self, g2p_text: list):
         data = []
         for txt in g2p_text:
-            if txt in punctuation or txt == _sil:
+            if txt in punctuation:
                 data.append(txt)
             elif txt != " ":
                 data.append("@" + txt)
