@@ -18,6 +18,7 @@ import argparse
 import glob
 import logging
 import os
+from typing import Tuple
 import yaml
 
 import librosa
@@ -39,6 +40,7 @@ from tensorflow_tts.processor import ThorstenProcessor
 from tensorflow_tts.processor import LJSpeechUltimateProcessor
 from tensorflow_tts.processor import SynpaflexProcessor
 from tensorflow_tts.processor import JSUTProcessor
+from tensorflow_tts.processor import IndonesianIPAProcessor
 from tensorflow_tts.processor.ljspeech import LJSPEECH_SYMBOLS
 from tensorflow_tts.processor.baker import BAKER_SYMBOLS
 from tensorflow_tts.processor.kss import KSS_SYMBOLS
@@ -47,6 +49,7 @@ from tensorflow_tts.processor.thorsten import THORSTEN_SYMBOLS
 from tensorflow_tts.processor.ljspeechu import LJSPEECH_U_SYMBOLS
 from tensorflow_tts.processor.synpaflex import SYNPAFLEX_SYMBOLS
 from tensorflow_tts.processor.jsut import JSUT_SYMBOLS
+from tensorflow_tts.processor.indonesian_ipa import INDONESIAN_IPA_SYMBOLS
 
 from tensorflow_tts.utils import remove_outlier
 
@@ -87,6 +90,7 @@ def parse_and_config():
             "ljspeechu",
             "synpaflex",
             "jsut",
+            "indonesianipa",
         ],
         help="Dataset to preprocess.",
     )
@@ -136,7 +140,7 @@ def ph_based_trim(
     raw_text: str,
     audio: np.array,
     hop_size: int,
-) -> (bool, np.array, np.array):
+) -> Tuple[bool, np.array, np.array]:
     """
     Args:
         config: Parsed yaml config
@@ -174,10 +178,9 @@ def ph_based_trim(
 
     last_idx = -2 if trim_pre_end else -1
 
-    idx_start, idx_end = (
-        0 if not trim_start else 1,
-        text_ids.__len__() if not trim_end else last_idx,
-    )
+    idx_start = 0 if not trim_start else 1
+    idx_end = text_ids.__len__() if not trim_end else last_idx
+
     text_ids = text_ids[idx_start:idx_end]
     durations = np.load(os.path.join(duration_path, f"{utt_id}-durations.npy"))
     if trim_start:
@@ -303,7 +306,7 @@ def gen_audio_features(item, config):
         f0 = np.pad(f0, (0, len(mel) - len(f0)))
 
     # extract energy
-    energy = np.sqrt(np.sum(S ** 2, axis=0))
+    energy = np.sqrt(np.sum(S**2, axis=0))
     assert len(mel) == len(f0) == len(energy)
 
     # remove outlier f0/energy
@@ -382,6 +385,7 @@ def preprocess():
         "ljspeechu": LJSpeechUltimateProcessor,
         "synpaflex": SynpaflexProcessor,
         "jsut": JSUTProcessor,
+        "indonesianipa": IndonesianIPAProcessor,
     }
 
     dataset_symbol = {
@@ -394,6 +398,7 @@ def preprocess():
         "ljspeechu": LJSPEECH_U_SYMBOLS,
         "synpaflex": SYNPAFLEX_SYMBOLS,
         "jsut": JSUT_SYMBOLS,
+        "indonesianipa": INDONESIAN_IPA_SYMBOLS,
     }
 
     dataset_cleaner = {
@@ -406,6 +411,7 @@ def preprocess():
         "ljspeechu": "english_cleaners",
         "synpaflex": "basic_cleaners",
         "jsut": None,
+        "indonesianipa": None,
     }
 
     logging.info(f"Selected '{config['dataset']}' processor.")
