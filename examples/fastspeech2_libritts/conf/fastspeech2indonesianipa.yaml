@@ -55,7 +55,7 @@ is_shuffle: true # shuffle dataset after each epoch.
 #             OPTIMIZER & SCHEDULER SETTING               #
 ###########################################################
 optimizer_params:
-  initial_learning_rate: 0.001
+  initial_learning_rate: 0.0001
   end_learning_rate: 0.00005
   decay_steps: 150000 # < train_max_steps is recommend.
   warmup_proportion: 0.02
