@@ -172,7 +172,9 @@ class MultiBandMelganTrainer(MelganTrainer):
             adv_loss /= i + 1
             gen_loss += self.config["lambda_adv"] * adv_loss
 
-            dict_metrics_losses.update({"adversarial_loss": adv_loss},)
+            dict_metrics_losses.update(
+                {"adversarial_loss": adv_loss},
+            )
 
         dict_metrics_losses.update({"gen_loss": gen_loss})
         dict_metrics_losses.update({"subband_spectral_convergence_loss": sub_sc_loss})
@@ -445,7 +447,7 @@ def main():
             hop_size=tf.constant(config["hop_size"], dtype=tf.int32),
         ),
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        batch_size=config["eval_batch_size"] * STRATEGY.num_replicas_in_sync,
     )
 
     # define trainer
