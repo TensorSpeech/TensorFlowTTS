@@ -77,6 +77,7 @@ lambda_adv: 2.5 # Loss balancing coefficient for adversarial loss.
 #                  DATA LOADER SETTING                    #
 ###########################################################
 batch_size: 32 # Batch size.
+eval_batch_size: 16
 batch_max_steps: 8192 # Length of each audio in batch for training. Make sure dividable by hop_size.
 batch_max_steps_valid: 8192 # Length of each audio for validation. Make sure dividable by hope_size.
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
