@@ -26,6 +26,9 @@ from tensorflow_tts.processor.ljspeechu import LJSPEECH_U_SYMBOLS as lju_symbols
 from tensorflow_tts.processor.indonesian_ipa import (
     INDONESIAN_IPA_SYMBOLS as indonesian_ipa_symbols,
 )
+from tensorflow_tts.processor.english_ipa import (
+    ENGLISH_IPA_SYMBOLS as english_ipa_symbols,
+)
 
 
 SelfAttentionParams = collections.namedtuple(
@@ -106,6 +109,8 @@ class FastSpeechConfig(BaseConfig):
             self.vocab_size = len(lju_symbols)
         elif dataset == "indonesianipa":
             self.vocab_size = len(indonesian_ipa_symbols)
+        elif dataset == "englishipa":
+            self.vocab_size = len(english_ipa_symbols)
         else:
             raise ValueError("No such dataset: {}".format(dataset))
         self.initializer_range = initializer_range

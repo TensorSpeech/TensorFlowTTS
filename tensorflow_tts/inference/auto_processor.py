@@ -30,6 +30,7 @@ from tensorflow_tts.processor import (
     JSUTProcessor,
     LJSpeechMultiProcessor,
     IndonesianIPAProcessor,
+    EnglishIPAProcessor,
 )
 
 from tensorflow_tts.utils import CACHE_DIRECTORY, PROCESSOR_FILE_NAME, LIBRARY_NAME
@@ -48,6 +49,7 @@ CONFIG_MAPPING = OrderedDict(
         ("SynpaflexProcessor", SynpaflexProcessor),
         ("JSUTProcessor", JSUTProcessor),
         ("IndonesianIPAProcessor", IndonesianIPAProcessor),
+        ("EnglishIPAProcessor", EnglishIPAProcessor),
     ]
 )
 
