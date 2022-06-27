@@ -145,6 +145,6 @@ class IndonesianIPAProcessor(BaseProcessor):
         for txt in g2p_text:
             if txt in _punctuation:
                 data.append(txt)
-            elif txt != " ":
+            elif txt in valid_symbols:
                 data.append("@" + txt)
         return data
