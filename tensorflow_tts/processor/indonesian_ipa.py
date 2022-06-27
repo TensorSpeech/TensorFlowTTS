@@ -15,8 +15,6 @@
 """Perform preprocessing and raw feature extraction for Indonesian IPA dataset."""
 
 import os
-import re
-from string import punctuation
 
 import numpy as np
 import soundfile as sf
@@ -145,7 +143,7 @@ class IndonesianIPAProcessor(BaseProcessor):
     def clean_g2p(self, g2p_text: list):
         data = []
         for txt in g2p_text:
-            if txt in punctuation:
+            if txt in _punctuation:
                 data.append(txt)
             elif txt != " ":
                 data.append("@" + txt)
