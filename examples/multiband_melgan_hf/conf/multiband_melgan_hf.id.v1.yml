@@ -21,7 +21,7 @@ multiband_melgan_generator_params:
   filters: 384 # Initial number of channels for conv layers.
   upsample_scales: [8, 4, 4] # List of Upsampling scales.
   stack_kernel_size: 3 # Kernel size of dilated conv layers in residual stack.
-  stacks: 2 # Number of stacks in a single residual stack module.
+  stacks: 4 # Number of stacks in a single residual stack module.
   is_weight_norm: false # Use weight-norm or not.
 
 ###########################################################
