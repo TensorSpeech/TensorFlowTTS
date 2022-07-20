@@ -16,7 +16,7 @@ model_type: "fastspeech2"
 
 fastspeech2_params:
   dataset: "indonesianipa"
-  n_speakers: 1
+  n_speakers: 3
   encoder_hidden_size: 256
   encoder_num_hidden_layers: 3
   encoder_num_attention_heads: 2
