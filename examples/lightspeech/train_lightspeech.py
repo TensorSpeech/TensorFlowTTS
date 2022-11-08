@@ -334,7 +334,7 @@ def main():
         speakers_map = dataset_mapping["speakers_map"]
 
     # Check n_speakers matches number of speakers in speakers_map
-    n_speakers = config["fastspeech2_params"]["n_speakers"]
+    n_speakers = config["lightspeech_params"]["n_speakers"]
     assert n_speakers == len(
         speakers_map
     ), f"Number of speakers in dataset does not match n_speakers in config"
@@ -389,19 +389,19 @@ def main():
 
     with STRATEGY.scope():
         # define model
-        fastspeech = TFLightSpeech(
+        lightspeech = TFLightSpeech(
             config=LightSpeechConfig(**config["lightspeech_params"])
         )
-        fastspeech._build()
-        fastspeech.summary()
+        lightspeech._build()
+        lightspeech.summary()
 
         if len(args.pretrained) > 1:
-            fastspeech.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
+            lightspeech.load_weights(args.pretrained, by_name=True, skip_mismatch=True)
             logging.info(
                 f"Successfully loaded pretrained weight from {args.pretrained}."
             )
 
-        # AdamW for fastspeech
+        # AdamW for lightspeech
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
             initial_learning_rate=config["optimizer_params"]["initial_learning_rate"],
             decay_steps=config["optimizer_params"]["decay_steps"],
@@ -429,7 +429,7 @@ def main():
         _ = optimizer.iterations
 
     # compile trainer
-    trainer.compile(model=fastspeech, optimizer=optimizer)
+    trainer.compile(model=lightspeech, optimizer=optimizer)
 
     # start training
     try:
