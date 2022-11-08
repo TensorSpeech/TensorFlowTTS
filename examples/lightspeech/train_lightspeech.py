@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2020 TensorFlowTTS Team.
+# Copyright 2020 Minh Nguyen (@dathudeptrai)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Train FastSpeech2."""
+"""Train LightSpeech."""
 
 import tensorflow as tf
 
@@ -36,20 +36,15 @@ import tensorflow_tts
 from TensorFlowTTS.examples.fastspeech2_libritts.fastspeech2_dataset import (
     CharactorDurationF0EnergyMelDataset,
 )
-from tensorflow_tts.configs import FastSpeech2Config
-from tensorflow_tts.models import TFFastSpeech2
+from tensorflow_tts.configs import LightSpeechConfig
+from tensorflow_tts.models import TFLightSpeech
 from tensorflow_tts.optimizers import AdamWeightDecay, WarmUp
 from tensorflow_tts.trainers import Seq2SeqBasedTrainer
-from tensorflow_tts.utils import (
-    calculate_2d_loss,
-    calculate_3d_loss,
-    return_strategy,
-    TFGriffinLim,
-)
+from tensorflow_tts.utils import calculate_2d_loss, calculate_3d_loss, return_strategy
 
 
-class FastSpeech2Trainer(Seq2SeqBasedTrainer):
-    """FastSpeech2 Trainer class based on FastSpeechTrainer."""
+class LightSpeechTrainer(Seq2SeqBasedTrainer):
+    """LightSpeech Trainer class based on LightSpeechTrainer."""
 
     def __init__(
         self,
@@ -68,7 +63,7 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             config (dict): Config dict loaded from yaml format configuration file.
             is_mixed_precision (bool): Use mixed precision or not.
         """
-        super(FastSpeech2Trainer, self).__init__(
+        super(LightSpeechTrainer, self).__init__(
             steps=steps,
             epochs=epochs,
             config=config,
@@ -79,26 +74,12 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         self.list_metrics_name = [
             "duration_loss",
             "f0_loss",
-            "energy_loss",
             "mel_loss_before",
             "mel_loss_after",
         ]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
         self.reset_states_eval()
-        self.use_griffin = config.get("use_griffin", False)
-        self.griffin_lim_tf = None
-        if self.use_griffin:
-            logging.info(
-                f"Load griff stats from {stats_path} and config from {dataset_config}"
-            )
-            self.griff_conf = yaml.load(open(dataset_config), Loader=yaml.Loader)
-            self.prepare_grim(stats_path, self.griff_conf)
-
-    def prepare_grim(self, stats_path, config):
-        if not stats_path:
-            raise KeyError("stats path need to exist")
-        self.griffin_lim_tf = TFGriffinLim(stats_path, config)
 
     def compile(self, model, optimizer):
         super().compile(model, optimizer)
@@ -122,25 +103,21 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
         """
-        mel_before, mel_after, duration_outputs, f0_outputs, energy_outputs = outputs
+        mel_before, mel_after, duration_outputs, f0_outputs = outputs
 
         log_duration = tf.math.log(
             tf.cast(tf.math.add(batch["duration_gts"], 1), tf.float32)
         )
         duration_loss = calculate_2d_loss(log_duration, duration_outputs, self.mse)
         f0_loss = calculate_2d_loss(batch["f0_gts"], f0_outputs, self.mse)
-        energy_loss = calculate_2d_loss(batch["energy_gts"], energy_outputs, self.mse)
         mel_loss_before = calculate_3d_loss(batch["mel_gts"], mel_before, self.mae)
         mel_loss_after = calculate_3d_loss(batch["mel_gts"], mel_after, self.mae)
 
-        per_example_losses = (
-            duration_loss + f0_loss + energy_loss + mel_loss_before + mel_loss_after
-        )
+        per_example_losses = duration_loss + f0_loss + mel_loss_before + mel_loss_after
 
         dict_metrics_losses = {
             "duration_loss": duration_loss,
             "f0_loss": f0_loss,
-            "energy_loss": energy_loss,
             "mel_loss_before": mel_loss_before,
             "mel_loss_after": mel_loss_after,
         }
@@ -172,13 +149,6 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
             utt_ids = utt_ids.numpy()
 
         # check directory
-        if self.use_griffin:
-            griff_dir_name = os.path.join(
-                self.config["outdir"], f"predictions/{self.steps}_wav"
-            )
-            if not os.path.exists(griff_dir_name):
-                os.makedirs(griff_dir_name)
-
         dirname = os.path.join(self.config["outdir"], f"predictions/{self.steps}steps")
         if not os.path.exists(dirname):
             os.makedirs(dirname)
@@ -186,26 +156,6 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
         for idx, (mel_gt, mel_before, mel_after) in enumerate(
             zip(mel_gts, mels_before, mels_after), 0
         ):
-
-            if self.use_griffin:
-                utt_id = utt_ids[idx]
-                grif_before = self.griffin_lim_tf(
-                    tf.reshape(mel_before, [-1, 80])[tf.newaxis, :], n_iter=32
-                )
-                grif_after = self.griffin_lim_tf(
-                    tf.reshape(mel_after, [-1, 80])[tf.newaxis, :], n_iter=32
-                )
-                grif_gt = self.griffin_lim_tf(
-                    tf.reshape(mel_gt, [-1, 80])[tf.newaxis, :], n_iter=32
-                )
-                self.griffin_lim_tf.save_wav(
-                    grif_before, griff_dir_name, f"{utt_id}_before"
-                )
-                self.griffin_lim_tf.save_wav(
-                    grif_after, griff_dir_name, f"{utt_id}_after"
-                )
-                self.griffin_lim_tf.save_wav(grif_gt, griff_dir_name, f"{utt_id}_gt")
-
             utt_id = utt_ids[idx]
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
             mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
@@ -234,7 +184,7 @@ class FastSpeech2Trainer(Seq2SeqBasedTrainer):
 def main():
     """Run training process."""
     parser = argparse.ArgumentParser(
-        description="Train FastSpeech (See detail in tensorflow_tts/bin/train-fastspeech.py)"
+        description="Train LightSpeech (See detail in tensorflow_tts/bin/train-fastspeech.py)"
     )
     parser.add_argument(
         "--train-dir",
@@ -427,7 +377,7 @@ def main():
     )
 
     # define trainer
-    trainer = FastSpeech2Trainer(
+    trainer = LightSpeechTrainer(
         config=config,
         strategy=STRATEGY,
         steps=0,
@@ -439,8 +389,8 @@ def main():
 
     with STRATEGY.scope():
         # define model
-        fastspeech = TFFastSpeech2(
-            config=FastSpeech2Config(**config["fastspeech2_params"])
+        fastspeech = TFLightSpeech(
+            config=LightSpeechConfig(**config["lightspeech_params"])
         )
         fastspeech._build()
         fastspeech.summary()

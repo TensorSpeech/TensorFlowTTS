@@ -12,27 +12,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Decode trained Mb-Melgan from folder."""
+"""Decode trained FastSpeech from folders."""
 
 import argparse
 import logging
 import os
+import sys
+
+sys.path.append(".")
 
 import numpy as np
-import soundfile as sf
+import tensorflow as tf
 import yaml
 from tqdm import tqdm
 
-from tensorflow_tts.configs import MultiBandMelGANGeneratorConfig
-from tensorflow_tts.datasets import MelDataset
-from tensorflow_tts.models import TFPQMF, TFMelGANGenerator
+from TensorFlowTTS.examples.fastspeech.fastspeech_dataset import CharactorDataset
+from tensorflow_tts.configs import LightSpeechConfig
+from tensorflow_tts.models import TFLightSpeech
 
 
 def main():
-    """Run melgan decoding from folder."""
+    """Run fastspeech2 decoding from folder."""
     parser = argparse.ArgumentParser(
-        description="Generate Audio from melspectrogram with trained melgan "
-        "(See detail in example/melgan/decode_melgan.py)."
+        description="Decode soft-mel features from charactor with trained FastSpeech "
+        "(See detail in examples/fastspeech2/decode_fastspeech2.py)."
     )
     parser.add_argument(
         "--rootdir",
@@ -48,16 +51,19 @@ def main():
         "--checkpoint", type=str, required=True, help="checkpoint file to be loaded."
     )
     parser.add_argument(
-        "--use-norm", type=int, default=1, help="Use norm or raw melspectrogram."
-    )
-    parser.add_argument("--batch-size", type=int, default=8, help="batch_size.")
-    parser.add_argument(
         "--config",
         default=None,
         type=str,
         required=True,
         help="yaml format configuration file. if not explicitly provided, "
         "it will be searched in the checkpoint directory. (default=None)",
+    )
+    parser.add_argument(
+        "--batch-size",
+        default=8,
+        type=int,
+        required=False,
+        help="Batch size for inference.",
     )
     parser.add_argument(
         "--verbose",
@@ -95,60 +101,63 @@ def main():
     config.update(vars(args))
 
     if config["format"] == "npy":
-        mel_query = (
-            "*-fs-after-feats.npy"
-            if "fastspeech" in args.rootdir or "lightspeech" in args.rootdir
-            else "*-norm-feats.npy"
-            if args.use_norm == 1
-            else "*-raw-feats.npy"
-        )
-        mel_load_fn = np.load
+        char_query = "*-ids.npy"
+        char_load_fn = np.load
     else:
         raise ValueError("Only npy is supported.")
 
     # define data-loader
-    dataset = MelDataset(
+    dataset = CharactorDataset(
         root_dir=args.rootdir,
-        mel_query=mel_query,
-        mel_load_fn=mel_load_fn,
+        charactor_query=char_query,
+        charactor_load_fn=char_load_fn,
     )
     dataset = dataset.create(batch_size=args.batch_size)
 
     # define model and load checkpoint
-    mb_melgan = TFMelGANGenerator(
-        config=MultiBandMelGANGeneratorConfig(
-            **config["multiband_melgan_generator_params"]
-        ),
-        name="multiband_melgan_generator",
+    lightspeech = TFLightSpeech(
+        config=LightSpeechConfig(**config["lightspeech_params"]), name="lightspeech"
     )
-    mb_melgan._build()
-    mb_melgan.load_weights(args.checkpoint)
+    lightspeech._build()
+    lightspeech.load_weights(args.checkpoint)
 
-    pqmf = TFPQMF(
-        config=MultiBandMelGANGeneratorConfig(
-            **config["multiband_melgan_generator_params"]
-        ),
-        name="pqmf",
-    )
+    for data in tqdm(dataset, desc="Decoding"):
+        utt_ids = data["utt_ids"]
+        char_ids = data["input_ids"]
 
-    for data in tqdm(dataset, desc="[Decoding]"):
-        utt_ids, mels, mel_lengths = data["utt_ids"], data["mels"], data["mel_lengths"]
+        # fastspeech inference.
+        (
+            masked_mel_before,
+            masked_mel_after,
+            duration_outputs,
+            _,
+        ) = lightspeech.inference(
+            char_ids,
+            speaker_ids=tf.zeros(shape=[tf.shape(char_ids)[0]], dtype=tf.int32),
+            speed_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
+            f0_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
+        )
 
-        # melgan inference.
-        generated_subbands = mb_melgan(mels)
-        generated_audios = pqmf.synthesis(generated_subbands)
+        # convert to numpy
+        masked_mel_befores = masked_mel_before.numpy()
+        masked_mel_afters = masked_mel_after.numpy()
 
-        # convert to numpy.
-        generated_audios = generated_audios.numpy()  # [B, T]
-
-        # save to outdir
-        for i, audio in enumerate(generated_audios):
-            utt_id = utt_ids[i].numpy().decode("utf-8")
-            sf.write(
-                os.path.join(args.outdir, f"{utt_id}.wav"),
-                audio[: mel_lengths[i].numpy() * config["hop_size"]],
-                config["sampling_rate"],
-                "PCM_16",
+        for (utt_id, mel_before, mel_after, durations) in zip(
+            utt_ids, masked_mel_befores, masked_mel_afters, duration_outputs
+        ):
+            # real len of mel predicted
+            real_length = durations.numpy().sum()
+            utt_id = utt_id.numpy().decode("utf-8")
+            # save to folder.
+            np.save(
+                os.path.join(args.outdir, f"{utt_id}-fs-before-feats.npy"),
+                mel_before[:real_length, :].astype(np.float32),
+                allow_pickle=False,
+            )
+            np.save(
+                os.path.join(args.outdir, f"{utt_id}-fs-after-feats.npy"),
+                mel_after[:real_length, :].astype(np.float32),
+                allow_pickle=False,
             )
 
 
