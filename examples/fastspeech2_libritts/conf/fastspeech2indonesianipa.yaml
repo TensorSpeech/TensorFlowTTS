@@ -16,7 +16,7 @@ model_type: "fastspeech2"
 
 fastspeech2_params:
   dataset: "indonesianipa"
-  n_speakers: 3
+  n_speakers: 1
   encoder_hidden_size: 256
   encoder_num_hidden_layers: 3
   encoder_num_attention_heads: 2
@@ -47,6 +47,7 @@ fastspeech2_params:
 #                  DATA LOADER SETTING                    #
 ###########################################################
 batch_size: 16 # Batch size for each GPU with assuming that gradient_accumulation_steps == 1.
+eval_batch_size: 5
 remove_short_samples: true # Whether to remove samples the length of which are less than batch_max_steps.
 allow_cache: true # Whether to allow cache in dataset. If true, it requires cpu memory.
 mel_length_threshold: 32 # remove all targets has mel_length <= 32

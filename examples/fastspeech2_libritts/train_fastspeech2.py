@@ -414,7 +414,7 @@ def main():
     ).create(
         is_shuffle=config["is_shuffle"],
         allow_cache=config["allow_cache"],
-        batch_size=config["batch_size"] * STRATEGY.num_replicas_in_sync,
+        batch_size=config["eval_batch_size"] * STRATEGY.num_replicas_in_sync,
     )
 
     # define trainer
