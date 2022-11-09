@@ -16,12 +16,9 @@
 
 import tensorflow as tf
 import numpy as np
+from tensorflow_tts.models import BaseModel
 from tensorflow_tts.models.fastspeech import (
-    TFFastSpeech,
-    TFFastSpeechIntermediate,
-    TFFastSpeechLayer,
     TFFastSpeechAttention,
-    TFFastSpeechEncoder,
     TFFastSpeechOutput,
     TFFastSpeechEmbeddings,
     TFFastSpeechLengthRegulator,
@@ -291,7 +288,7 @@ class TFLightSpeechDecoder(TFLightSpeechEncoder):
         return position_enc
 
 
-class TFLightSpeech(tf.keras.Model):
+class TFLightSpeech(BaseModel):
     """TF Fastspeech module."""
 
     def __init__(self, config, **kwargs):
