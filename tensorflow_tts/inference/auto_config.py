@@ -22,6 +22,7 @@ from collections import OrderedDict
 from tensorflow_tts.configs import (
     FastSpeechConfig,
     FastSpeech2Config,
+    LightSpeechConfig,
     MelGANGeneratorConfig,
     MultiBandMelGANGeneratorConfig,
     HifiGANGeneratorConfig,
@@ -35,6 +36,7 @@ from huggingface_hub import hf_hub_url, cached_download
 
 CONFIG_MAPPING = OrderedDict(
     [
+        ("lightspeech", LightSpeechConfig),
         ("fastspeech", FastSpeechConfig),
         ("fastspeech2", FastSpeech2Config),
         ("multiband_melgan_generator", MultiBandMelGANGeneratorConfig),

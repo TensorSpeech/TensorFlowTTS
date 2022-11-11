@@ -1,6 +1,7 @@
 from tensorflow_tts.models.base_model import BaseModel
 from tensorflow_tts.models.fastspeech import TFFastSpeech
 from tensorflow_tts.models.fastspeech2 import TFFastSpeech2
+from tensorflow_tts.models.lightspeech import TFLightSpeech
 from tensorflow_tts.models.melgan import (
     TFMelGANDiscriminator,
     TFMelGANGenerator,
@@ -11,7 +12,7 @@ from tensorflow_tts.models.mb_melgan import TFMBMelGANGenerator
 from tensorflow_tts.models.hifigan import (
     TFHifiGANGenerator,
     TFHifiGANMultiPeriodDiscriminator,
-    TFHifiGANPeriodDiscriminator
+    TFHifiGANPeriodDiscriminator,
 )
 from tensorflow_tts.models.tacotron2 import TFTacotron2
 from tensorflow_tts.models.parallel_wavegan import TFParallelWaveGANGenerator
