@@ -95,7 +95,15 @@ def main():
     config.update(vars(args))
 
     if config["format"] == "npy":
-        mel_query = "*-fs-after-feats.npy" if "fastspeech" in args.rootdir else "*-norm-feats.npy" if args.use_norm == 1 else "*-raw-feats.npy"
+        mel_query = (
+            "*-fs-after-feats.npy"
+            if "fastspeech" in args.rootdir
+            else "*-ls-feats.npy"
+            if "lightspeech" in args.rootdir
+            else "*-norm-feats.npy"
+            if args.use_norm == 1
+            else "*-raw-feats.npy"
+        )
         mel_load_fn = np.load
     else:
         raise ValueError("Only npy is supported.")
@@ -110,14 +118,19 @@ def main():
 
     # define model and load checkpoint
     mb_melgan = TFMelGANGenerator(
-        config=MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]),
+        config=MultiBandMelGANGeneratorConfig(
+            **config["multiband_melgan_generator_params"]
+        ),
         name="multiband_melgan_generator",
     )
     mb_melgan._build()
     mb_melgan.load_weights(args.checkpoint)
 
     pqmf = TFPQMF(
-        config=MultiBandMelGANGeneratorConfig(**config["multiband_melgan_generator_params"]), name="pqmf"
+        config=MultiBandMelGANGeneratorConfig(
+            **config["multiband_melgan_generator_params"]
+        ),
+        name="pqmf",
     )
 
     for data in tqdm(dataset, desc="[Decoding]"):
