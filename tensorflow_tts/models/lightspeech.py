@@ -25,7 +25,6 @@ from tensorflow_tts.models.fastspeech import (
     ACT2FN,
     get_initializer,
     TFEmbedding,
-    TFTacotronPostnet,
 )
 
 
@@ -137,7 +136,7 @@ class TFLightSpeechIntermediate(tf.keras.layers.Layer):
 
 
 class TFLightSpeechLayer(tf.keras.layers.Layer):
-    """Fastspeech module (FFT module on the paper)."""
+    """LightSpeech module (FFT module on the paper)."""
 
     def __init__(self, config, index, **kwargs):
         """Init variables."""
@@ -289,10 +288,10 @@ class TFLightSpeechDecoder(TFLightSpeechEncoder):
 
 
 class TFLightSpeech(BaseModel):
-    """TF Fastspeech module."""
+    """TF LightSpeech module."""
 
     def __init__(self, config, **kwargs):
-        """Init layers for fastspeech."""
+        """Init layers for LightSpeech."""
         self.enable_tflite_convertible = kwargs.pop("enable_tflite_convertible", False)
         super().__init__(**kwargs)
         self.embeddings = TFFastSpeechEmbeddings(config, name="embeddings")
@@ -311,10 +310,7 @@ class TFLightSpeech(BaseModel):
             name="decoder",
         )
         self.mel_dense = tf.keras.layers.Dense(
-            units=config.num_mels, dtype=tf.float32, name="mel_before"
-        )
-        self.postnet = TFTacotronPostnet(
-            config=config, dtype=tf.float32, name="postnet"
+            units=config.num_mels, dtype=tf.float32, name="mel_dense"
         )
 
         self.setup_inference_fn()
@@ -409,17 +405,9 @@ class TFLightSpeech(BaseModel):
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.
-        mels_before = self.mel_dense(last_decoder_hidden_states)
-        mels_after = (
-            self.postnet([mels_before, encoder_masks], training=training) + mels_before
-        )
+        mel_outputs = self.mel_dense(last_decoder_hidden_states)
 
-        outputs = (
-            mels_before,
-            mels_after,
-            duration_outputs,
-            f0_outputs,
-        )
+        outputs = (mel_outputs, duration_outputs, f0_outputs)
         return outputs
 
     def _inference(
@@ -458,10 +446,6 @@ class TFLightSpeech(BaseModel):
             [last_encoder_hidden_states, speaker_ids, attention_mask], training=False
         )
         f0_outputs *= f0_ratios
-
-        # f0_embedding = self.f0_dropout(
-        #    self.f0_embeddings(tf.expand_dims(f0_outputs, 2)), training=True
-        # )
         f0_embedding = self.f0_embeddings(tf.expand_dims(f0_outputs, 2))
 
         # sum features
@@ -484,12 +468,9 @@ class TFLightSpeech(BaseModel):
         last_decoder_hidden_states = decoder_output[0]
 
         # here u can use sum or concat more than 1 hidden states layers from decoder.
-        mel_before = self.mel_dense(last_decoder_hidden_states)
-        mel_after = (
-            self.postnet([mel_before, encoder_masks], training=False) + mel_before
-        )
+        mel_outputs = self.mel_dense(last_decoder_hidden_states)
 
-        outputs = (mel_before, mel_after, duration_outputs, f0_outputs)
+        outputs = (mel_outputs, duration_outputs, f0_outputs)
         return outputs
 
     def setup_inference_fn(self):

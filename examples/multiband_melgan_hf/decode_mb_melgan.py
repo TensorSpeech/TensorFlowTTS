@@ -97,7 +97,9 @@ def main():
     if config["format"] == "npy":
         mel_query = (
             "*-fs-after-feats.npy"
-            if "fastspeech" in args.rootdir or "lightspeech" in args.rootdir
+            if "fastspeech" in args.rootdir
+            else "*-ls-feats.npy"
+            if "lightspeech" in args.rootdir
             else "*-norm-feats.npy"
             if args.use_norm == 1
             else "*-raw-feats.npy"

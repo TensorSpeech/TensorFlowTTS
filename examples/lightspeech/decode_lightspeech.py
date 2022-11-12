@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Decode trained FastSpeech from folders."""
+"""Decode trained LightSpeech from folders."""
 
 import argparse
 import logging
@@ -32,10 +32,10 @@ from tensorflow_tts.models import TFLightSpeech
 
 
 def main():
-    """Run fastspeech2 decoding from folder."""
+    """Run lightspeech decoding from folder."""
     parser = argparse.ArgumentParser(
-        description="Decode soft-mel features from charactor with trained FastSpeech "
-        "(See detail in examples/fastspeech2/decode_fastspeech2.py)."
+        description="Decode soft-mel features from charactor with trained LightSpeech "
+        "(See detail in examples/lightspeech/decode_lightspeech.py)."
     )
     parser.add_argument(
         "--rootdir",
@@ -125,13 +125,8 @@ def main():
         utt_ids = data["utt_ids"]
         char_ids = data["input_ids"]
 
-        # fastspeech inference.
-        (
-            masked_mel_before,
-            masked_mel_after,
-            duration_outputs,
-            _,
-        ) = lightspeech.inference(
+        # lightspeech inference.
+        (masked_mel, duration_outputs, _) = lightspeech.inference(
             char_ids,
             speaker_ids=tf.zeros(shape=[tf.shape(char_ids)[0]], dtype=tf.int32),
             speed_ratios=tf.ones(shape=[tf.shape(char_ids)[0]], dtype=tf.float32),
@@ -139,24 +134,16 @@ def main():
         )
 
         # convert to numpy
-        masked_mel_befores = masked_mel_before.numpy()
-        masked_mel_afters = masked_mel_after.numpy()
+        masked_mels = masked_mel.numpy()
 
-        for (utt_id, mel_before, mel_after, durations) in zip(
-            utt_ids, masked_mel_befores, masked_mel_afters, duration_outputs
-        ):
+        for (utt_id, mel, durations) in zip(utt_ids, masked_mels, duration_outputs):
             # real len of mel predicted
             real_length = durations.numpy().sum()
             utt_id = utt_id.numpy().decode("utf-8")
             # save to folder.
             np.save(
-                os.path.join(args.outdir, f"{utt_id}-fs-before-feats.npy"),
-                mel_before[:real_length, :].astype(np.float32),
-                allow_pickle=False,
-            )
-            np.save(
-                os.path.join(args.outdir, f"{utt_id}-fs-after-feats.npy"),
-                mel_after[:real_length, :].astype(np.float32),
+                os.path.join(args.outdir, f"{utt_id}-ls-feats.npy"),
+                mel[:real_length, :].astype(np.float32),
                 allow_pickle=False,
             )
 
