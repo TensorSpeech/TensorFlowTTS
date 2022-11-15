@@ -74,8 +74,7 @@ class LightSpeechTrainer(Seq2SeqBasedTrainer):
         self.list_metrics_name = [
             "duration_loss",
             "f0_loss",
-            "mel_loss_before",
-            "mel_loss_after",
+            "mel_loss",
         ]
         self.init_train_eval_metrics(self.list_metrics_name)
         self.reset_states_train()
@@ -103,23 +102,21 @@ class LightSpeechTrainer(Seq2SeqBasedTrainer):
             per_example_losses: per example losses for each GPU, shape [B]
             dict_metrics_losses: dictionary loss.
         """
-        mel_before, mel_after, duration_outputs, f0_outputs = outputs
+        mel_outputs, duration_outputs, f0_outputs = outputs
 
         log_duration = tf.math.log(
             tf.cast(tf.math.add(batch["duration_gts"], 1), tf.float32)
         )
         duration_loss = calculate_2d_loss(log_duration, duration_outputs, self.mse)
         f0_loss = calculate_2d_loss(batch["f0_gts"], f0_outputs, self.mse)
-        mel_loss_before = calculate_3d_loss(batch["mel_gts"], mel_before, self.mae)
-        mel_loss_after = calculate_3d_loss(batch["mel_gts"], mel_after, self.mae)
+        mel_loss = calculate_3d_loss(batch["mel_gts"], mel_outputs, self.mae)
 
-        per_example_losses = duration_loss + f0_loss + mel_loss_before + mel_loss_after
+        per_example_losses = duration_loss + f0_loss + mel_loss
 
         dict_metrics_losses = {
             "duration_loss": duration_loss,
             "f0_loss": f0_loss,
-            "mel_loss_before": mel_loss_before,
-            "mel_loss_after": mel_loss_after,
+            "mel_loss": mel_loss,
         }
 
         return per_example_losses, dict_metrics_losses
@@ -131,20 +128,18 @@ class LightSpeechTrainer(Seq2SeqBasedTrainer):
         # predict with tf.function.
         outputs = self.one_step_predict(batch)
 
-        mels_before, mels_after, *_ = outputs
+        mels, *_ = outputs
         mel_gts = batch["mel_gts"]
         utt_ids = batch["utt_ids"]
 
         # convert to tensor.
         # here we just take a sample at first replica.
         try:
-            mels_before = mels_before.values[0].numpy()
-            mels_after = mels_after.values[0].numpy()
+            mels = mels.values[0].numpy()
             mel_gts = mel_gts.values[0].numpy()
             utt_ids = utt_ids.values[0].numpy()
         except Exception:
-            mels_before = mels_before.numpy()
-            mels_after = mels_after.numpy()
+            mels = mels.numpy()
             mel_gts = mel_gts.numpy()
             utt_ids = utt_ids.numpy()
 
@@ -153,29 +148,22 @@ class LightSpeechTrainer(Seq2SeqBasedTrainer):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        for idx, (mel_gt, mel_before, mel_after) in enumerate(
-            zip(mel_gts, mels_before, mels_after), 0
-        ):
+        for idx, (mel_gt, mel) in enumerate(zip(mel_gts, mels), 0):
             utt_id = utt_ids[idx]
             mel_gt = tf.reshape(mel_gt, (-1, 80)).numpy()  # [length, 80]
-            mel_before = tf.reshape(mel_before, (-1, 80)).numpy()  # [length, 80]
-            mel_after = tf.reshape(mel_after, (-1, 80)).numpy()  # [length, 80]
+            mel = tf.reshape(mel, (-1, 80)).numpy()  # [length, 80]
 
             # plit figure and save it
             figname = os.path.join(dirname, f"{utt_id}.png")
             fig = plt.figure(figsize=(10, 8))
-            ax1 = fig.add_subplot(311)
-            ax2 = fig.add_subplot(312)
-            ax3 = fig.add_subplot(313)
+            ax1 = fig.add_subplot(211)
+            ax2 = fig.add_subplot(212)
             im = ax1.imshow(np.rot90(mel_gt), aspect="auto", interpolation="none")
             ax1.set_title("Target Mel-Spectrogram")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax1)
-            ax2.set_title("Predicted Mel-before-Spectrogram")
-            im = ax2.imshow(np.rot90(mel_before), aspect="auto", interpolation="none")
+            ax2.set_title("Predicted Mel-Spectrogram")
+            im = ax2.imshow(np.rot90(mel), aspect="auto", interpolation="none")
             fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax2)
-            ax3.set_title("Predicted Mel-after-Spectrogram")
-            im = ax3.imshow(np.rot90(mel_after), aspect="auto", interpolation="none")
-            fig.colorbar(mappable=im, shrink=0.65, orientation="horizontal", ax=ax3)
             plt.tight_layout()
             plt.savefig(figname)
             plt.close()
@@ -184,7 +172,7 @@ class LightSpeechTrainer(Seq2SeqBasedTrainer):
 def main():
     """Run training process."""
     parser = argparse.ArgumentParser(
-        description="Train LightSpeech (See detail in tensorflow_tts/bin/train-fastspeech.py)"
+        description="Train LightSpeech"
     )
     parser.add_argument(
         "--train-dir",

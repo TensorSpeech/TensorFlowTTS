@@ -95,7 +95,15 @@ def main():
     config.update(vars(args))
 
     if config["format"] == "npy":
-        mel_query = "*-fs-after-feats.npy" if "fastspeech" in args.rootdir else "*-norm-feats.npy" if args.use_norm == 1 else "*-raw-feats.npy"
+        mel_query = (
+            "*-fs-after-feats.npy"
+            if "fastspeech" in args.rootdir
+            else "*-ls-feats.npy"
+            if "lightspeech" in args.rootdir
+            else "*-norm-feats.npy"
+            if args.use_norm == 1
+            else "*-raw-feats.npy"
+        )
         mel_load_fn = np.load
     else:
         raise ValueError("Only npy is supported.")

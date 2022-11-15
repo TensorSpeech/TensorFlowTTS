@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Decode trained FastSpeech from folders."""
+"""Decode trained LightSpeech from folders."""
 
 import argparse
 import logging
@@ -37,7 +37,7 @@ from tensorflow_tts.models import TFLightSpeech
 def main():
     """Run lightspeech decoding from folder."""
     parser = argparse.ArgumentParser(
-        description="Decode soft-mel features from charactor with trained FastSpeech "
+        description="Decode soft-mel features from charactor with trained LightSpeech "
         "(See detail in examples/lightspeech/decode_lightspeech.py)."
     )
     parser.add_argument(
@@ -149,22 +149,19 @@ def main():
         mel_lens = data["mel_lengths"]
 
         # lightspeech inference.
-        masked_mel_before, masked_mel_after, duration_outputs, _ = lightspeech(
-            **data, training=True
-        )
+        masked_mel, duration_outputs, _ = lightspeech(**data, training=True)
 
         # convert to numpy
-        masked_mel_befores = masked_mel_before.numpy()
-        masked_mel_afters = masked_mel_after.numpy()
+        masked_mels = masked_mel.numpy()
 
-        for (utt_id, _, mel_after, _, mel_len) in zip(
-            utt_ids, masked_mel_befores, masked_mel_afters, duration_outputs, mel_lens
+        for (utt_id, mel, _, mel_len) in zip(
+            utt_ids, masked_mels, duration_outputs, mel_lens
         ):
             utt_id = utt_id.numpy().decode("utf-8")
 
             np.save(
                 os.path.join(outdpost, f"{utt_id}-postnet.npy"),
-                mel_after[:mel_len, :].astype(np.float32),
+                mel[:mel_len, :].astype(np.float32),
                 allow_pickle=False,
             )
 
