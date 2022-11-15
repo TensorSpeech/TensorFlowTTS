@@ -45,9 +45,17 @@ requirements = {
         "g2p_en",
         "dataclasses",
         "pyopenjtalk==0.1.3",
+        "gruut",
+        "g2p_id_py==0.3.1",
     ],
-    "setup": ["numpy", "pytest-runner",],
-    "test": ["pytest>=3.3.0", "hacking>=1.1.0",],
+    "setup": [
+        "numpy",
+        "pytest-runner",
+    ],
+    "test": [
+        "pytest>=3.3.0",
+        "hacking>=1.1.0",
+    ],
 }
 
 # TODO(@dathudeptrai) update console_scripts.
