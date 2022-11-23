@@ -1,0 +1,40 @@
+site_name: Text-to-Speech with TensorFlowTTS
+repo_url: https://github.com/w11wo/TensorFlowTTS
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+
+plugins:
+  - search
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+
+nav:
+  - Start Here: index.md
+  - Installation: installation.md
+  - Recipes:
+      - LightSpeech & Multi-band MelGAN:
+          - Introduction: recipes/lightspeech-mbmelgan/intro.md
+          - Dataset Structure: recipes/lightspeech-mbmelgan/dataset-structure.md
+          - Duration Extraction: recipes/lightspeech-mbmelgan/duration-extraction.md
+          - Model Training: recipes/lightspeech-mbmelgan/model-training.md
