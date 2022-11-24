@@ -85,7 +85,10 @@ lightspeech-en-bookbot/
 ├── events.out.tfevents.1669084428.bookbot-tf-2.10561.0.v2
 └── predictions/ # (3)
     ├── 100000steps/
+    │   ├── b'en-US-Madison_11'.png
+    │   ├── ...
     ├── 10000steps/
+    │   ├── ...
     ├── ...
 ```
 
@@ -153,5 +156,46 @@ CUDA_VISIBLE_DEVICES=0 python TensorFlowTTS/examples/multiband_melgan_hf/train_m
 ```
 
 Note that this first pre-trains only the generator for 200,000 steps, and then continues the remaining steps with the usual GAN training framework.
+
+At the end of training, we should end up with the following files
+
+```sh
+mb-melgan-hifi-en-bookbot/
+├── checkpoints/ # (1)
+│   ├── checkpoint
+│   ├── ckpt-100000.data-00000-of-00001
+│   ├── ckpt-100000.index
+│   ├── ...
+│   ├── discriminator-100000.h5
+│   ├── discriminator-120000.h5
+│   ├── ...
+│   ├── generator-100000.h5
+│   ├── ...
+│   └── generator-1000000.h5 # (2)
+├── config.yml
+├── events.out.tfevents.1669101534.bookbot-tf-2.21897.0.v2
+├── events.out.tfevents.1669116847.bookbot-tf-2.31894.0.v2
+└── predictions/ # (3)
+    ├── 100000steps/
+    │   ├── b'en-US-Madison_11'.png
+    │   ├── b'en-US-Madison_11'_gen.wav
+    │   ├── b'en-US-Madison_11'_ref.wav
+    │   ├── ...
+    ├── 10000steps/
+    │   ├── ...
+    ├── ...
+```
+
+1. This contains all of the training checkpoints.
+2. The final generator checkpoint (which we want).
+3. This contains all mid-training intermediate predictions (waveforms).
+
+
+We can simply copy the final generator model into the output model directory.
+
+```sh
+cd mb-melgan-hifi-en-bookbot
+cp checkpoints/generator-1000000.h5 model.h5
+```
 
 With that, we are done!
