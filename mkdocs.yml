@@ -1,4 +1,5 @@
 site_name: Text-to-Speech with TensorFlowTTS
+site_url: https://w11wo.github.io/TensorFlowTTS/
 repo_url: https://github.com/w11wo/TensorFlowTTS
 docs_dir: docs
 
@@ -21,7 +22,7 @@ theme:
         name: Switch to light mode
   features:
     - navigation.sections
-    - navigation.expand
+    # - navigation.expand
     - content.code.annotate
 
 plugins:
@@ -47,9 +48,17 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
 
+extra_javascript:
+  - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
+  - javascripts/tablesort.js
+
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Live Demo: https://huggingface.co/spaces/bookbot/Text-to-Speech-Playground
+  - Model Zoo:
+      - English: models/english.md
+      - Indonesian: models/indonesian.md
   - Recipes:
       - LightSpeech & Multi-band MelGAN:
           - Introduction: recipes/lightspeech-mbmelgan/intro.md

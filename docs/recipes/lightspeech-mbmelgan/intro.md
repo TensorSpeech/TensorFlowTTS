@@ -10,20 +10,20 @@ For English, we use [gruut](https://github.com/rhasspy/gruut) and for Indonesian
 
 LightSpeech follows the same architecture as [FastSpeech2](https://arxiv.org/abs/2006.04558), except with an optimized model configuration obtained via Neural Architecture Search (NAS). In our case, we don't really perform NAS, but use the previously found best model configuration.
 
-![FastSpeech2](/assets/fastspeech2.png){ loading=lazy }
+![FastSpeech2](../../assets/fastspeech2.png){ loading=lazy }
 
 ## Multi-band MelGAN
 
 Multi-Band MelGAN is an improvement upon [MelGAN](https://arxiv.org/abs/1910.06711) that does waveform generation and waveform discrimination on a multi-band basis.
 
 <figure markdown>
-  ![MB-MelGAN](/assets/mb-melgan.png){ loading=lazy width="500"  }
+  ![MB-MelGAN](../../assets/mb-melgan.png){ loading=lazy width="500"  }
 </figure>
 
 ## HiFi-GAN Discrminator
 
 Further, instead of using the original discriminator, we can use the discriminator presented in the HiFi-GAN paper.
 
-![HiFi-GAN-Discriminator](/assets/hifigan-discriminator.png){ loading=lazy }
+![HiFi-GAN-Discriminator](../../assets/hifigan-discriminator.png){ loading=lazy }
 
 We specifically use the multi-period discriminator (MPD) on the right.

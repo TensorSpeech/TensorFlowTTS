@@ -16,8 +16,3 @@ This documentation web page aims to fully cover the end-to-end pipeline of using
 - Inference/Deployment
     - Converting to TensorFlow Lite
     - Inference using TensorFlow Lite
-
-## Pre-trained Models
-
-<!-- TODO: link to spaces -->
-<!-- TODO: Table here with language | config | dataset -->
