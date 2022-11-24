@@ -2,7 +2,7 @@
 
 ## Folder Structure
 
-Let's revisit the structure of our dataset now that we have new components. We need the audio files, duration files, and metadata file to be located in the same folder. Continuing with the same [sample dataset](/recipes/lightspeech-mbmelgan/dataset/#example), we should end up with these files by the end of the duration extraction step:
+Let's revisit the structure of our dataset now that we have new components. We need the audio files, duration files, and metadata file to be located in the same folder. Continuing with the same [sample dataset](../dataset/#example), we should end up with these files by the end of the duration extraction step:
 
 ```
 en-bookbot/

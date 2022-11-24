@@ -9,9 +9,9 @@ This documentation web page aims to fully cover the end-to-end pipeline of using
 
 ## Guides
 
-- [Installing TensorFlowTTS](/installation)
+- [Installing TensorFlowTTS](./installation)
 - Recipes
-    - [LightSpeech & Multi-band MelGAN](/recipes/lightspeech-mbmelgan/intro)
+    - [LightSpeech & Multi-band MelGAN](./recipes/lightspeech-mbmelgan/intro)
     - Adding Custom Processor
 - Inference/Deployment
     - Converting to TensorFlow Lite

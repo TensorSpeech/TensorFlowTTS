@@ -90,7 +90,7 @@ mfa train {YOUR_DATASET} {LEXICON} {OUTPUT_ACOUSTIC_MODEL} {TEXTGRID_OUTPUT_DIR}
 
 ### Example
 
-Using the same [sample dataset](/recipes/lightspeech-mbmelgan/dataset/#example) and a lexicon file `lexicon.txt`, the command to run will be similar to the following
+Using the same [sample dataset](../dataset/#example) and a lexicon file `lexicon.txt`, the command to run will be similar to the following
 
 ```sh
 mfa train ./en-bookbot ./lexicon.txt ./outputs/en_bookbot_acoustic_model.zip ./outputs/parsed --punctuation ""
