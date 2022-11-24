@@ -21,20 +21,38 @@ theme:
         name: Switch to light mode
   features:
     - navigation.sections
+    - navigation.expand
+    - content.code.annotate
 
 plugins:
   - search
+  - glightbox
 
 markdown_extensions:
+  # enable image captions
   - attr_list
   - md_in_html
+  # admonitions
+  - admonition
+  # python support
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  # task list
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 nav:
-  - Start Here: index.md
+  - Home: index.md
   - Installation: installation.md
   - Recipes:
       - LightSpeech & Multi-band MelGAN:
           - Introduction: recipes/lightspeech-mbmelgan/intro.md
-          - Dataset Structure: recipes/lightspeech-mbmelgan/dataset-structure.md
+          - Dataset: recipes/lightspeech-mbmelgan/dataset.md
           - Duration Extraction: recipes/lightspeech-mbmelgan/duration-extraction.md
-          - Model Training: recipes/lightspeech-mbmelgan/model-training.md
+          - Training: recipes/lightspeech-mbmelgan/training.md

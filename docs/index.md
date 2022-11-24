@@ -1,4 +1,4 @@
-# Start Here
+# Home
 
 This documentation web page aims to fully cover the end-to-end pipeline of using [TensorFlowTTS](https://github.com/TensorSpeech/TensorFlowTTS/) to train and deploy text-to-speech models. Since the original repository seems to be inactive, these set of tutorials will work on this [fork](https://github.com/w11wo/TensorFlowTTS/) developed by Wilson Wongso which contains new features.
 
