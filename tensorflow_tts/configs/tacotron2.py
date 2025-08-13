@@ -24,7 +24,7 @@ from tensorflow_tts.processor.libritts import LIBRITTS_SYMBOLS as lbri_symbols
 from tensorflow_tts.processor.ljspeechu import LJSPEECH_U_SYMBOLS as lju_symbols
 from tensorflow_tts.processor.synpaflex import SYNPAFLEX_SYMBOLS as synpaflex_symbols
 from tensorflow_tts.processor.jsut import JSUT_SYMBOLS as jsut_symbols
-
+from tensorflow_tts.processor.thorsten import THORSTEN_SYMBOLS as thorsten_symbols
 
 class Tacotron2Config(BaseConfig):
     """Initialize Tacotron-2 Config."""
@@ -76,6 +76,8 @@ class Tacotron2Config(BaseConfig):
             self.vocab_size = len(synpaflex_symbols)
         elif dataset == "jsut":
             self.vocab_size = len(jsut_symbols)
+        elif dataset == "thorsten":
+            self.vocab_size = len(thorsten_symbols)
         else:
             raise ValueError("No such dataset: {}".format(dataset))
         self.embedding_hidden_size = embedding_hidden_size
