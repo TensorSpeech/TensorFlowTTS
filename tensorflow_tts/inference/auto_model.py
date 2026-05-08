@@ -105,7 +105,7 @@ class TFAutoModel(object):
                 if pretrained_path is not None and ".h5" in pretrained_path:
                     try:
                         model.load_weights(pretrained_path)
-                    except:
+                    except Exception:
                         model.load_weights(
                             pretrained_path, by_name=True, skip_mismatch=True
                         )

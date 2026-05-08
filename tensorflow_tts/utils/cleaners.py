@@ -27,7 +27,7 @@ from unidecode import unidecode
 
 try:
     from german_transliterate.core import GermanTransliterate
-except:
+except Exception:
     pass
 
 # Regular expression matching whitespace:

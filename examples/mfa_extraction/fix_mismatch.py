@@ -62,7 +62,7 @@ def fix(base_path: str, dur_path: str, trimmed_dur_path: str, use_norm: str):
                 dur = np.load(
                     os.path.join(trimmed_dur_path, f"{i.split('-')[0]}-durations.npy")
                 )
-            except:
+            except Exception:
                 dur = np.load(
                     os.path.join(dur_path, f"{i.split('-')[0]}-durations.npy")
                 )
